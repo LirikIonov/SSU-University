@@ -4,10 +4,8 @@ from urllib.parse import quote
 import mkdocs_gen_files
 
 
-DOCS_DIR = Path(mkdocs_gen_files.config.docs_dir)
-
-LECTURES_DIR = DOCS_DIR / "lectures"
-SLIDES_DIR = DOCS_DIR / "slides"
+LECTURES_DIR = Path("go/lectures")
+SLIDES_DIR = Path("go/slides")
 
 
 def encode_path(path: Path) -> str:
@@ -50,10 +48,7 @@ lecture_files = sorted(
     key=lambda path: str(path).lower(),
 )
 
-with mkdocs_gen_files.open(
-    "lectures/index.md",
-    "w",
-) as out:
+with mkdocs_gen_files.open("lectures/index.md", "w") as out:
     out.write("# Лекции\n\n")
 
     for lecture in lecture_files:
@@ -73,10 +68,7 @@ pdf_files = sorted(
     key=lambda path: path.name.lower(),
 )
 
-with mkdocs_gen_files.open(
-    "slides/index.md",
-    "w",
-) as out:
+with mkdocs_gen_files.open("slides/index.md", "w") as out:
     out.write("# Презентации\n\n")
 
     for pdf in pdf_files:
@@ -89,8 +81,7 @@ with mkdocs_gen_files.open(
 
 
 # ---------------------------------------------------------------------------
-# Отдельная страница для каждого PDF
-# Нужна, чтобы Slides был раскрывающимся разделом в навигации
+# Страница для каждого PDF
 # ---------------------------------------------------------------------------
 
 for pdf in pdf_files:
@@ -102,5 +93,9 @@ for pdf in pdf_files:
         Path("slides") / page_name,
         "w",
     ) as out:
+        out.write("---\n")
+        out.write(f'title: "{title}"\n')
+        out.write("---\n\n")
+
         out.write(f"# {title}\n\n")
         out.write(f"[Открыть PDF](./{pdf_url})\n")
