@@ -4,8 +4,10 @@ from urllib.parse import quote
 import mkdocs_gen_files
 
 
-LECTURES_DIR = Path("go/lectures")
-SLIDES_DIR = Path("go/slides")
+DOCS_DIR = Path(mkdocs_gen_files.config.docs_dir)
+
+LECTURES_DIR = DOCS_DIR / "lectures"
+SLIDES_DIR = DOCS_DIR / "slides"
 
 
 def encode_path(path: Path) -> str:
@@ -81,7 +83,7 @@ with mkdocs_gen_files.open("slides/index.md", "w") as out:
 
 
 # ---------------------------------------------------------------------------
-# Страница для каждого PDF
+# Отдельная страница для каждого PDF
 # ---------------------------------------------------------------------------
 
 for pdf in pdf_files:
@@ -93,9 +95,5 @@ for pdf in pdf_files:
         Path("slides") / page_name,
         "w",
     ) as out:
-        out.write("---\n")
-        out.write(f'title: "{title}"\n')
-        out.write("---\n\n")
-
         out.write(f"# {title}\n\n")
         out.write(f"[Открыть PDF](./{pdf_url})\n")
