@@ -4,8 +4,10 @@ from urllib.parse import quote
 import mkdocs_gen_files
 
 
-LECTURES_DIR = Path("go/lectures")
-SLIDES_DIR = Path("go/slides")
+DOCS_DIR = Path(mkdocs_gen_files.config.docs_dir)
+
+LECTURES_DIR = DOCS_DIR / "go" / "lectures"
+SLIDES_DIR = DOCS_DIR / "go" / "slides"
 
 
 def encode_path(path: Path) -> str:
@@ -13,10 +15,6 @@ def encode_path(path: Path) -> str:
 
 
 def get_title(path: Path) -> str:
-    """
-    Берём первый H1 из Markdown.
-    Если его нет — используем имя файла.
-    """
     try:
         with path.open("r", encoding="utf-8") as file:
             for line in file:
@@ -58,15 +56,12 @@ with mkdocs_gen_files.open(
 ) as out:
     out.write("# Лекции\n\n")
 
-    if not lecture_files:
-        out.write("Лекции не найдены.\n")
-    else:
-        for lecture in lecture_files:
-            relative_path = lecture.relative_to(LECTURES_DIR)
-            url = encode_path(relative_path)
-            title = get_title(lecture)
+    for lecture in lecture_files:
+        relative_path = lecture.relative_to(LECTURES_DIR)
+        url = encode_path(relative_path)
+        title = get_title(lecture)
 
-            out.write(f"- [{title}]({url})\n")
+        out.write(f"- [{title}]({url})\n")
 
 
 # ---------------------------------------------------------------------------
@@ -84,11 +79,8 @@ with mkdocs_gen_files.open(
 ) as out:
     out.write("# Презентации\n\n")
 
-    if not pdf_files:
-        out.write("PDF-файлы не найдены.\n")
-    else:
-        for pdf in pdf_files:
-            title = pdf.stem
-            url = quote(pdf.name)
+    for pdf in pdf_files:
+        title = pdf.stem
+        url = quote(pdf.name)
 
-            out.write(f"- [{title}](./{url})\n")
+        out.write(f"- [{title}](./{url})\n")
