@@ -101,6 +101,7 @@ theme:
     - navigation.tracking
     - navigation.top
     - navigation.footer
+     - navigation.expand
 
     # Правый TOC следует за текущим разделом
     - toc.follow
