@@ -6,8 +6,8 @@ import mkdocs_gen_files
 
 DOCS_DIR = Path(mkdocs_gen_files.config.docs_dir)
 
-LECTURES_DIR = DOCS_DIR / "go" / "lectures"
-SLIDES_DIR = DOCS_DIR / "go" / "slides"
+LECTURES_DIR = DOCS_DIR / "lectures"
+SLIDES_DIR = DOCS_DIR / "slides"
 
 
 def encode_path(path: Path) -> str:
@@ -33,8 +33,8 @@ def get_title(path: Path) -> str:
 with mkdocs_gen_files.open("index.md", "w") as out:
     out.write("# Go — углублённое изучение\n\n")
     out.write("## Материалы\n\n")
-    out.write("- [Лекции](go/lectures/)\n")
-    out.write("- [Презентации](go/slides/)\n")
+    out.write("- [Лекции](lectures/)\n")
+    out.write("- [Презентации](slides/)\n")
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ lecture_files = sorted(
 )
 
 with mkdocs_gen_files.open(
-    "go/lectures/index.md",
+    "lectures/index.md",
     "w",
 ) as out:
     out.write("# Лекции\n\n")
@@ -74,13 +74,33 @@ pdf_files = sorted(
 )
 
 with mkdocs_gen_files.open(
-    "go/slides/index.md",
+    "slides/index.md",
     "w",
 ) as out:
     out.write("# Презентации\n\n")
 
     for pdf in pdf_files:
         title = pdf.stem
-        url = quote(pdf.name)
+        page_name = f"{pdf.stem}.md"
 
-        out.write(f"- [{title}](./{url})\n")
+        out.write(
+            f"- [{title}]({quote(page_name)})\n"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Отдельная страница для каждого PDF
+# Нужна, чтобы Slides был раскрывающимся разделом в навигации
+# ---------------------------------------------------------------------------
+
+for pdf in pdf_files:
+    title = pdf.stem
+    page_name = f"{pdf.stem}.md"
+    pdf_url = quote(pdf.name)
+
+    with mkdocs_gen_files.open(
+        Path("slides") / page_name,
+        "w",
+    ) as out:
+        out.write(f"# {title}\n\n")
+        out.write(f"[Открыть PDF](./{pdf_url})\n")

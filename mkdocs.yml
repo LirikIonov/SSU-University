@@ -42,7 +42,9 @@ markdown_extensions:
       custom_checkbox: true
 
 not_in_nav: |
-  /index.md
+  index.md
+  lectures/index.md
+  slides/index.md
 
 plugins:
   - search:
