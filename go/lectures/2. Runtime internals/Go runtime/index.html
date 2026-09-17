@@ -8,7 +8,7 @@
 <link href="../../Additional/1%20-%20Go%20Runtime%20deep/" rel="next"/>
 <link href="../../../../assets/images/favicon.png" rel="icon"/>
 <meta content="mkdocs-1.6.1, mkdocs-material-9.7.7" name="generator"/>
-<title>Лекция 2.0. Go runtime internals - Go</title>
+<title>Лекция 2.0. Go runtime internals — расширенная версия - Go</title>
 <link href="../../../../assets/stylesheets/main.ec1eaa64.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -45,7 +45,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Лекция 2.0. Go runtime internals
+              Лекция 2.0. Go runtime internals — расширенная версия
             
           </span>
 </div>
@@ -222,7 +222,7 @@
 <span class="md-ellipsis">
     
   
-    Лекция 2.0. Go runtime internals
+    Лекция 2.0. Go runtime internals — расширенная версия
   
 
     
@@ -233,7 +233,7 @@
 <span class="md-ellipsis">
     
   
-    Лекция 2.0. Go runtime internals
+    Лекция 2.0. Go runtime internals — расширенная версия
   
 
     
@@ -288,7 +288,7 @@
 <span class="md-ellipsis">
     
   
-    Лекция 2.1. Глубокие internals Go runtime, synchronization и CPU
+    Доп. Лекция 1. Глубокие internals Go runtime, synchronization и CPU
   
 
     
@@ -334,7 +334,7 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<h1 id="20-go-runtime-internals">Лекция 2.0. Go runtime internals<a class="headerlink" href="#20-go-runtime-internals" title="Permanent link">¶</a></h1>
+<h1 id="20-go-runtime-internals">Лекция 2.0. Go runtime internals — расширенная версия<a class="headerlink" href="#20-go-runtime-internals" title="Permanent link">¶</a></h1>
 <h2 id="_1">О чём эта лекция<a class="headerlink" href="#_1" title="Permanent link">¶</a></h2>
 <p>На уровне языка конкурентность в Go выглядит почти подозрительно просто:</p>
 <div class="highlight"><pre><span></span><code><span class="k">go</span><span class="w"> </span><span class="nx">handle</span><span class="p">(</span><span class="nx">conn</span><span class="p">)</span>
@@ -3187,7 +3187,2071 @@ Mutex profile горячий
 </code></pre></div>
 <p>Именно здесь runtime internals возвращаются обратно в production backend: они позволяют отличать проблему scheduler от проблемы synchronization, I/O, CPU capacity и архитектуры resource limiting.</p>
 <hr/>
-<h1 id="_11">Источники и ориентиры реализации<a class="headerlink" href="#_11" title="Permanent link">¶</a></h1>
+<hr/>
+<h1 id="25">25. Расширенный разбор обязательных механизмов<a class="headerlink" href="#25" title="Permanent link">¶</a></h1>
+<p>Ниже основной материал той же лекции раскрыт ещё на один слой глубже: не как отдельная «дополнительная» тема про CPU/MESI, а как подробное объяснение именно обязательных механизмов runtime, которые нужны для понимания поведения Go backend под нагрузкой.</p>
+<h2 id="251-go-runtime">25.1. Go runtime как слой между языком и операционной системой<a class="headerlink" href="#251-go-runtime" title="Permanent link">¶</a></h2>
+<p>Когда мы пишем:</p>
+<div class="highlight"><pre><span></span><code><span class="k">go</span><span class="w"> </span><span class="nx">handle</span><span class="p">(</span><span class="nx">conn</span><span class="p">)</span>
+</code></pre></div>
+<p>язык обещает concurrent execution новой goroutine. Но ни Linux, ни Windows, ни macOS не знают сущность «goroutine». Для операционной системы существуют процессы, threads, virtual memory, file descriptors, timers и syscalls.</p>
+<p>Поэтому между исходным кодом и OS существует Go runtime:</p>
+<div class="highlight"><pre><span></span><code>Go source
+↓
+compiler
+↓
+native machine code
++
+Go runtime
+↓
+OS threads / syscalls / virtual memory
+↓
+CPU / kernel / hardware
+</code></pre></div>
+<p>Runtime решает задачу мультиплексирования: goroutines обычно существенно больше, чем OS threads.</p>
+<p>Представим backend:</p>
+<div class="highlight"><pre><span></span><code>50 000 HTTP connections
+20 000 goroutines ждут network
+5 000 goroutines ждут channels/mutexes
+200 goroutines runnable
+8 CPU cores
+</code></pre></div>
+<p>ОС не должна получить 25 000 sleeping threads. Runtime умеет убрать ожидающую G из runnable work и продолжить выполнять другие G на ограниченном наборе M.</p>
+<p>В этом и находится центральная ценность модели Go:</p>
+<div class="highlight"><pre><span></span><code>логическое ожидание операции
+≠
+обязательное физическое ожидание OS thread
+</code></pre></div>
+<p>Но эта возможность не бесплатна. Runtime должен вести scheduler state, stacks, queues, timers, poll descriptors, synchronization waiters и GC metadata.</p>
+<hr/>
+<h2 id="252-go-f-runnable-computation">25.2. <code>go f()</code> — это создание runnable computation, а не немедленный запуск<a class="headerlink" href="#252-go-f-runnable-computation" title="Permanent link">¶</a></h2>
+<p>Возьмём:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="nx">worker</span><span class="p">()</span>
+<span class="w">    </span><span class="nx">doSomething</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Плохая mental model:</p>
+<div class="highlight"><pre><span></span><code>go worker()
+↓
+worker немедленно начинает выполняться
+</code></pre></div>
+<p>Точнее:</p>
+<div class="highlight"><pre><span></span><code>current G выполняет go statement
+↓
+runtime подготавливает новую G
+↓
+новая G получает stack + execution context
+↓
+G становится RUNNABLE
+↓
+G помещается в scheduler queue
+↓
+когда scheduler выберет G
+↓
+RUNNABLE → RUNNING
+↓
+worker действительно начинает выполнение
+</code></pre></div>
+<p>Поэтому программа:</p>
+<div class="highlight"><pre><span></span><code><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">"worker"</span><span class="p">)</span>
+<span class="p">}()</span>
+
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">"main"</span><span class="p">)</span>
+</code></pre></div>
+<p>не имеет гарантированного порядка этих двух <code>Println</code> только из-за порядка строк.</p>
+<p>Если порядок нужен, его выражают synchronization primitives.</p>
+<hr/>
+<h2 id="253-g">25.3. Что именно хранит <code>G</code><a class="headerlink" href="#253-g" title="Permanent link">¶</a></h2>
+<p>Не нужно превращать лекцию в чтение <code>runtime/runtime2.go</code>, но важно понимать категорию данных.</p>
+<p><code>G</code> должна позволять runtime остановить computation и потом продолжить её с того же места.</p>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>G
+├── status
+├── stack bounds
+├── saved PC/SP и scheduler context
+├── pointer на M, если G сейчас RUNNING
+├── wait reason / waiting structures
+├── goroutine id/runtime bookkeeping
+└── GC/scheduler metadata
+</code></pre></div>
+<p>То есть G — это не «адрес функции».</p>
+<p>Если goroutine находится здесь:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">handler</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">user</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">loadUser</span><span class="p">()</span>
+<span class="w">    </span><span class="nx">order</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">buildOrder</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span>
+<span class="w">    </span><span class="nx">result</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">responseCh</span>
+<span class="w">    </span><span class="nx">save</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>и блокируется на <code>&lt;-responseCh</code>, runtime должен сохранить computation так, чтобы позже продолжить именно после receive, сохранив call stack и локальное состояние.</p>
+<p>Модель:</p>
+<div class="highlight"><pre><span></span><code>RUNNING
+↓
+park
+↓
+WAITING 10 секунд
+↓
+ready
+↓
+RUNNABLE
+↓
+scheduler
+↓
+RUNNING
+↓
+продолжение после receive
+</code></pre></div>
+<hr/>
+<h2 id="254-g-state-machine">25.4. Состояния G как state machine<a class="headerlink" href="#254-g-state-machine" title="Permanent link">¶</a></h2>
+<p>Для прикладного понимания полезна такая модель:</p>
+<div class="highlight"><pre><span></span><code>              ┌───────────────┐
+              │   RUNNABLE    │
+              └───────┬───────┘
+                      │ scheduler
+                      ▼
+              ┌───────────────┐
+              │    RUNNING    │
+              └─┬─────┬─────┬─┘
+                │     │     │
+          block │     │     │ syscall
+                │     │     │
+                ▼     │     ▼
+            WAITING   │   SYSCALL
+                │     │     │
+          wake  │     │     │ return
+                └──►RUNNABLE◄┘
+                      │
+                      │ finish
+                      ▼
+                    DEAD
+</code></pre></div>
+<p>Важно не просто запомнить названия, а понимать различие.</p>
+<h3 id="runnable_1">RUNNABLE<a class="headerlink" href="#runnable_1" title="Permanent link">¶</a></h3>
+<p>G уже может выполняться, но пока не получила P/M/CPU.</p>
+<p>Это потенциальная scheduler latency.</p>
+<h3 id="running_1">RUNNING<a class="headerlink" href="#running_1" title="Permanent link">¶</a></h3>
+<p>G прямо сейчас выполняет Go code на M, которому принадлежит P.</p>
+<h3 id="waiting_1">WAITING<a class="headerlink" href="#waiting_1" title="Permanent link">¶</a></h3>
+<p>Продолжать computation невозможно до события:</p>
+<ul>
+<li>channel;</li>
+<li>mutex/semaphore;</li>
+<li>timer;</li>
+<li>network readiness;</li>
+<li>select;</li>
+<li>другие runtime waits.</li>
+</ul>
+<h3 id="syscall_1">SYSCALL<a class="headerlink" href="#syscall_1" title="Permanent link">¶</a></h3>
+<p>G/M находятся в syscall path. Это отдельное состояние, потому что OS thread может быть занят kernel operation, а P runtime выгодно передать другому M.</p>
+<h3 id="dead_1">DEAD<a class="headerlink" href="#dead_1" title="Permanent link">¶</a></h3>
+<p>G закончила computation и может быть переиспользована runtime.</p>
+<hr/>
+<h2 id="255-runnable-waiting-latency">25.5. RUNNABLE и WAITING — принципиально разные причины latency<a class="headerlink" href="#255-runnable-waiting-latency" title="Permanent link">¶</a></h2>
+<p>Это одна из самых полезных диагностических идей лекции.</p>
+<p>Пусть request отвечает 3 секунды.</p>
+<p>Вариант A:</p>
+<div class="highlight"><pre><span></span><code>G WAITING 2.9 s on network
+RUNNABLE 0.01 s
+RUNNING 0.09 s
+</code></pre></div>
+<p>Проблема ближе к downstream/network.</p>
+<p>Вариант B:</p>
+<div class="highlight"><pre><span></span><code>G RUNNABLE 2.5 s
+RUNNING кусками 0.5 s
+</code></pre></div>
+<p>Здесь работа готова, но CPU/scheduler capacity не хватает.</p>
+<p>Обе ситуации выглядят для пользователя одинаково:</p>
+<div class="highlight"><pre><span></span><code>HTTP latency = 3 s
+</code></pre></div>
+<p>Но лечатся совершенно по-разному.</p>
+<hr/>
+<h2 id="256-goroutine-os-thread">25.6. Почему goroutine дешёвая относительно OS thread<a class="headerlink" href="#256-goroutine-os-thread" title="Permanent link">¶</a></h2>
+<p>OS thread обычно требует kernel-visible thread state и существенно более тяжёлую thread lifecycle machinery.</p>
+<p>Goroutine создаётся и планируется в user-space runtime.</p>
+<p>Она использует:</p>
+<ul>
+<li>небольшой growable stack;</li>
+<li>compact runtime descriptor;</li>
+<li>Go scheduler вместо отдельного kernel scheduler entity;</li>
+<li>parking без обязательного sleeping thread.</li>
+</ul>
+<p>Поэтому возможно:</p>
+<div class="highlight"><pre><span></span><code>100 000 G
+</code></pre></div>
+<p>при десятках M, а не 100 000 M.</p>
+<p>Но из этого нельзя делать вывод:</p>
+<blockquote>
+<p>Goroutine бесплатна.</p>
+</blockquote>
+<p>Цена включает:</p>
+<div class="highlight"><pre><span></span><code>stack
++ G metadata
++ scheduler bookkeeping
++ GC scanning
++ captured/retained heap objects
++ wait structures
++ external resources
+</code></pre></div>
+<hr/>
+<h2 id="257-goroutine-leak-retention-problem">25.7. Goroutine leak как retention problem<a class="headerlink" href="#257-goroutine-leak-retention-problem" title="Permanent link">¶</a></h2>
+<p>Пример:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">start</span><span class="p">(</span><span class="nx">ch</span><span class="w"> </span><span class="o">&lt;-</span><span class="kt">chan</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">buf</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="o">&lt;&lt;</span><span class="mi">20</span><span class="p">)</span>
+<span class="w">        </span><span class="nx">value</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ch</span>
+<span class="w">        </span><span class="nx">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">value</span>
+<span class="w">        </span><span class="nx">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">buf</span>
+<span class="w">    </span><span class="p">}()</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Если никто никогда не отправит в <code>ch</code> и не закроет его:</p>
+<div class="highlight"><pre><span></span><code>G → WAITING forever
+</code></pre></div>
+<p>Но одновременно:</p>
+<div class="highlight"><pre><span></span><code>G stack остаётся root
+↓
+stack/reference graph остаётся reachable
+↓
+8 MiB buffer может оставаться живым
+</code></pre></div>
+<p>Поэтому leak goroutine часто означает не только несколько килобайт runtime overhead.</p>
+<p>Она может удерживать:</p>
+<ul>
+<li>request body;</li>
+<li>response;</li>
+<li>transaction;</li>
+<li>connection;</li>
+<li>large buffer;</li>
+<li>domain graph;</li>
+<li>timers.</li>
+</ul>
+<hr/>
+<h2 id="258-g-m-p">25.8. G / M / P: точная учебная модель<a class="headerlink" href="#258-g-m-p" title="Permanent link">¶</a></h2>
+<p>Три сущности отвечают на три разных вопроса.</p>
+<div class="highlight"><pre><span></span><code>G — что нужно выполнить?
+M — какой OS thread сейчас выполняет инструкции?
+P — какой runtime execution resource позволяет M выполнять Go code?
+</code></pre></div>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>G
+↓
+M + P
+↓
+OS scheduler
+↓
+CPU
+</code></pre></div>
+<p>Важно: ОС планирует M, а Go scheduler планирует G.</p>
+<p>Получается два scheduler слоя:</p>
+<div class="highlight"><pre><span></span><code>Go scheduler:
+G → M/P
+
+OS scheduler:
+M → CPU
+</code></pre></div>
+<hr/>
+<h2 id="259-p-cpu">25.9. Почему нельзя отождествлять P и CPU<a class="headerlink" href="#259-p-cpu" title="Permanent link">¶</a></h2>
+<p>Удобно думать:</p>
+<div class="highlight"><pre><span></span><code>GOMAXPROCS ≈ число P ≈ разрешённый parallelism Go code
+</code></pre></div>
+<p>Но P не является физическим core.</p>
+<p>Если:</p>
+<div class="highlight"><pre><span></span><code>GOMAXPROCS = 8
+</code></pre></div>
+<p>runtime имеет восемь execution resources для параллельного Go code.</p>
+<p>Но ОС может физически дать процессу меньше CPU time из-за:</p>
+<ul>
+<li>cgroup quota;</li>
+<li>competing processes;</li>
+<li>host load;</li>
+<li>scheduling policy.</li>
+</ul>
+<p>То есть:</p>
+<div class="highlight"><pre><span></span><code>P = runtime capacity token/state
+CPU = hardware
+M = OS-scheduled bridge между ними
+</code></pre></div>
+<hr/>
+<h2 id="2510-p">25.10. Почему P нельзя просто убрать<a class="headerlink" href="#2510-p" title="Permanent link">¶</a></h2>
+<p>Вообразим runtime только из:</p>
+<div class="highlight"><pre><span></span><code>G + M
+</code></pre></div>
+<p>Тогда local scheduler state, allocator caches и execution resources сильнее привязываются к OS thread.</p>
+<p>Теперь M1 делает blocking syscall:</p>
+<div class="highlight"><pre><span></span><code>M1 blocked in kernel
+</code></pre></div>
+<p>Если scheduler capacity также привязана к M1, мы временно теряем её.</p>
+<p>С P runtime может сделать:</p>
+<div class="highlight"><pre><span></span><code>G1/M1/P0
+↓
+M1 enters syscall
+↓
+P0 detaches
+↓
+M2 acquires P0
+↓
+G2 executes
+</code></pre></div>
+<p>Именно это делает P самостоятельной полезной сущностью.</p>
+<hr/>
+<h2 id="2511-p">25.11. Что живёт на P<a class="headerlink" href="#2511-p" title="Permanent link">¶</a></h2>
+<p>Конкретные поля меняются между версиями, но архитектурная идея стабильна: часть hot runtime state выгодно держать per-P.</p>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>P
+├── local run queue
+├── runnext
+├── allocator caches
+├── sudog/defer caches
+├── timer/runtime bookkeeping
+└── scheduler state
+</code></pre></div>
+<p>Это уменьшает global synchronization.</p>
+<p>Вместо:</p>
+<div class="highlight"><pre><span></span><code>64 P
+↓
+один global allocator/scheduler lock
+</code></pre></div>
+<p>много fast paths остаются локальными.</p>
+<hr/>
+<h2 id="2512-gomaxprocs-worker-pool">25.12. GOMAXPROCS — не worker pool<a class="headerlink" href="#2512-gomaxprocs-worker-pool" title="Permanent link">¶</a></h2>
+<p>Это одна из самых важных границ.</p>
+<p>Пусть:</p>
+<div class="highlight"><pre><span></span><code>GOMAXPROCS = 8
+</code></pre></div>
+<p>Это не означает:</p>
+<div class="highlight"><pre><span></span><code>не более 8 HTTP requests одновременно
+</code></pre></div>
+<p>И не означает:</p>
+<div class="highlight"><pre><span></span><code>не более 8 DB requests одновременно
+</code></pre></div>
+<p>Тысячи G могут:</p>
+<div class="highlight"><pre><span></span><code>немного выполнить Go code
+↓
+уйти в network WAITING
+</code></pre></div>
+<p>И одновременно иметь тысячи in-flight external operations.</p>
+<p><code>GOMAXPROCS</code> ограничивает parallel execution Go code, а downstream concurrency нужно ограничивать отдельно.</p>
+<hr/>
+<h2 id="2513-cpu-bound-io-bound-gomaxprocs-">25.13. CPU-bound и I/O-bound сервисы реагируют на GOMAXPROCS по-разному<a class="headerlink" href="#2513-cpu-bound-io-bound-gomaxprocs-" title="Permanent link">¶</a></h2>
+<h3 id="cpu-bound">CPU-bound<a class="headerlink" href="#cpu-bound" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>JSON/crypto/compression/calculation
+</code></pre></div>
+<p>Здесь больше P до разумного hardware limit может дать больше parallelism.</p>
+<h3 id="io-bound">I/O-bound<a class="headerlink" href="#io-bound" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>HTTP dependency
+PostgreSQL
+network storage
+</code></pre></div>
+<p>Если 95% времени G ждёт внешнюю систему, ещё четыре P могут почти ничего не изменить.</p>
+<p>Поэтому tuning начинается с вопроса:</p>
+<blockquote>
+<p>Где реально проводится время request?</p>
+</blockquote>
+<p>а не с автоматического изменения <code>GOMAXPROCS</code>.</p>
+<hr/>
+<h2 id="2514-container-aware-gomaxprocs-throttling">25.14. Container-aware GOMAXPROCS и throttling<a class="headerlink" href="#2514-container-aware-gomaxprocs-throttling" title="Permanent link">¶</a></h2>
+<p>Представим Kubernetes container:</p>
+<div class="highlight"><pre><span></span><code>host: 64 CPU
+CPU limit: 2
+</code></pre></div>
+<p>Если runtime активно ведёт себя как на 64-way machine:</p>
+<div class="highlight"><pre><span></span><code>много parallel CPU work
+↓
+quota быстро исчерпывается
+↓
+cgroup throttling
+↓
+process временно не получает CPU
+↓
+tail latency растёт
+</code></pre></div>
+<p>Современный Go учитывает container CPU limit при default <code>GOMAXPROCS</code> на Linux.</p>
+<p>Но это не значит, что runtime решил все capacity problems.</p>
+<p>Нужно всё равно смотреть:</p>
+<ul>
+<li>CPU throttling metrics;</li>
+<li>actual workload;</li>
+<li>thread count;</li>
+<li>runnable queue;</li>
+<li>latency distribution.</li>
+</ul>
+<h1 id="26-scheduler-run-queues-work-stealing">26. Scheduler, run queues и work stealing — подробнее<a class="headerlink" href="#26-scheduler-run-queues-work-stealing" title="Permanent link">¶</a></h1>
+<h2 id="261-scheduler">26.1. Scheduler решает не одну задачу<a class="headerlink" href="#261-scheduler" title="Permanent link">¶</a></h2>
+<p>На первый взгляд задача простая:</p>
+<div class="highlight"><pre><span></span><code>есть RUNNABLE G
+↓
+выбрать следующую
+</code></pre></div>
+<p>Но реальный scheduler одновременно пытается сохранить:</p>
+<ul>
+<li>throughput;</li>
+<li>fairness;</li>
+<li>locality;</li>
+<li>low latency;</li>
+<li>небольшое количество активных OS threads;</li>
+<li>progress GC/runtime tasks;</li>
+<li>баланс между P.</li>
+</ul>
+<p>Эти цели конфликтуют.</p>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>держать G на том же P
+</code></pre></div>
+<p>полезно для cache locality.</p>
+<p>Но:</p>
+<div class="highlight"><pre><span></span><code>если соседний P idle
+</code></pre></div>
+<p>лучше отдать ему часть work.</p>
+<p>Отсюда work stealing.</p>
+<hr/>
+<h2 id="262-global-queue">26.2. Почему одна global queue плохо масштабируется<a class="headerlink" href="#262-global-queue" title="Permanent link">¶</a></h2>
+<p>Представим:</p>
+<div class="highlight"><pre><span></span><code>P0 ─┐
+P1 ─┤
+P2 ─┼──► GLOBAL RUN QUEUE
+P3 ─┤
+... │
+P63─┘
+</code></pre></div>
+<p>Каждый P постоянно:</p>
+<div class="highlight"><pre><span></span><code>enqueue
+↓
+dequeue
+↓
+shared synchronization
+</code></pre></div>
+<p>Одна структура становится hot shared state.</p>
+<p>Поэтому Go использует distributed scheduler:</p>
+<div class="highlight"><pre><span></span><code>P0.runq
+P1.runq
+P2.runq
+...
++
+global run queue
+</code></pre></div>
+<p>Local path дешёвый.</p>
+<p>Global structures нужны, когда нужна coordination.</p>
+<hr/>
+<h2 id="263-local-run-queue">26.3. Local run queue<a class="headerlink" href="#263-local-run-queue" title="Permanent link">¶</a></h2>
+<p>Ментальная модель:</p>
+<div class="highlight"><pre><span></span><code>P0
+├── runnext → G17
+└── runq:
+    G21
+    G22
+    G23
+</code></pre></div>
+<p>Если P уже выполняет связанный workload, держать новые G локально выгодно:</p>
+<div class="highlight"><pre><span></span><code>меньше cross-P synchronization
++
+лучше locality
+</code></pre></div>
+<p>Но local queue конечна.</p>
+<p>При overflow часть work уходит в global scheduling machinery.</p>
+<p>Конкретный размер очереди — implementation detail текущего runtime, а не public contract.</p>
+<hr/>
+<h2 id="264-runnext">26.4. <code>runnext</code><a class="headerlink" href="#264-runnext" title="Permanent link">¶</a></h2>
+<p><code>runnext</code> — отдельный slot G, которой дают повышенный шанс выполниться следующей на этом P.</p>
+<p>Сценарий:</p>
+<div class="highlight"><pre><span></span><code>G1 выполняется
+↓
+G1 создаёт/разблокирует G2
+↓
+G2 → runnext
+↓
+после G1 scheduler предпочитает G2
+</code></pre></div>
+<p>Это особенно полезно для producer-consumer chain.</p>
+<p>Почему:</p>
+<div class="highlight"><pre><span></span><code>latency меньше
+cache locality потенциально лучше
+</code></pre></div>
+<p>Но <code>runnext</code> не создаёт вечную parent-child связь между G.</p>
+<p>«Связанная goroutine» здесь — удобная causal mental model, а не постоянное поле runtime.</p>
+<hr/>
+<h2 id="265-inherittime">26.5. <code>inheritTime</code><a class="headerlink" href="#265-inherittime" title="Permanent link">¶</a></h2>
+<p>G из <code>runnext</code> может продолжить текущую scheduler slice.</p>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>G1
+↓
+G2 via runnext
+↓
+G3 via runnext
+</code></pre></div>
+<p>могут идти в рамках одного внутреннего scheduler tick/accounting interval.</p>
+<p>Это уменьшает latency handoff.</p>
+<p>Но если бесконечно продолжать такую цепочку:</p>
+<div class="highlight"><pre><span></span><code>G1 → G2 → G3 → G4 → ...
+</code></pre></div>
+<p>остальные G могут страдать.</p>
+<p>Поэтому fairness и preemption остаются необходимы.</p>
+<hr/>
+<h2 id="266-schedtick">26.6. <code>schedtick</code><a class="headerlink" href="#266-schedtick" title="Permanent link">¶</a></h2>
+<p>Важно не объяснять <code>schedtick</code> как аппаратный timer tick.</p>
+<p>Это внутренний scheduler progress counter P.</p>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>новая scheduler slice
+↓
+schedtick++
+</code></pre></div>
+<p>Если G запускается с <code>inheritTime</code>, отдельный новый tick может не начинаться.</p>
+<p>Runtime может смотреть, как долго P остаётся без scheduler progress.</p>
+<p>Это помогает обнаруживать слишком длинную execution slice.</p>
+<hr/>
+<h2 id="267-schedule-findrunnable">26.7. <code>schedule()</code> и <code>findRunnable()</code><a class="headerlink" href="#267-schedule-findrunnable" title="Permanent link">¶</a></h2>
+<p>Когда M должен найти следующую G:</p>
+<div class="highlight"><pre><span></span><code>schedule()
+↓
+findRunnable()
+↓
+execute(G)
+</code></pre></div>
+<p><code>findRunnable</code> не читает одну FIFO queue.</p>
+<p>Он рассматривает несколько источников work:</p>
+<div class="highlight"><pre><span></span><code>runtime/GC tasks
+local runq
+global runq
+timers
+netpoller
+work stealing
+</code></pre></div>
+<p>Точный порядок проверок может меняться между версиями.</p>
+<p>Нужная студенту модель:</p>
+<blockquote>
+<p>Scheduler ищет самый разумный доступный источник runnable work, постепенно расширяя область поиска.</p>
+</blockquote>
+<hr/>
+<h2 id="268-fairness-locality">26.8. Fairness против locality<a class="headerlink" href="#268-fairness-locality" title="Permanent link">¶</a></h2>
+<p>Если всегда выбирать local queue:</p>
+<div class="highlight"><pre><span></span><code>P0 local work never ends
+↓
+global work waits
+</code></pre></div>
+<p>Плохая fairness.</p>
+<p>Если постоянно брать global work:</p>
+<div class="highlight"><pre><span></span><code>shared synchronization ↑
+locality ↓
+</code></pre></div>
+<p>Плохой throughput.</p>
+<p>Поэтому scheduler периодически делает fairness checks.</p>
+<p>Это классический tradeoff:</p>
+<div class="highlight"><pre><span></span><code>локальная эффективность
+vs
+глобальная справедливость
+</code></pre></div>
+<hr/>
+<h2 id="269-work-stealing">26.9. Work stealing<a class="headerlink" href="#269-work-stealing" title="Permanent link">¶</a></h2>
+<p>Пусть:</p>
+<div class="highlight"><pre><span></span><code>P0 empty
+P1 empty
+P2: G1 G2 G3 G4 G5 G6
+P3 empty
+</code></pre></div>
+<p>Если ничего не делать:</p>
+<div class="highlight"><pre><span></span><code>P2 busy
+P0/P1/P3 idle
+</code></pre></div>
+<p>Scheduler позволяет idle P украсть часть run queue victim P.</p>
+<div class="highlight"><pre><span></span><code>P0
+↓
+choose victim P2
+↓
+steal batch
+↓
+P0 executes stolen work
+</code></pre></div>
+<p>Это dynamic load balancing.</p>
+<hr/>
+<h2 id="2610-steal-batch">26.10. Почему steal batch<a class="headerlink" href="#2610-steal-batch" title="Permanent link">¶</a></h2>
+<p>Если воровать по одной G:</p>
+<div class="highlight"><pre><span></span><code>steal
+run
+steal
+run
+steal
+</code></pre></div>
+<p>coordination overhead высок.</p>
+<p>Batch позволяет:</p>
+<div class="highlight"><pre><span></span><code>одна cross-P operation
+↓
+несколько последующих local executions
+</code></pre></div>
+<p>То есть стоимость stealing амортизируется.</p>
+<hr/>
+<h2 id="2611-work-stealing-locality">26.11. Почему work stealing может ухудшить locality<a class="headerlink" href="#2611-work-stealing-locality" title="Permanent link">¶</a></h2>
+<p>G могла до этого выполняться рядом с данными, горячими в cache одного core.</p>
+<p>После steal:</p>
+<div class="highlight"><pre><span></span><code>G → другой P/M/core
+</code></pre></div>
+<p>новый core может получить cache misses.</p>
+<p>Поэтому scheduler постоянно балансирует:</p>
+<div class="highlight"><pre><span></span><code>использовать idle CPU
+vs
+сохранить cache locality
+</code></pre></div>
+<p>Это особенно важно на больших CPU/NUMA machines.</p>
+<hr/>
+<h2 id="2612-spinning-m">26.12. Spinning M<a class="headerlink" href="#2612-spinning-m" title="Permanent link">¶</a></h2>
+<p>Когда work сейчас не найдено, есть два крайних решения.</p>
+<h3 id="park">Сразу park<a class="headerlink" href="#park" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>нет work
+↓
+thread sleep
+</code></pre></div>
+<p>Если G появится через мгновение, thread нужно снова wake.</p>
+<h3 id="_11">Бесконечно искать<a class="headerlink" href="#_11" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>нет work
+↓
+scan forever
+</code></pre></div>
+<p>CPU тратится впустую.</p>
+<p>Go использует промежуточную стратегию:</p>
+<div class="highlight"><pre><span></span><code>spinning M
+</code></pre></div>
+<p>M некоторое время активно ищет work.</p>
+<p>Если work появляется, latency низкая.</p>
+<p>Если нет — M park'ится.</p>
+<hr/>
+<h2 id="2613-spinning-m">26.13. Почему нельзя иметь много spinning M<a class="headerlink" href="#2613-spinning-m" title="Permanent link">¶</a></h2>
+<p>Пусть 64 P и work отсутствует.</p>
+<p>Если все M spin:</p>
+<div class="highlight"><pre><span></span><code>64 CPU busy
+полезная работа = 0
+</code></pre></div>
+<p>Поэтому runtime ограничивает число spinning workers.</p>
+<p>Это energy/CPU efficiency tradeoff.</p>
+<hr/>
+<h2 id="2614-wakep">26.14. <code>wakep()</code><a class="headerlink" href="#2614-wakep" title="Permanent link">¶</a></h2>
+<p>Когда появляется runnable G, runtime решает:</p>
+<blockquote>
+<p>Нужно ли активировать ещё один worker?</p>
+</blockquote>
+<p>Если будить thread на каждую новую G:</p>
+<div class="highlight"><pre><span></span><code>wake
+↓
+thread обнаружил, что работу уже забрали
+↓
+park
+</code></pre></div>
+<p>получим thread thrashing.</p>
+<p>Поэтому wake policy консервативна.</p>
+<p>Идея:</p>
+<div class="highlight"><pre><span></span><code>idle P есть
++
+нет уже spinning worker, который найдёт work
+↓
+имеет смысл wake дополнительный M
+</code></pre></div>
+<hr/>
+<h2 id="2615-scheduler-latency">26.15. Scheduler latency<a class="headerlink" href="#2615-scheduler-latency" title="Permanent link">¶</a></h2>
+<p>Очень полезная метрика mental model:</p>
+<div class="highlight"><pre><span></span><code>time G became RUNNABLE
+↓
+time G became RUNNING
+</code></pre></div>
+<p>Если CPU свободен, она мала.</p>
+<p>Если CPU saturated:</p>
+<div class="highlight"><pre><span></span><code>run queues grow
+↓
+RUNNABLE wait grows
+↓
+request p99 grows
+</code></pre></div>
+<p>Это latency без network wait и без mutex wait.</p>
+<hr/>
+<h2 id="2616-scheduler-backpressure">26.16. Почему scheduler не является backpressure<a class="headerlink" href="#2616-scheduler-backpressure" title="Permanent link">¶</a></h2>
+<p>Пусть endpoint создаёт goroutine на каждую задачу:</p>
+<div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">job</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">jobs</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="nx">process</span><span class="p">(</span><span class="nx">job</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Scheduler корректно поставит миллионы G в states/queues.</p>
+<p>Но если CPU способен завершать:</p>
+<div class="highlight"><pre><span></span><code>10 000 jobs/s
+</code></pre></div>
+<p>а producer создаёт:</p>
+<div class="highlight"><pre><span></span><code>100 000 jobs/s
+</code></pre></div>
+<p>очередь будет расти.</p>
+<p>Runtime не знает, что вы хотели ограничить latency.</p>
+<p>Нужен application-level bounded queue/admission control.</p>
+<hr/>
+<h1 id="27-netpoller-syscalls-preemption">27. Netpoller, syscalls и preemption — подробнее<a class="headerlink" href="#27-netpoller-syscalls-preemption" title="Permanent link">¶</a></h1>
+<h2 id="271-blocking-style-network-api-blocking-thread">27.1. Почему blocking-style network API не означает blocking thread<a class="headerlink" href="#271-blocking-style-network-api-blocking-thread" title="Permanent link">¶</a></h2>
+<p>Код:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">n</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">conn</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">buf</span><span class="p">)</span>
+</code></pre></div>
+<p>выглядит синхронным.</p>
+<p>Если data нет, function действительно не может продолжить computation.</p>
+<p>Но runtime может сделать:</p>
+<div class="highlight"><pre><span></span><code>Read would block
+↓
+зарегистрировать fd в netpoller
+↓
+park G
+↓
+M/P выполняют другую G
+</code></pre></div>
+<p>То есть:</p>
+<div class="highlight"><pre><span></span><code>blocking API semantics
+</code></pre></div>
+<p>сохраняются для programmer, но runtime implementation использует readiness-based I/O.</p>
+<hr/>
+<h2 id="272-readiness-model">27.2. Readiness model<a class="headerlink" href="#272-readiness-model" title="Permanent link">¶</a></h2>
+<p>Kernel polling API сообщает примерно:</p>
+<div class="highlight"><pre><span></span><code>этот fd теперь имеет шанс выполнить read/write без обычного blocking
+</code></pre></div>
+<p>а не:</p>
+<div class="highlight"><pre><span></span><code>весь логический HTTP request полностью готов
+</code></pre></div>
+<p>Поэтому lifecycle может быть:</p>
+<div class="highlight"><pre><span></span><code>RUNNING
+↓
+Read gets some bytes
+↓
+would block again
+↓
+WAITING
+↓
+readiness event
+↓
+RUNNABLE
+↓
+RUNNING
+</code></pre></div>
+<p>многократно.</p>
+<hr/>
+<h2 id="273-polldesc">27.3. <code>pollDesc</code><a class="headerlink" href="#273-polldesc" title="Permanent link">¶</a></h2>
+<p>У pollable descriptor runtime хранит структуру состояния.</p>
+<p>Для mental model:</p>
+<div class="highlight"><pre><span></span><code>fd
+↓
+pollDesc
+├── reader wait state
+├── writer wait state
+├── read deadline
+└── write deadline
+</code></pre></div>
+<p>Она связывает kernel fd с waiting goroutines.</p>
+<hr/>
+<h2 id="274-network-waiter">27.4. Что может разбудить network waiter<a class="headerlink" href="#274-network-waiter" title="Permanent link">¶</a></h2>
+<p>Не только incoming packet.</p>
+<p>Возможные события:</p>
+<div class="highlight"><pre><span></span><code>fd readable/writable
+connection closed
+deadline expired
+runtime cancellation-related path
+</code></pre></div>
+<p>После этого:</p>
+<div class="highlight"><pre><span></span><code>WAITING → RUNNABLE
+</code></pre></div>
+<p>а operation продолжает execution и возвращает соответствующий результат/error.</p>
+<hr/>
+<h2 id="275-timeout-sleeping-thread">27.5. Почему timeout не создаёт отдельный sleeping thread<a class="headerlink" href="#275-timeout-sleeping-thread" title="Permanent link">¶</a></h2>
+<p>Deadline интегрирован с runtime timer/poll machinery.</p>
+<p>Поэтому 100 000 network deadlines не означают:</p>
+<div class="highlight"><pre><span></span><code>100 000 OS threads sleeping with timers
+</code></pre></div>
+<p>Это ещё один пример multiplexing runtime state поверх ограниченных kernel resources.</p>
+<hr/>
+<h2 id="276-blocking-syscall">27.6. Blocking syscall принципиально другой<a class="headerlink" href="#276-blocking-syscall" title="Permanent link">¶</a></h2>
+<p>Не всякая I/O operation может быть представлена pollable readiness wait.</p>
+<p>Если thread реально вошёл в blocking syscall:</p>
+<div class="highlight"><pre><span></span><code>M blocked by kernel
+</code></pre></div>
+<p>он физически не может выполнять другую G.</p>
+<p>Но P можно освободить/retake и передать другому M.</p>
+<div class="highlight"><pre><span></span><code>G1/M1/P0
+↓
+syscall
+↓
+M1 blocked
+↓
+P0 → M2
+↓
+G2 runs
+</code></pre></div>
+<hr/>
+<h2 id="277-os-thread-count-gomaxprocs">27.7. Почему OS thread count может быть больше GOMAXPROCS<a class="headerlink" href="#277-os-thread-count-gomaxprocs" title="Permanent link">¶</a></h2>
+<p>Потому что часть M может одновременно:</p>
+<ul>
+<li>находиться в syscall;</li>
+<li>выполнять cgo;</li>
+<li>быть в runtime transitions;</li>
+<li>быть parked/idle.</li>
+</ul>
+<p><code>GOMAXPROCS</code> ограничивает число P, а не lifetime всех OS threads runtime.</p>
+<hr/>
+<h2 id="278-cgo-foreign-code">27.8. cgo и foreign code<a class="headerlink" href="#278-cgo-foreign-code" title="Permanent link">¶</a></h2>
+<p>В foreign function runtime не контролирует внутренний blocking так же хорошо, как собственный netpoll path.</p>
+<p>Поэтому много long-running cgo calls может привести к:</p>
+<div class="highlight"><pre><span></span><code>more blocked M
+↓
+more M needed for runnable Go work
+↓
+thread count grows
+</code></pre></div>
+<p>Это важный production diagnostic.</p>
+<hr/>
+<h2 id="279-preemption">27.9. Preemption: зачем она вообще нужна<a class="headerlink" href="#279-preemption" title="Permanent link">¶</a></h2>
+<p>Parking работает только если G сама доходит до operation, которая может её остановить.</p>
+<p>CPU-bound code:</p>
+<div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">compute</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>может долго не ждать ничего.</p>
+<p>Без preemption такая G потенциально удерживает P слишком долго.</p>
+<hr/>
+<h2 id="2710-cooperative-asynchronous-preemption">27.10. Cooperative и asynchronous preemption<a class="headerlink" href="#2710-cooperative-asynchronous-preemption" title="Permanent link">¶</a></h2>
+<p>Исторически runtime сильнее зависел от cooperative safe points:</p>
+<div class="highlight"><pre><span></span><code>function calls
+stack checks
+runtime calls
+</code></pre></div>
+<p>Современный Go умеет инициировать asynchronous preemption на поддерживаемых platform paths.</p>
+<p>Но это не означает:</p>
+<div class="highlight"><pre><span></span><code>остановить G в любой случайной machine instruction без ограничений
+</code></pre></div>
+<p>Runtime всё равно должен иметь безопасный state для stack/GC.</p>
+<hr/>
+<h2 id="2711-preemption-gc">27.11. Почему preemption нужна GC<a class="headerlink" href="#2711-preemption-gc" title="Permanent link">¶</a></h2>
+<p>GC должен получать progress и иметь возможность корректно анализировать goroutine roots/stacks.</p>
+<p>Если G бесконечно монополизирует execution:</p>
+<div class="highlight"><pre><span></span><code>scheduler progress плохой
++
+GC coordination плохая
+</code></pre></div>
+<p>Поэтому async preemption улучшает не только fairness application G, но и runtime progress.</p>
+<hr/>
+<h2 id="2712-preemption-cancellation">27.12. Preemption не является cancellation<a class="headerlink" href="#2712-preemption-cancellation" title="Permanent link">¶</a></h2>
+<p>Context отменился:</p>
+<div class="highlight"><pre><span></span><code>ctx.Done()
+</code></pre></div>
+<p>Runtime scheduler не обязан автоматически завершить вашу CPU function.</p>
+<p>Preemption означает:</p>
+<div class="highlight"><pre><span></span><code>дать CPU другим G
+</code></pre></div>
+<p>Cancellation означает:</p>
+<div class="highlight"><pre><span></span><code>application должна перестать делать ненужную работу
+</code></pre></div>
+<p>Это разные задачи.</p>
+<hr/>
+<h2 id="2713-preemption-overload">27.13. Preemption не решает overload<a class="headerlink" href="#2713-preemption-overload" title="Permanent link">¶</a></h2>
+<p>Пусть CPU может обработать:</p>
+<div class="highlight"><pre><span></span><code>1 000 requests/s
+</code></pre></div>
+<p>а приходит:</p>
+<div class="highlight"><pre><span></span><code>10 000 requests/s
+</code></pre></div>
+<p>Preemption может честно делить CPU между requests.</p>
+<p>Но суммарная capacity всё равно 1 000 requests/s.</p>
+<p>Получаем:</p>
+<div class="highlight"><pre><span></span><code>runnable backlog ↑
+latency ↑
+timeouts ↑
+</code></pre></div>
+<p>Нужен admission control.</p>
+<h1 id="28-stack-growth-goroutine">28. Stack growth и реальная цена goroutine — подробнее<a class="headerlink" href="#28-stack-growth-goroutine" title="Permanent link">¶</a></h1>
+<h2 id="281-stack-call-frames-">28.1. Stack растёт из-за call frames, а не из-за времени жизни<a class="headerlink" href="#281-stack-call-frames-" title="Permanent link">¶</a></h2>
+<p>Пусть goroutine живёт час, но call depth небольшой.</p>
+<p>Её stack может оставаться маленьким.</p>
+<p>Другая goroutine живёт 10 ms, но уходит в глубокую recursion и получает большой stack.</p>
+<p>То есть stack pressure определяется прежде всего:</p>
+<ul>
+<li>глубиной вызовов;</li>
+<li>размером frames;</li>
+<li>compiler decisions;</li>
+<li>редкими deep paths.</li>
+</ul>
+<p>Модель:</p>
+<div class="highlight"><pre><span></span><code>handler
+↓
+service
+↓
+validation
+↓
+parser
+↓
+recursive traversal
+↓
+ещё frames
+</code></pre></div>
+<hr/>
+<h2 id="282-stack-frame">28.2. Что находится в stack frame<a class="headerlink" href="#282-stack-frame" title="Permanent link">¶</a></h2>
+<p>Упрощённо frame может содержать:</p>
+<ul>
+<li>local variables;</li>
+<li>spill slots;</li>
+<li>return state;</li>
+<li>arguments/results согласно calling convention;</li>
+<li>temporary compiler values.</li>
+</ul>
+<p>Поэтому два вызова одинаковой глубины могут требовать разный stack footprint.</p>
+<hr/>
+<h2 id="283-stack-goroutine-model">28.3. Почему фиксированный большой stack неудобен для goroutine model<a class="headerlink" href="#283-stack-goroutine-model" title="Permanent link">¶</a></h2>
+<p>Если каждому execution context сразу дать большой stack:</p>
+<div class="highlight"><pre><span></span><code>1 MiB × 100 000 G
+</code></pre></div>
+<p>получаем огромный memory footprint.</p>
+<p>Большинство G в backend большую часть времени не используют такую глубину.</p>
+<p>Go предпочитает:</p>
+<div class="highlight"><pre><span></span><code>small initial stack
+↓
+grow when needed
+</code></pre></div>
+<p>Это переносит цену из постоянного reservation в редкие growth operations.</p>
+<hr/>
+<h2 id="284-stack-check">28.4. Stack check<a class="headerlink" href="#284-stack-check" title="Permanent link">¶</a></h2>
+<p>Compiler добавляет проверку в начало большинства функций.</p>
+<p>Ментальная модель:</p>
+<div class="highlight"><pre><span></span><code>function entry
+↓
+хватит ли stack для frame?
+├── да → continue
+└── нет → morestack
+</code></pre></div>
+<p>Runtime использует guard, чтобы не ждать фактического выхода SP за границу memory.</p>
+<p>Нужно заранее оставить достаточно пространства для самого growth protocol.</p>
+<hr/>
+<h2 id="285-growth-stack">28.5. Почему growth нельзя делать на перемещаемом stack<a class="headerlink" href="#285-growth-stack" title="Permanent link">¶</a></h2>
+<p>Runtime собирается:</p>
+<div class="highlight"><pre><span></span><code>allocate new stack
+copy old active stack
+update pointers
+replace bounds
+</code></pre></div>
+<p>Если machinery выполняется на старом stack:</p>
+<div class="highlight"><pre><span></span><code>мы пытаемся переносить память,
+на которой сами сейчас стоим
+</code></pre></div>
+<p>Поэтому execution переключается на system stack <code>g0</code> текущего M.</p>
+<div class="highlight"><pre><span></span><code>M
+├── current G stack ← объект relocation
+└── g0 stack        ← runtime выполняет relocation
+</code></pre></div>
+<hr/>
+<h2 id="286">28.6. Геометрический рост<a class="headerlink" href="#286" title="Permanent link">¶</a></h2>
+<p>Stack увеличивается не на несколько bytes.</p>
+<p>Используется multiplicative growth idea:</p>
+<div class="highlight"><pre><span></span><code>2
+4
+8
+16
+32
+...
+</code></pre></div>
+<p>Конкретные размеры/heuristics — implementation detail.</p>
+<p>Почему геометрически:</p>
+<div class="highlight"><pre><span></span><code>много маленьких growth
+→ много copies
+</code></pre></div>
+<p>против:</p>
+<div class="highlight"><pre><span></span><code>редкие более крупные growth
+→ amortized cost
+</code></pre></div>
+<hr/>
+<h2 id="287-memcpy">28.7. Почему <code>memcpy</code> недостаточно<a class="headerlink" href="#287-memcpy" title="Permanent link">¶</a></h2>
+<p>Stack содержит managed pointers.</p>
+<p>Пример:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">f</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">    </span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">x</span>
+<span class="w">    </span><span class="nx">use</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Если <code>x</code> физически находится в stack:</p>
+<div class="highlight"><pre><span></span><code>old stack: 0x100000...
+new stack: 0x500000...
+</code></pre></div>
+<p>после простого byte copy <code>p</code> может всё ещё содержать старый numeric address.</p>
+<p>Runtime должен исправить managed references, которые указывают внутрь перемещённого stack.</p>
+<hr/>
+<h2 id="288-stack-maps">28.8. Stack maps<a class="headerlink" href="#288-stack-maps" title="Permanent link">¶</a></h2>
+<p>Откуда runtime знает, что конкретное machine word является pointer?</p>
+<p>Не по внешнему виду числа.</p>
+<p>Compiler генерирует precise pointer metadata.</p>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>frame layout
+├── slot 0: scalar
+├── slot 1: pointer
+├── slot 2: scalar
+└── slot 3: pointer
+</code></pre></div>
+<p>Эти данные нужны сразу нескольким механизмам:</p>
+<div class="highlight"><pre><span></span><code>GC
++
+stack copying
+</code></pre></div>
+<p>Это хороший пример тесной связки compiler и runtime.</p>
+<hr/>
+<h2 id="289-unsafeuintptr">28.9. Почему <code>unsafe</code>/<code>uintptr</code> требуют осторожности<a class="headerlink" href="#289-unsafeuintptr" title="Permanent link">¶</a></h2>
+<p>Managed pointer известен runtime как pointer.</p>
+<p><code>uintptr</code> — integer representation адреса с особыми правилами.</p>
+<p>Если programmer превращает pointer в integer и хранит его произвольно, runtime не обязан рассматривать это число как relocatable managed pointer.</p>
+<p>Отсюда строгие правила вокруг <code>unsafe.Pointer</code> и <code>uintptr</code>.</p>
+<p>Именно movable stack делает такие правила особенно понятными.</p>
+<hr/>
+<h2 id="2810-syscall-cgo-relocation">28.10. Почему syscall и cgo усложняют relocation<a class="headerlink" href="#2810-syscall-cgo-relocation" title="Permanent link">¶</a></h2>
+<p>Если stack address передан наружу:</p>
+<div class="highlight"><pre><span></span><code>Go stack pointer
+↓
+kernel/C code
+</code></pre></div>
+<p>runtime не может свободно переместить stack, пока внешняя сторона потенциально использует старый address.</p>
+<p>Поэтому stack copying разрешён только в runtime-safe states.</p>
+<hr/>
+<h2 id="2811-sudogelem-stack-pointer">28.11. <code>sudog.elem</code> и stack pointer<a class="headerlink" href="#2811-sudogelem-stack-pointer" title="Permanent link">¶</a></h2>
+<p>Blocked channel operation может иметь waiter metadata, указывающую на element location в stack G.</p>
+<div class="highlight"><pre><span></span><code>sudog.elem
+↓
+G stack
+</code></pre></div>
+<p>Если stack перемещается, runtime должен учесть этот reference.</p>
+<p>Это показывает, почему stack growth нельзя рассматривать изолированно от synchronization runtime.</p>
+<hr/>
+<h2 id="2812-stack-shrink">28.12. Stack shrink<a class="headerlink" href="#2812-stack-shrink" title="Permanent link">¶</a></h2>
+<p>Пусть G однажды выросла:</p>
+<div class="highlight"><pre><span></span><code>8 KiB → 256 KiB
+</code></pre></div>
+<p>затем deep call chain закончился, и используется только малая часть.</p>
+<p>Если G долгоживущая, хранить peak forever дорого.</p>
+<p>Runtime может shrink stack в безопасный момент.</p>
+<p>Разница:</p>
+<div class="highlight"><pre><span></span><code>grow — срочно, иначе function не продолжит
+shrink — optimization, можно выбрать удобный момент
+</code></pre></div>
+<hr/>
+<h2 id="2813-source-local-stack-allocation">28.13. Source local не означает stack allocation<a class="headerlink" href="#2813-source-local-stack-allocation" title="Permanent link">¶</a></h2>
+<p>Пример:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">create</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="nx">User</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">u</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">User</span><span class="p">{}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">u</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>u</code> написан как local variable, но его lifetime переживает function return.</p>
+<p>Compiler решает placement через escape analysis.</p>
+<p>Поэтому нельзя оценивать stack usage только по синтаксису исходника.</p>
+<hr/>
+<h2 id="2814-stack-heap">28.14. «Stack быстрее heap» — слишком слабая модель<a class="headerlink" href="#2814-stack-heap" title="Permanent link">¶</a></h2>
+<p>Stack allocation обычно очень дешёвая.</p>
+<p>Но production cost включает:</p>
+<div class="highlight"><pre><span></span><code>stack growth
+copying
+pointer adjustment
+GC root scanning
+cache behaviour
+heap escapes
+object lifetime
+</code></pre></div>
+<p>Правильный вопрос:</p>
+<blockquote>
+<p>Каков lifetime и ownership данных и сколько runtime work создаёт выбранная модель?</p>
+</blockquote>
+<hr/>
+<h2 id="2815-stack-capacity-planning">28.15. Средний stack важнее минимального при capacity planning<a class="headerlink" href="#2815-stack-capacity-planning" title="Permanent link">¶</a></h2>
+<p>Представим:</p>
+<div class="highlight"><pre><span></span><code>100 000 G
+</code></pre></div>
+<p>Если студент считает:</p>
+<div class="highlight"><pre><span></span><code>100 000 × 2 KiB
+</code></pre></div>
+<p>он получает лишь грубую нижнюю историческую оценку.</p>
+<p>Если реальный средний stack стал:</p>
+<div class="highlight"><pre><span></span><code>16 KiB
+</code></pre></div>
+<p>масштаб уже совсем другой.</p>
+<p>А ещё G удерживает heap graph.</p>
+<p>Поэтому capacity model должна опираться на measurement, а не лозунг «goroutine весит 2 KB».</p>
+<hr/>
+<h1 id="29-parking-wakeup-lost-wakeup">29. Parking, wakeup и lost wakeup — подробнее<a class="headerlink" href="#29-parking-wakeup-lost-wakeup" title="Permanent link">¶</a></h1>
+<h2 id="291">29.1. Центральный механизм дешёвого ожидания<a class="headerlink" href="#291" title="Permanent link">¶</a></h2>
+<p>Пусть G не может продолжать:</p>
+<div class="highlight"><pre><span></span><code>channel empty
+mutex busy
+network not ready
+timer not fired
+</code></pre></div>
+<p>Runtime должен сделать:</p>
+<div class="highlight"><pre><span></span><code>RUNNING
+↓
+WAITING
+</code></pre></div>
+<p>и вернуть execution resource другим G.</p>
+<p>Это и есть фундаментальная разница между:</p>
+<div class="highlight"><pre><span></span><code>логически ждать
+</code></pre></div>
+<p>и:</p>
+<div class="highlight"><pre><span></span><code>физически занимать OS thread
+</code></pre></div>
+<hr/>
+<h2 id="292-gopark">29.2. Что делает <code>gopark</code><a class="headerlink" href="#292-gopark" title="Permanent link">¶</a></h2>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>current G RUNNING
+↓
+gopark
+↓
+save wait metadata
+↓
+mcall(park_m)
+↓
+switch to g0
+↓
+RUNNING → WAITING
+↓
+dropg
+↓
+schedule next G
+</code></pre></div>
+<p>То есть <code>gopark</code> — вход в protocol parking текущей G.</p>
+<hr/>
+<h2 id="293-g0">29.3. Почему нужен <code>g0</code><a class="headerlink" href="#293-g0" title="Permanent link">¶</a></h2>
+<p>После того как G переводится в WAITING, runtime не должен продолжать scheduler machinery на её user stack как будто это обычный user code.</p>
+<p>Поэтому transition выполняется на system stack M.</p>
+<div class="highlight"><pre><span></span><code>user G stack
+↓
+M.g0
+↓
+park_m / scheduler
+</code></pre></div>
+<hr/>
+<h2 id="294-dropg">29.4. <code>dropg</code><a class="headerlink" href="#294-dropg" title="Permanent link">¶</a></h2>
+<p>До parking:</p>
+<div class="highlight"><pre><span></span><code>M.curg → G
+G.m → M
+</code></pre></div>
+<p>После:</p>
+<div class="highlight"><pre><span></span><code>M больше не исполняет эту G
+</code></pre></div>
+<p>association снимается.</p>
+<p>Теперь M/P могут получить другую RUNNABLE G.</p>
+<hr/>
+<h2 id="295-goready">29.5. <code>goready</code><a class="headerlink" href="#295-goready" title="Permanent link">¶</a></h2>
+<p>Когда событие произошло:</p>
+<div class="highlight"><pre><span></span><code>WAITING
+↓
+goready/ready
+↓
+RUNNABLE
+</code></pre></div>
+<p>Ключевой момент:</p>
+<blockquote>
+<p>Ready — это разрешение выполняться, а не мгновенное выполнение.</p>
+</blockquote>
+<p>После ready G всё ещё конкурирует за scheduler resources.</p>
+<hr/>
+<h2 id="296-wakeup-latency">29.6. Wakeup latency<a class="headerlink" href="#296-wakeup-latency" title="Permanent link">¶</a></h2>
+<p>Событие произошло в момент <code>t0</code>.</p>
+<p>G реально продолжилась в <code>t1</code>.</p>
+<p>Между ними:</p>
+<div class="highlight"><pre><span></span><code>ready bookkeeping
+run queue
+scheduler selection
+M availability
+OS scheduling M
+</code></pre></div>
+<p>Поэтому:</p>
+<div class="highlight"><pre><span></span><code>resource became available
+</code></pre></div>
+<p>не равно:</p>
+<div class="highlight"><pre><span></span><code>waiter immediately runs
+</code></pre></div>
+<p>Это критично для понимания Mutex barging.</p>
+<hr/>
+<h2 id="297-gosched-parking">29.7. <code>Gosched</code> и parking<a class="headerlink" href="#297-gosched-parking" title="Permanent link">¶</a></h2>
+<p><code>Gosched()</code> означает примерно:</p>
+<div class="highlight"><pre><span></span><code>я всё ещё могу продолжать
+но добровольно отдам execution другим
+</code></pre></div>
+<p>State:</p>
+<div class="highlight"><pre><span></span><code>RUNNING → RUNNABLE
+</code></pre></div>
+<p>Parking:</p>
+<div class="highlight"><pre><span></span><code>я не могу продолжать без события
+</code></pre></div>
+<p>State:</p>
+<div class="highlight"><pre><span></span><code>RUNNING → WAITING
+</code></pre></div>
+<p>Разница фундаментальная.</p>
+<hr/>
+<h2 id="298-preemption-parking">29.8. Preemption и parking<a class="headerlink" href="#298-preemption-parking" title="Permanent link">¶</a></h2>
+<p>Preemption:</p>
+<div class="highlight"><pre><span></span><code>G могла продолжать
+но scheduler временно отнял execution
+</code></pre></div>
+<p>обычно снова ведёт к runnable scheduling state.</p>
+<p>Parking:</p>
+<div class="highlight"><pre><span></span><code>G логически не готова продолжать
+</code></pre></div>
+<p>и должна ждать external/runtime event.</p>
+<hr/>
+<h2 id="299-lost-wakeup">29.9. Lost wakeup<a class="headerlink" href="#299-lost-wakeup" title="Permanent link">¶</a></h2>
+<p>Наивный protocol:</p>
+<div class="highlight"><pre><span></span><code>G1                    G2
+
+check condition
+false
+unlock
+
+                      event happens
+                      wake G1
+
+park
+</code></pre></div>
+<p>Wake произошёл, когда G1 ещё не зарегистрирована как waiter.</p>
+<p>Затем G1 park'ится.</p>
+<p>Нового event может не быть.</p>
+<p>Получаем permanent sleep.</p>
+<hr/>
+<h2 id="2910-waiter-sleep">29.10. Почему waiter должен быть зарегистрирован до sleep<a class="headerlink" href="#2910-waiter-sleep" title="Permanent link">¶</a></h2>
+<p>Правильная идея:</p>
+<div class="highlight"><pre><span></span><code>lock
+↓
+check condition
+↓
+register waiter
+↓
+prepare parking
+↓
+release lock coordinated with park
+↓
+WAITING
+</code></pre></div>
+<p>Теперь producer/event side либо увидит waiter, либо waiter успеет заметить изменившееся condition через recheck protocol.</p>
+<hr/>
+<h2 id="2911-goparkunlock">29.11. <code>goparkunlock</code><a class="headerlink" href="#2911-goparkunlock" title="Permanent link">¶</a></h2>
+<p>Runtime часто использует variant parking, связанный с release internal lock.</p>
+<p>Смысл:</p>
+<div class="highlight"><pre><span></span><code>не делать отдельно:
+unlock
+...
+park
+</code></pre></div>
+<p>с опасным race window.</p>
+<p>Вместо этого unlock встроен в parking protocol.</p>
+<hr/>
+<h2 id="2912-wait-reason">29.12. Wait reason<a class="headerlink" href="#2912-wait-reason" title="Permanent link">¶</a></h2>
+<p>WAITING G имеет reason, который помогает diagnostics.</p>
+<p>Можно увидеть:</p>
+<div class="highlight"><pre><span></span><code>[chan receive]
+[chan send]
+[semacquire]
+[select]
+[IO wait]
+[sleep]
+</code></pre></div>
+<p>Это позволяет быстро классифицировать накопившиеся goroutines.</p>
+<p>Но один reason недостаточен: нужен stack trace и понимание lifecycle.</p>
+<hr/>
+<h2 id="2913-waiting-g">29.13. Почему много WAITING G может быть нормой<a class="headerlink" href="#2913-waiting-g" title="Permanent link">¶</a></h2>
+<p>Network server может иметь тысячи idle keep-alive connections.</p>
+<p>Если G park'ятся через netpoller:</p>
+<div class="highlight"><pre><span></span><code>CPU почти не используется
+</code></pre></div>
+<p>и число G может быть большим, но стабильным.</p>
+<p>Проблема начинается, когда:</p>
+<div class="highlight"><pre><span></span><code>G count растёт без возврата к baseline
+</code></pre></div>
+<p>или wait reason указывает на condition, которое никогда не наступит.</p>
+<hr/>
+<h1 id="30-channels-sudog-wait-queues">30. Channels, <code>sudog</code> и wait queues — подробнее<a class="headerlink" href="#30-channels-sudog-wait-queues" title="Permanent link">¶</a></h1>
+<h2 id="301-channel-data-structure-synchronization-primitive">30.1. Channel — data structure + synchronization primitive<a class="headerlink" href="#301-channel-data-structure-synchronization-primitive" title="Permanent link">¶</a></h2>
+<p>Плохое упрощение:</p>
+<blockquote>
+<p>Channel — очередь.</p>
+</blockquote>
+<p>Buffered channel действительно имеет buffer.</p>
+<p>Но channel также содержит synchronization state:</p>
+<div class="highlight"><pre><span></span><code>buffer
+send wait queue
+receive wait queue
+closed state
+internal lock
+</code></pre></div>
+<p>Unbuffered channel вообще не имеет data queue capacity.</p>
+<hr/>
+<h2 id="302-hchan">30.2. Ментальная модель <code>hchan</code><a class="headerlink" href="#302-hchan" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>hchan
+├── qcount      сколько элементов сейчас в buffer
+├── dataqsiz    capacity
+├── buf         storage
+├── sendx       позиция записи
+├── recvx       позиция чтения
+├── sendq       blocked senders
+├── recvq       blocked receivers
+├── closed
+└── lock
+</code></pre></div>
+<p>Конкретный layout — implementation detail.</p>
+<p>Архитектурная идея — нет.</p>
+<hr/>
+<h2 id="303-sudog">30.3. Что такое <code>sudog</code><a class="headerlink" href="#303-sudog" title="Permanent link">¶</a></h2>
+<p><code>sudog</code> — waiter object, связывающий конкретную G с конкретным synchronization wait.</p>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>sudog
+├── g → waiting goroutine
+├── elem → data/address для operation
+├── next/prev
+└── wait metadata
+</code></pre></div>
+<p>Почему нельзя просто хранить <code>*g</code>?</p>
+<p>Потому что relation many-to-many.</p>
+<hr/>
+<h2 id="304-many-to-many">30.4. Many-to-many<a class="headerlink" href="#304-many-to-many" title="Permanent link">¶</a></h2>
+<p>Один channel может иметь много waiters:</p>
+<div class="highlight"><pre><span></span><code>ch.recvq
+├── sudog(G1)
+├── sudog(G2)
+└── sudog(G3)
+</code></pre></div>
+<p>Одна G при <code>select</code> может быть представлена сразу несколькими sudog:</p>
+<div class="highlight"><pre><span></span><code>G42
+├── sg1 → ch1.recvq
+├── sg2 → ch2.sendq
+└── sg3 → ch3.recvq
+</code></pre></div>
+<p>Это и объясняет отдельную structure.</p>
+<hr/>
+<h2 id="305-sudog-pool">30.5. Sudog pool<a class="headerlink" href="#305-sudog-pool" title="Permanent link">¶</a></h2>
+<p>Blocking synchronization очень частая операция.</p>
+<p>Если каждый waiter создавать обычной heap allocation:</p>
+<div class="highlight"><pre><span></span><code>contention
+↓
+heap allocations ↑
+↓
+GC pressure ↑
+</code></pre></div>
+<p>Runtime переиспользует <code>sudog</code> через caches/pools.</p>
+<p>Модель:</p>
+<div class="highlight"><pre><span></span><code>acquireSudog
+↓
+use in wait queue
+↓
+releaseSudog
+↓
+cache
+</code></pre></div>
+<hr/>
+<h2 id="306-unbuffered-send-receiver">30.6. Unbuffered send, receiver уже ждёт<a class="headerlink" href="#306-unbuffered-send-receiver" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nx">ch</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nx">x</span>
+</code></pre></div>
+<p>В <code>recvq</code> уже есть waiter.</p>
+<p>Runtime может:</p>
+<div class="highlight"><pre><span></span><code>dequeue receiver sudog
+↓
+transfer x
+↓
+ready receiver
+↓
+sender продолжает
+</code></pre></div>
+<p>Sender сам park'иться не обязан.</p>
+<hr/>
+<h2 id="307-unbuffered-send-receiver">30.7. Unbuffered send, receiver нет<a class="headerlink" href="#307-unbuffered-send-receiver" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>send cannot complete
+↓
+acquire sudog
+↓
+sg.g = sender
+sg.elem = value location
+↓
+sendq.enqueue
+↓
+gopark
+↓
+sender WAITING
+</code></pre></div>
+<p>Позже receiver завершит rendezvous и разбудит sender.</p>
+<hr/>
+<h2 id="308-unbuffered-channel-rendezvous">30.8. Unbuffered channel как rendezvous<a class="headerlink" href="#308-unbuffered-channel-rendezvous" title="Permanent link">¶</a></h2>
+<p>У него нет места для автономного хранения элемента.</p>
+<p>Следовательно, successful send означает, что send и receive synchronization пересеклись.</p>
+<p>Это важно для memory ordering semantics channel.</p>
+<hr/>
+<h2 id="309-buffered-send">30.9. Buffered send<a class="headerlink" href="#309-buffered-send" title="Permanent link">¶</a></h2>
+<p>Если есть место:</p>
+<div class="highlight"><pre><span></span><code>qcount &lt; dataqsiz
+↓
+copy element into buffer
+↓
+advance send index
+↓
+return
+</code></pre></div>
+<p>Никакого parking.</p>
+<p>Если buffer full:</p>
+<div class="highlight"><pre><span></span><code>blocking send
+↓
+sudog
+↓
+sendq
+↓
+park
+</code></pre></div>
+<hr/>
+<h2 id="3010-buffered-channel-throughput">30.10. Buffered channel не создаёт throughput<a class="headerlink" href="#3010-buffered-channel-throughput" title="Permanent link">¶</a></h2>
+<p>Пусть producer:</p>
+<div class="highlight"><pre><span></span><code>10 000 msg/s
+</code></pre></div>
+<p>consumer:</p>
+<div class="highlight"><pre><span></span><code>1 000 msg/s
+</code></pre></div>
+<p>Buffer 100:</p>
+<div class="highlight"><pre><span></span><code>fills quickly
+</code></pre></div>
+<p>Buffer 1 000 000:</p>
+<div class="highlight"><pre><span></span><code>fills later
+</code></pre></div>
+<p>Но mismatch остаётся.</p>
+<p>Большой buffer меняет:</p>
+<ul>
+<li>время до saturation;</li>
+<li>memory usage;</li>
+<li>queueing latency.</li>
+</ul>
+<p>Он не увеличивает consumer service rate.</p>
+<hr/>
+<h2 id="3011-non-blocking-channel-operation">30.11. Non-blocking channel operation<a class="headerlink" href="#3011-non-blocking-channel-operation" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<span class="k">case</span><span class="w"> </span><span class="nx">ch</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nx">x</span><span class="p">:</span>
+<span class="w">    </span><span class="c1">// sent</span>
+<span class="k">default</span><span class="p">:</span>
+<span class="w">    </span><span class="c1">// not ready</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Если operation сейчас невозможна:</p>
+<div class="highlight"><pre><span></span><code>текущая G не создаёт waiter
+не gopark
+идёт default
+</code></pre></div>
+<p>Но она может использовать sudog другой стороны, если opposite waiter уже существует.</p>
+<p>То есть:</p>
+<blockquote>
+<p>Non-blocking значит «не блокировать текущую G», а не «runtime вообще не касается sudog».</p>
+</blockquote>
+<hr/>
+<h2 id="3012-select">30.12. <code>select</code><a class="headerlink" href="#3012-select" title="Permanent link">¶</a></h2>
+<p>Без <code>default</code> и без ready cases:</p>
+<div class="highlight"><pre><span></span><code>one G
+↓
+multiple sudog
+↓
+register in multiple channel queues
+↓
+park
+</code></pre></div>
+<p>После события:</p>
+<div class="highlight"><pre><span></span><code>one case wins
+↓
+G ready
+↓
+losing registrations removed
+</code></pre></div>
+<p>Здесь <code>sudog</code> необходим архитектурно.</p>
+<hr/>
+<h2 id="3013-internal-channel-lock">30.13. Internal channel lock<a class="headerlink" href="#3013-internal-channel-lock" title="Permanent link">¶</a></h2>
+<p>Channel имеет internal synchronization, но G не может уснуть, оставив internal lock навечно захваченным.</p>
+<p>Нужен protocol:</p>
+<div class="highlight"><pre><span></span><code>lock channel
+↓
+check buffer/waiters/closed
+↓
+register sudog if needed
+↓
+park with coordinated unlock
+</code></pre></div>
+<p>Иначе opposite side не сможет прийти и изменить state.</p>
+<hr/>
+<h2 id="3014-closech">30.14. <code>close(ch)</code><a class="headerlink" href="#3014-closech" title="Permanent link">¶</a></h2>
+<p>Close меняет state channel и должен обработать waiters.</p>
+<p>После close:</p>
+<ul>
+<li>receivers должны получить возможность завершить operations;</li>
+<li>buffered values сначала остаются читаемыми;</li>
+<li>после drain receive возвращает zero value и <code>ok=false</code>;</li>
+<li>send в closed channel приводит к panic.</li>
+</ul>
+<p>Close — это synchronization event, а не просто boolean assignment.</p>
+<hr/>
+<h2 id="3015-channel-lifecycle-goroutine-leak">30.15. Channel lifecycle и goroutine leak<a class="headerlink" href="#3015-channel-lifecycle-goroutine-leak" title="Permanent link">¶</a></h2>
+<p>Типичный leak:</p>
+<div class="highlight"><pre><span></span><code><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">resultCh</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nx">result</span>
+<span class="p">}()</span>
+</code></pre></div>
+<p>а consumer ушёл по timeout и больше channel не читает.</p>
+<p>Если channel unbuffered:</p>
+<div class="highlight"><pre><span></span><code>sender waits forever
+</code></pre></div>
+<p>Получаем goroutine leak.</p>
+<p>Поэтому channel design нужно связывать с cancellation/lifecycle.</p>
+<hr/>
+<h2 id="3016-channel">30.16. Когда channel естественен<a class="headerlink" href="#3016-channel" title="Permanent link">¶</a></h2>
+<p>Channel хорошо выражает:</p>
+<div class="highlight"><pre><span></span><code>ownership transfer
+event stream
+pipeline
+bounded queue
+worker coordination
+</code></pre></div>
+<p>Mutex естественнее, если нужно:</p>
+<div class="highlight"><pre><span></span><code>коротко защитить shared state
+</code></pre></div>
+<p>Механизмы пересекаются, но не являются взаимозаменяемыми лозунгами.</p>
+<h1 id="31-syncmutex-runtime-semaphore-contention">31. <code>sync.Mutex</code>, runtime semaphore и contention — подробнее<a class="headerlink" href="#31-syncmutex-runtime-semaphore-contention" title="Permanent link">¶</a></h1>
+<h2 id="311-mutex">31.1. Главная цель Mutex<a class="headerlink" href="#311-mutex" title="Permanent link">¶</a></h2>
+<p>Mutex защищает invariant shared state:</p>
+<div class="highlight"><pre><span></span><code>только один owner critical section одновременно
+</code></pre></div>
+<p>Но runtime implementation должна дополнительно решить:</p>
+<ul>
+<li>как сделать uncontended case дешёвым;</li>
+<li>что делать при кратком contention;</li>
+<li>когда park goroutine;</li>
+<li>кого wake;</li>
+<li>как не разбудить толпу;</li>
+<li>как избежать starvation.</li>
+</ul>
+<p>Поэтому внутренний Mutex значительно интереснее идеи «locked/unlocked».</p>
+<hr/>
+<h2 id="312-fast-path">31.2. Fast path<a class="headerlink" href="#312-fast-path" title="Permanent link">¶</a></h2>
+<p>Свободный mutex:</p>
+<div class="highlight"><pre><span></span><code>state = 0
+</code></pre></div>
+<p>Lock пытается сделать atomic transition:</p>
+<div class="highlight"><pre><span></span><code>0 → mutexLocked
+</code></pre></div>
+<p>Если CAS успешен:</p>
+<div class="highlight"><pre><span></span><code>Lock complete
+</code></pre></div>
+<p>Без:</p>
+<ul>
+<li>sudog;</li>
+<li>runtime semaphore;</li>
+<li>gopark;</li>
+<li>scheduler transition.</li>
+</ul>
+<p>Именно поэтому uncontended Mutex очень дешёвый.</p>
+<hr/>
+<h2 id="313-fast-path">31.3. Почему fast path должен быть минимальным<a class="headerlink" href="#313-fast-path" title="Permanent link">¶</a></h2>
+<p>В нормальной хорошо спроектированной программе многие locks большую часть времени uncontended.</p>
+<p>Если даже uncontended <code>Lock</code> требовал:</p>
+<div class="highlight"><pre><span></span><code>queue lock
+scheduler call
+allocation
+kernel primitive
+</code></pre></div>
+<p>цена synchronization была бы высокой всегда.</p>
+<p>Go выносит сложность в slow path.</p>
+<hr/>
+<h2 id="314-failed-cas-sleep">31.4. Failed CAS не означает немедленный sleep<a class="headerlink" href="#314-failed-cas-sleep" title="Permanent link">¶</a></h2>
+<p>Пусть owner скоро освободит lock.</p>
+<p>Если contender сразу park'ится:</p>
+<div class="highlight"><pre><span></span><code>enqueue
+park
+wake
+scheduler
+</code></pre></div>
+<p>стоимость может быть выше, чем очень короткий active wait.</p>
+<p>Поэтому runtime иногда spin'ится.</p>
+<hr/>
+<h2 id="315-spinning">31.5. Spinning<a class="headerlink" href="#315-spinning" title="Permanent link">¶</a></h2>
+<p>Spin означает:</p>
+<div class="highlight"><pre><span></span><code>G остаётся RUNNING
+M/P/CPU заняты
+G несколько раз проверяет возможность progress
+</code></pre></div>
+<p>Это выгодно только если ожидание действительно короткое.</p>
+<p>Цена spin:</p>
+<div class="highlight"><pre><span></span><code>CPU consumption
++
+shared cache-line pressure
+</code></pre></div>
+<p>Поэтому он bounded и heuristic-based.</p>
+<hr/>
+<h2 id="316-spin-parallelism">31.6. Почему spin бессмыслен при отсутствии parallelism<a class="headerlink" href="#316-spin-parallelism" title="Permanent link">¶</a></h2>
+<p>При <code>GOMAXPROCS=1</code> contender spin'ится на единственном P.</p>
+<p>Но owner lock может быть другой runnable G, которой как раз нужен этот P, чтобы сделать Unlock.</p>
+<p>Получаем абсурд:</p>
+<div class="highlight"><pre><span></span><code>waiter busy-spins
+↓
+owner не получает execution
+↓
+lock не освобождается
+</code></pre></div>
+<p>Runtime учитывает scheduler conditions и не spin'ится бездумно.</p>
+<hr/>
+<h2 id="317-parking-contention">31.7. Parking при тяжёлом contention<a class="headerlink" href="#317-parking-contention" title="Permanent link">¶</a></h2>
+<p>Если ожидание явно не краткое:</p>
+<div class="highlight"><pre><span></span><code>slow path
+↓
+runtime semaphore
+↓
+register waiter
+↓
+sudog
+↓
+gopark
+↓
+WAITING
+</code></pre></div>
+<p>Теперь waiter перестаёт потреблять CPU.</p>
+<p>M/P могут выполнять другую работу.</p>
+<hr/>
+<h2 id="318-mutexstate">31.8. <code>Mutex.state</code><a class="headerlink" href="#318-mutexstate" title="Permanent link">¶</a></h2>
+<p>Текущая implementation кодирует несколько components в одном <code>int32</code>:</p>
+<div class="highlight"><pre><span></span><code>31                                3 2 1 0
+┌──────────────────────────────────┬─┬─┬─┐
+│          waiter count            │S│W│L│
+└──────────────────────────────────┴─┴─┴─┘
+</code></pre></div>
+<p>Где:</p>
+<div class="highlight"><pre><span></span><code>L = locked
+W = woken coordination bit
+S = starvation mode
+</code></pre></div>
+<p>Смысл packed word:</p>
+<div class="highlight"><pre><span></span><code>несколько связанных state transitions
+↓
+один atomic CAS
+</code></pre></div>
+<hr/>
+<h2 id="319-waiter-count">31.9. Waiter count<a class="headerlink" href="#319-waiter-count" title="Permanent link">¶</a></h2>
+<p>Когда G понимает, что ей придётся ждать, protocol должен отразить waiter до фактического sleep.</p>
+<p>Почему:</p>
+<div class="highlight"><pre><span></span><code>Unlock должен увидеть,
+что кого-то нужно wake
+</code></pre></div>
+<p>Если сначала park, потом пытаться register waiter, wakeup можно потерять.</p>
+<hr/>
+<h2 id="3110-mutexwoken">31.10. <code>mutexWoken</code><a class="headerlink" href="#3110-mutexwoken" title="Permanent link">¶</a></h2>
+<p>Пусть несколько G sleeping.</p>
+<p>Unlock будит одного waiter.</p>
+<p>Без coordination другой concurrent path может решить:</p>
+<div class="highlight"><pre><span></span><code>waiters есть
+→ wake ещё одного
+</code></pre></div>
+<p>и вызвать thundering herd.</p>
+<p><code>mutexWoken</code> означает примерно:</p>
+<blockquote>
+<p>Уже существует активированный contender; лишний wake сейчас не нужен.</p>
+</blockquote>
+<p>Это не ownership bit.</p>
+<hr/>
+<h2 id="3111-thundering-herd">31.11. Thundering herd<a class="headerlink" href="#3111-thundering-herd" title="Permanent link">¶</a></h2>
+<p>Наивный Unlock:</p>
+<div class="highlight"><pre><span></span><code>wake all waiters
+</code></pre></div>
+<p>Если 1000 G waiting:</p>
+<div class="highlight"><pre><span></span><code>1000 WAITING → RUNNABLE
+↓
+1000 scheduler entries
+↓
+1000 contenders на один lock
+↓
+1 winner
+999 losers
+</code></pre></div>
+<p>Получаем огромную бессмысленную работу.</p>
+<p>Правильная стратегия старается активировать ограниченное число contenders.</p>
+<hr/>
+<h2 id="3112-normal-mode-barging">31.12. Normal mode и barging<a class="headerlink" href="#3112-normal-mode-barging" title="Permanent link">¶</a></h2>
+<p>В normal mode wake waiter не означает direct ownership.</p>
+<p>Timeline:</p>
+<div class="highlight"><pre><span></span><code>G1 owns lock
+G2 WAITING
+
+G1 Unlock
+↓
+G2 RUNNABLE
+
+G3 already RUNNING
+↓
+G3 Lock
+↓
+G3 wins CAS
+
+G2 later RUNNING
+↓
+lock busy again
+</code></pre></div>
+<p>G3 barged ahead of older waiter.</p>
+<p>Почему это допускается:</p>
+<div class="highlight"><pre><span></span><code>G3 уже на CPU
+↓
+дать ей lock может быть дешевле,
+чем ждать schedule G2
+</code></pre></div>
+<p>Это throughput optimization.</p>
+<hr/>
+<h2 id="3113-barging">31.13. Цена barging<a class="headerlink" href="#3113-barging" title="Permanent link">¶</a></h2>
+<p>Если поток newcomers непрерывен:</p>
+<div class="highlight"><pre><span></span><code>старый waiter wakes
+↓
+loses
+↓
+sleeps
+↓
+wakes
+↓
+loses
+</code></pre></div>
+<p>Tail latency отдельной G может стать очень плохой.</p>
+<p>Тогда throughput policy начинает нарушать fairness.</p>
+<hr/>
+<h2 id="3114-starvation-mode">31.14. Starvation mode<a class="headerlink" href="#3114-starvation-mode" title="Permanent link">¶</a></h2>
+<p>После достаточно долгого wait runtime может переключить Mutex в starvation protocol.</p>
+<p>Идея:</p>
+<div class="highlight"><pre><span></span><code>старый waiter должен получить progress
+</code></pre></div>
+<p>В этом режиме newcomers не должны steal ownership так же свободно.</p>
+<p>Unlock делает более прямой handoff waiter.</p>
+<p>Цена:</p>
+<div class="highlight"><pre><span></span><code>fairness ↑
+throughput может ↓
+</code></pre></div>
+<p>Конкретный временной threshold текущей implementation — detail, а не public guarantee.</p>
+<hr/>
+<h2 id="3115-starvation-mode">31.15. Почему starvation mode не включён всегда<a class="headerlink" href="#3115-starvation-mode" title="Permanent link">¶</a></h2>
+<p>Если всегда делать строгий FIFO/direct handoff:</p>
+<div class="highlight"><pre><span></span><code>Unlock
+↓
+wake old waiter
+↓
+ждать его scheduling
+</code></pre></div>
+<p>можно терять throughput на коротких critical sections.</p>
+<p>Normal mode оптимизирован под common fast contention.</p>
+<p>Starvation mode — механизм восстановления fairness при плохом сценарии.</p>
+<hr/>
+<h2 id="3116-critical-section-io">31.16. Critical section и I/O<a class="headerlink" href="#3116-critical-section-io" title="Permanent link">¶</a></h2>
+<p>Опасный код:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">mu</span><span class="p">.</span><span class="nx">Lock</span><span class="p">()</span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">mu</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+
+<span class="nx">state</span><span class="p">.</span><span class="nx">Value</span><span class="o">++</span>
+<span class="nx">resp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Do</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span>
+</code></pre></div>
+<p>Если внешний request идёт 3 секунды:</p>
+<div class="highlight"><pre><span></span><code>lock held 3 seconds
+</code></pre></div>
+<p>Все остальные users shared state стоят в очереди.</p>
+<p>Возможный результат:</p>
+<div class="highlight"><pre><span></span><code>CPU low
+throughput low
+hundreds G WAITING [semacquire]
+</code></pre></div>
+<p>Симптом выглядит не как CPU overload, но сервис практически сериализован.</p>
+<hr/>
+<h2 id="3117-runtime-semaphore">31.17. Runtime semaphore<a class="headerlink" href="#3117-runtime-semaphore" title="Permanent link">¶</a></h2>
+<p>Поле <code>sema</code> у Mutex используется внутренней runtime machinery для sleep/wakeup.</p>
+<p>Важно разделять:</p>
+<div class="highlight"><pre><span></span><code>Mutex.state
+→ logical ownership/fairness protocol
+
+runtime semaphore
+→ waiter parking/wakeup machinery
+</code></pre></div>
+<p>Semaphore не является самой логикой Mutex ownership.</p>
+<hr/>
+<h2 id="3118-kernel-semaphore">31.18. Почему это не просто kernel semaphore<a class="headerlink" href="#3118-kernel-semaphore" title="Permanent link">¶</a></h2>
+<p>Если каждый contended lock немедленно делал отдельный kernel synchronization call, runtime терял бы часть преимуществ user-space scheduling.</p>
+<p>Go runtime организует waiters как G/sudog и park'ит goroutine.</p>
+<p>Kernel thread при этом часто остаётся доступен Go scheduler.</p>
+<hr/>
+<h2 id="3119-semaroot">31.19. <code>semaRoot</code><a class="headerlink" href="#3119-semaroot" title="Permanent link">¶</a></h2>
+<p>Mutex не содержит полноценную queue object.</p>
+<p>Это держит Mutex маленьким.</p>
+<p>Runtime имеет shared semaphore wait structures, выбираемые по адресу semaphore.</p>
+<p>Mental model:</p>
+<div class="highlight"><pre><span></span><code>&amp;m.sema
+↓
+semaphore table/hash mapping
+↓
+semaRoot
+↓
+waiter structures
+↓
+sudog
+↓
+G
+</code></pre></div>
+<p>Конкретная структура таблицы — implementation detail.</p>
+<hr/>
+<h2 id="3120-recheck-lost-wakeup">31.20. Recheck против lost wakeup<a class="headerlink" href="#3120-recheck-lost-wakeup" title="Permanent link">¶</a></h2>
+<p>Acquire slow path должен учитывать race:</p>
+<div class="highlight"><pre><span></span><code>G1 checks resource unavailable
+↓
+G2 releases resource
+↓
+G1 decides to sleep
+</code></pre></div>
+<p>Если G1 не перепроверит состояние после регистрации waiter, release может потеряться.</p>
+<p>Поэтому semaphore protocol имеет waiter accounting + recheck.</p>
+<p>Это тот же общий invariant:</p>
+<blockquote>
+<p>Event и registration waiter должны быть согласованы так, чтобы wakeup нельзя было потерять.</p>
+</blockquote>
+<hr/>
+<h2 id="3121-low-cpu-contention">31.21. Low CPU не исключает contention<a class="headerlink" href="#3121-low-cpu-contention" title="Permanent link">¶</a></h2>
+<p>Сценарий:</p>
+<div class="highlight"><pre><span></span><code>1 G RUNNING inside lock
+999 G WAITING on lock
+</code></pre></div>
+<p>CPU может быть 10–20%.</p>
+<p>Но throughput ограничен одним critical section.</p>
+<p>Поэтому contention ищут:</p>
+<ul>
+<li>mutex profile;</li>
+<li>block profile;</li>
+<li>goroutine stacks;</li>
+<li>trace.</li>
+</ul>
+<p>Не по CPU graph alone.</p>
+<hr/>
+<h2 id="3122-mutex-profile">31.22. Mutex profile<a class="headerlink" href="#3122-mutex-profile" title="Permanent link">¶</a></h2>
+<p>Профиль помогает ответить:</p>
+<div class="highlight"><pre><span></span><code>Где приложение теряет время на lock contention?
+</code></pre></div>
+<p>Но профиль не говорит автоматически, как исправить architecture.</p>
+<p>Нужно понять:</p>
+<ul>
+<li>lock scope;</li>
+<li>protected invariant;</li>
+<li>есть ли I/O внутри;</li>
+<li>можно ли sharding;</li>
+<li>нужен ли вообще shared mutable state.</li>
+</ul>
+<hr/>
+<h1 id="32-atomics-cas-go-memory-model">32. Atomics, CAS и Go Memory Model — подробнее<a class="headerlink" href="#32-atomics-cas-go-memory-model" title="Permanent link">¶</a></h1>
+<h2 id="321-atomic">32.1. <code>atomic</code> отвечает не на один вопрос<a class="headerlink" href="#321-atomic" title="Permanent link">¶</a></h2>
+<p>Когда разработчик говорит:</p>
+<blockquote>
+<p>Сделаем поле атомарным.</p>
+</blockquote>
+<p>нужно спросить:</p>
+<div class="highlight"><pre><span></span><code>Какой invariant мы защищаем?
+</code></pre></div>
+<p>Atomicity одной variable не гарантирует correctness всей state machine.</p>
+<hr/>
+<h2 id="322-cas">32.2. CAS<a class="headerlink" href="#322-cas" title="Permanent link">¶</a></h2>
+<p>Compare-And-Swap концептуально:</p>
+<div class="highlight"><pre><span></span><code>if *addr == expected {
+    *addr = desired
+    return true
+}
+return false
+</code></pre></div>
+<p>но проверка и запись происходят атомарно относительно других atomic participants.</p>
+<hr/>
+<h2 id="323-cas-loop">32.3. CAS loop<a class="headerlink" href="#323-cas-loop" title="Permanent link">¶</a></h2>
+<p>Типичный optimistic pattern:</p>
+<div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">old</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">Load</span><span class="p">()</span>
+<span class="w">    </span><span class="nx">new</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">compute</span><span class="p">(</span><span class="nx">old</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">CompareAndSwap</span><span class="p">(</span><span class="nx">old</span><span class="p">,</span><span class="w"> </span><span class="nx">new</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">break</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Failure означает:</p>
+<div class="highlight"><pre><span></span><code>кто-то изменил state после нашего Load
+</code></pre></div>
+<p>Нужно reread и recompute.</p>
+<hr/>
+<h2 id="324-cas-packed-state-machine">32.4. CAS как основа packed state machine<a class="headerlink" href="#324-cas-packed-state-machine" title="Permanent link">¶</a></h2>
+<p>Mutex state — хороший пример.</p>
+<p>Нужно атомарно изменить несколько logical components:</p>
+<div class="highlight"><pre><span></span><code>Locked
+Woken
+Starving
+waiter count
+</code></pre></div>
+<p>Они упакованы в один word.</p>
+<p>Тогда transition:</p>
+<div class="highlight"><pre><span></span><code>old bits
+↓
+compute new bits
+↓
+CAS
+</code></pre></div>
+<p>сохраняет связность invariant.</p>
+<hr/>
+<h2 id="325-atomicity-visibility-ordering">32.5. Atomicity, visibility и ordering<a class="headerlink" href="#325-atomicity-visibility-ordering" title="Permanent link">¶</a></h2>
+<p>Это три разных вопроса.</p>
+<h3 id="atomicity">Atomicity<a class="headerlink" href="#atomicity" title="Permanent link">¶</a></h3>
+<p>Операция не наблюдается наполовину.</p>
+<h3 id="visibility">Visibility<a class="headerlink" href="#visibility" title="Permanent link">¶</a></h3>
+<p>Когда другой participant гарантированно увидит write?</p>
+<h3 id="ordering">Ordering<a class="headerlink" href="#ordering" title="Permanent link">¶</a></h3>
+<p>В каком порядке memory effects должны наблюдаться относительно synchronization event?</p>
+<p>Memory Model описывает именно эти отношения на language level.</p>
+<hr/>
+<h2 id="326">32.6. Неправильная публикация<a class="headerlink" href="#326" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">ready</span><span class="w"> </span><span class="kt">bool</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="kt">int</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">writer</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="nx">ready</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">reader</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="o">!</span><span class="nx">ready</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Интуитивное рассуждение:</p>
+<div class="highlight"><pre><span></span><code>data записан раньше ready
+</code></pre></div>
+<p>недостаточно.</p>
+<p>Здесь data race.</p>
+<p>Без synchronization program не получает необходимых visibility/ordering guarantees.</p>
+<hr/>
+<h2 id="327-channel">32.7. Публикация через channel<a class="headerlink" href="#327-channel" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="kt">int</span>
+<span class="nx">ready</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kt">chan</span><span class="w"> </span><span class="kd">struct</span><span class="p">{})</span>
+
+<span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="nb">close</span><span class="p">(</span><span class="nx">ready</span><span class="p">)</span>
+<span class="p">}()</span>
+
+<span class="o">&lt;-</span><span class="nx">ready</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+</code></pre></div>
+<p>Synchronization event связывает write и subsequent read.</p>
+<p>Mental model:</p>
+<div class="highlight"><pre><span></span><code>write data
+↓
+channel synchronization
+↓
+reader observes synchronization
+↓
+read data
+</code></pre></div>
+<hr/>
+<h2 id="328-mutex">32.8. Публикация через Mutex<a class="headerlink" href="#328-mutex" title="Permanent link">¶</a></h2>
+<p>Writer:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">mu</span><span class="p">.</span><span class="nx">Lock</span><span class="p">()</span>
+<span class="nx">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span>
+<span class="nx">mu</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+</code></pre></div>
+<p>Reader:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">mu</span><span class="p">.</span><span class="nx">Lock</span><span class="p">()</span>
+<span class="nx">v</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">data</span>
+<span class="nx">mu</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+</code></pre></div>
+<p>Mutex даёт не только mutual exclusion, но и memory ordering guarantee.</p>
+<p>Это принципиально важно.</p>
+<hr/>
+<h2 id="329-goroutine-creation-ordering">32.9. Goroutine creation и ordering<a class="headerlink" href="#329-goroutine-creation-ordering" title="Permanent link">¶</a></h2>
+<p>Создание goroutine само по себе имеет определённые memory-order semantics для действий до <code>go</code> statement относительно старта новой G.</p>
+<p>Но обратного автоматического ordering:</p>
+<div class="highlight"><pre><span></span><code>новая G что-то записала
+↓
+parent потом обязательно увидит без synchronization
+</code></pre></div>
+<p>нет.</p>
+<p>Чтобы дождаться результата, нужен synchronization mechanism.</p>
+<hr/>
+<h2 id="3210-atomic-field-composite-invariant">32.10. Atomic field не защищает composite invariant<a class="headerlink" href="#3210-atomic-field-composite-invariant" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">State</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">balance</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nx">Int64</span>
+<span class="w">    </span><span class="nx">status</span><span class="w">  </span><span class="nx">atomic</span><span class="p">.</span><span class="nx">Int32</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Допустим invariant:</p>
+<div class="highlight"><pre><span></span><code>status=CLOSED ⇒ balance=0
+</code></pre></div>
+<p>Отдельно atomic <code>balance</code> и <code>status</code> не обеспечивают atomic transition пары.</p>
+<p>Reader может увидеть промежуточную комбинацию.</p>
+<p>Если нужен composite invariant, часто проще Mutex или single packed atomic state.</p>
+<hr/>
+<h2 id="3211-public-go-atomics-ordering">32.11. Public Go atomics и ordering<a class="headerlink" href="#3211-public-go-atomics-ordering" title="Permanent link">¶</a></h2>
+<p>Программист должен рассуждать через Go Memory Model, а не через конкретные CPU instructions.</p>
+<p>Implementation может использовать разные sequences на:</p>
+<ul>
+<li>x86-64;</li>
+<li>ARM64;</li>
+<li>других architectures.</li>
+</ul>
+<p>Публичный contract остаётся Go-level.</p>
+<hr/>
+<h2 id="3212-atomic-operation">32.12. Почему atomic operation всё равно может быть дорогой<a class="headerlink" href="#3212-atomic-operation" title="Permanent link">¶</a></h2>
+<p>Пусть:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">counter</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+<p>делают десятки cores.</p>
+<p>Логически это lock-free operation.</p>
+<p>Физически все пишут одну cache line.</p>
+<p>Hardware должен постоянно согласовывать ownership.</p>
+<p>Получаем:</p>
+<div class="highlight"><pre><span></span><code>atomic
+≠
+free
+≠
+contention-free
+</code></pre></div>
+<hr/>
+<h2 id="3213-failed-cas">32.13. Failed CAS под нагрузкой<a class="headerlink" href="#3213-failed-cas" title="Permanent link">¶</a></h2>
+<p>32 contenders:</p>
+<div class="highlight"><pre><span></span><code>Load old
+↓
+compute new
+↓
+CAS
+</code></pre></div>
+<p>один winner.</p>
+<p>31 делают retry.</p>
+<p>Если contention постоянен, значительная часть CPU уходит в coordination, а не business work.</p>
+<hr/>
+<h2 id="3214-mutex-hot-cas-loop">32.14. Почему Mutex иногда лучше hot CAS loop<a class="headerlink" href="#3214-mutex-hot-cas-loop" title="Permanent link">¶</a></h2>
+<p>При тяжёлом contention Mutex может park лишних contenders.</p>
+<p>Hot lock-free CAS loop может держать все cores активными:</p>
+<div class="highlight"><pre><span></span><code>retry
+retry
+retry
+</code></pre></div>
+<p>Поэтому:</p>
+<blockquote>
+<p>Lock-free не означает автоматически быстрее под любой нагрузкой.</p>
+</blockquote>
+<p>Выбор требует benchmark конкретного workload.</p>
+<hr/>
+<h2 id="3215-data-race-business-race">32.15. Data race и business race<a class="headerlink" href="#3215-data-race-business-race" title="Permanent link">¶</a></h2>
+<p>Race detector ищет data races памяти.</p>
+<p>Но backend может иметь logical race при идеальной memory synchronization.</p>
+<p>Например два database transactions читают один balance и выполняют lost update.</p>
+<p>То есть:</p>
+<div class="highlight"><pre><span></span><code>go test -race clean
+</code></pre></div>
+<p>не доказывает correctness concurrency на уровне DB/domain.</p>
+<hr/>
+<h2 id="3216-race-detector-race">32.16. Почему race detector не доказывает отсутствие race<a class="headerlink" href="#3216-race-detector-race" title="Permanent link">¶</a></h2>
+<p>Detector dynamic.</p>
+<p>Он наблюдает выполненные paths.</p>
+<p>Если тест не создал опасное interleaving/path:</p>
+<div class="highlight"><pre><span></span><code>race exists
+но не executed
+↓
+no report
+</code></pre></div>
+<p>Поэтому нужны meaningful concurrent tests/load scenarios.</p>
+<hr/>
+<h2 id="3217-memory-model-cpu">32.17. Memory Model как запрет «угадывать CPU»<a class="headerlink" href="#3217-memory-model-cpu" title="Permanent link">¶</a></h2>
+<p>Нельзя строить correctness на фразах:</p>
+<div class="highlight"><pre><span></span><code>"на x86 так обычно видно"
+"compiler вряд ли переставит"
+"эта запись маленькая"
+</code></pre></div>
+<p>Correct Go program опирается на language synchronization guarantees.</p>
+<p>Hardware detail нужен для performance, а не для замены Memory Model.</p>
+<hr/>
+<h1 id="_12">Источники и ориентиры реализации<a class="headerlink" href="#_12" title="Permanent link">¶</a></h1>
 <p>Для деталей текущей реализации использованы и рекомендуются официальные материалы проекта Go:</p>
 <ul>
 <li><code>runtime/HACKING</code> — модель G/M/P и общие правила runtime;</li>
@@ -3226,13 +5290,13 @@ Mutex profile горячий
               </div>
 </div>
 </a>
-<a aria-label="Вперед: Лекция 2.1. Глубокие internals Go runtime, synchronization и CPU" class="md-footer__link md-footer__link--next" href="../../Additional/1%20-%20Go%20Runtime%20deep/">
+<a aria-label="Вперед: Доп. Лекция 1. Глубокие internals Go runtime, synchronization и CPU" class="md-footer__link md-footer__link--next" href="../../Additional/1%20-%20Go%20Runtime%20deep/">
 <div class="md-footer__title">
 <span class="md-footer__direction">
                 Вперед
               </span>
 <div class="md-ellipsis">
-                Лекция 2.1. Глубокие internals Go runtime, synchronization и CPU
+                Доп. Лекция 1. Глубокие internals Go runtime, synchronization и CPU
               </div>
 </div>
 <div class="md-footer__button md-icon">
