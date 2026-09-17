@@ -5,15 +5,19 @@
          <lastmod>2026-09-17</lastmod>
     </url>
     <url>
-         <loc>https://lirikonov.github.io/SSU-University/go/lectures/</loc>
-         <lastmod>2026-09-17</lastmod>
-    </url>
-    <url>
          <loc>https://lirikonov.github.io/SSU-University/go/lectures/1.%20Prod/Production%20backend/</loc>
          <lastmod>2026-09-17</lastmod>
     </url>
     <url>
-         <loc>https://lirikonov.github.io/SSU-University/go/slides/</loc>
+         <loc>https://lirikonov.github.io/SSU-University/go/lectures/2.%20Runtime%20internals/2.0-Go-runtime-internals-lecture/</loc>
+         <lastmod>2026-09-17</lastmod>
+    </url>
+    <url>
+         <loc>https://lirikonov.github.io/SSU-University/lectures/</loc>
+         <lastmod>2026-09-17</lastmod>
+    </url>
+    <url>
+         <loc>https://lirikonov.github.io/SSU-University/slides/</loc>
          <lastmod>2026-09-17</lastmod>
     </url>
 </urlset>
