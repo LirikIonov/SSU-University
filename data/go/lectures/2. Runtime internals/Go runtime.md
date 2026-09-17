@@ -1,4 +1,4 @@
-# Лекция 2.0. Go runtime internals
+# Лекция 2.0. Go runtime internals — расширенная версия
 
 ## О чём эта лекция
 
@@ -4210,8 +4210,3313 @@ Mutex profile горячий
 
 ---
 
-# Источники и ориентиры реализации
+---
 
+# 25. Расширенный разбор обязательных механизмов
+
+Ниже основной материал той же лекции раскрыт ещё на один слой глубже: не как отдельная «дополнительная» тема про CPU/MESI, а как подробное объяснение именно обязательных механизмов runtime, которые нужны для понимания поведения Go backend под нагрузкой.
+
+## 25.1. Go runtime как слой между языком и операционной системой
+
+Когда мы пишем:
+
+```go
+go handle(conn)
+```
+
+язык обещает concurrent execution новой goroutine. Но ни Linux, ни Windows, ни macOS не знают сущность «goroutine». Для операционной системы существуют процессы, threads, virtual memory, file descriptors, timers и syscalls.
+
+Поэтому между исходным кодом и OS существует Go runtime:
+
+```text
+Go source
+↓
+compiler
+↓
+native machine code
++
+Go runtime
+↓
+OS threads / syscalls / virtual memory
+↓
+CPU / kernel / hardware
+```
+
+Runtime решает задачу мультиплексирования: goroutines обычно существенно больше, чем OS threads.
+
+Представим backend:
+
+```text
+50 000 HTTP connections
+20 000 goroutines ждут network
+5 000 goroutines ждут channels/mutexes
+200 goroutines runnable
+8 CPU cores
+```
+
+ОС не должна получить 25 000 sleeping threads. Runtime умеет убрать ожидающую G из runnable work и продолжить выполнять другие G на ограниченном наборе M.
+
+В этом и находится центральная ценность модели Go:
+
+```text
+логическое ожидание операции
+≠
+обязательное физическое ожидание OS thread
+```
+
+Но эта возможность не бесплатна. Runtime должен вести scheduler state, stacks, queues, timers, poll descriptors, synchronization waiters и GC metadata.
+
+---
+
+## 25.2. `go f()` — это создание runnable computation, а не немедленный запуск
+
+Возьмём:
+
+```go
+func main() {
+    go worker()
+    doSomething()
+}
+```
+
+Плохая mental model:
+
+```text
+go worker()
+↓
+worker немедленно начинает выполняться
+```
+
+Точнее:
+
+```text
+current G выполняет go statement
+↓
+runtime подготавливает новую G
+↓
+новая G получает stack + execution context
+↓
+G становится RUNNABLE
+↓
+G помещается в scheduler queue
+↓
+когда scheduler выберет G
+↓
+RUNNABLE → RUNNING
+↓
+worker действительно начинает выполнение
+```
+
+Поэтому программа:
+
+```go
+go func() {
+    fmt.Println("worker")
+}()
+
+fmt.Println("main")
+```
+
+не имеет гарантированного порядка этих двух `Println` только из-за порядка строк.
+
+Если порядок нужен, его выражают synchronization primitives.
+
+---
+
+## 25.3. Что именно хранит `G`
+
+Не нужно превращать лекцию в чтение `runtime/runtime2.go`, но важно понимать категорию данных.
+
+`G` должна позволять runtime остановить computation и потом продолжить её с того же места.
+
+Упрощённо:
+
+```text
+G
+├── status
+├── stack bounds
+├── saved PC/SP и scheduler context
+├── pointer на M, если G сейчас RUNNING
+├── wait reason / waiting structures
+├── goroutine id/runtime bookkeeping
+└── GC/scheduler metadata
+```
+
+То есть G — это не «адрес функции».
+
+Если goroutine находится здесь:
+
+```go
+func handler() {
+    user := loadUser()
+    order := buildOrder(user)
+    result := <-responseCh
+    save(result)
+}
+```
+
+и блокируется на `<-responseCh`, runtime должен сохранить computation так, чтобы позже продолжить именно после receive, сохранив call stack и локальное состояние.
+
+Модель:
+
+```text
+RUNNING
+↓
+park
+↓
+WAITING 10 секунд
+↓
+ready
+↓
+RUNNABLE
+↓
+scheduler
+↓
+RUNNING
+↓
+продолжение после receive
+```
+
+---
+
+## 25.4. Состояния G как state machine
+
+Для прикладного понимания полезна такая модель:
+
+```text
+              ┌───────────────┐
+              │   RUNNABLE    │
+              └───────┬───────┘
+                      │ scheduler
+                      ▼
+              ┌───────────────┐
+              │    RUNNING    │
+              └─┬─────┬─────┬─┘
+                │     │     │
+          block │     │     │ syscall
+                │     │     │
+                ▼     │     ▼
+            WAITING   │   SYSCALL
+                │     │     │
+          wake  │     │     │ return
+                └──►RUNNABLE◄┘
+                      │
+                      │ finish
+                      ▼
+                    DEAD
+```
+
+Важно не просто запомнить названия, а понимать различие.
+
+### RUNNABLE
+
+G уже может выполняться, но пока не получила P/M/CPU.
+
+Это потенциальная scheduler latency.
+
+### RUNNING
+
+G прямо сейчас выполняет Go code на M, которому принадлежит P.
+
+### WAITING
+
+Продолжать computation невозможно до события:
+
+- channel;
+- mutex/semaphore;
+- timer;
+- network readiness;
+- select;
+- другие runtime waits.
+
+### SYSCALL
+
+G/M находятся в syscall path. Это отдельное состояние, потому что OS thread может быть занят kernel operation, а P runtime выгодно передать другому M.
+
+### DEAD
+
+G закончила computation и может быть переиспользована runtime.
+
+---
+
+## 25.5. RUNNABLE и WAITING — принципиально разные причины latency
+
+Это одна из самых полезных диагностических идей лекции.
+
+Пусть request отвечает 3 секунды.
+
+Вариант A:
+
+```text
+G WAITING 2.9 s on network
+RUNNABLE 0.01 s
+RUNNING 0.09 s
+```
+
+Проблема ближе к downstream/network.
+
+Вариант B:
+
+```text
+G RUNNABLE 2.5 s
+RUNNING кусками 0.5 s
+```
+
+Здесь работа готова, но CPU/scheduler capacity не хватает.
+
+Обе ситуации выглядят для пользователя одинаково:
+
+```text
+HTTP latency = 3 s
+```
+
+Но лечатся совершенно по-разному.
+
+---
+
+## 25.6. Почему goroutine дешёвая относительно OS thread
+
+OS thread обычно требует kernel-visible thread state и существенно более тяжёлую thread lifecycle machinery.
+
+Goroutine создаётся и планируется в user-space runtime.
+
+Она использует:
+
+- небольшой growable stack;
+- compact runtime descriptor;
+- Go scheduler вместо отдельного kernel scheduler entity;
+- parking без обязательного sleeping thread.
+
+Поэтому возможно:
+
+```text
+100 000 G
+```
+
+при десятках M, а не 100 000 M.
+
+Но из этого нельзя делать вывод:
+
+> Goroutine бесплатна.
+
+Цена включает:
+
+```text
+stack
++ G metadata
++ scheduler bookkeeping
++ GC scanning
++ captured/retained heap objects
++ wait structures
++ external resources
+```
+
+---
+
+## 25.7. Goroutine leak как retention problem
+
+Пример:
+
+```go
+func start(ch <-chan string) {
+    go func() {
+        buf := make([]byte, 8<<20)
+        value := <-ch
+        _ = value
+        _ = buf
+    }()
+}
+```
+
+Если никто никогда не отправит в `ch` и не закроет его:
+
+```text
+G → WAITING forever
+```
+
+Но одновременно:
+
+```text
+G stack остаётся root
+↓
+stack/reference graph остаётся reachable
+↓
+8 MiB buffer может оставаться живым
+```
+
+Поэтому leak goroutine часто означает не только несколько килобайт runtime overhead.
+
+Она может удерживать:
+
+- request body;
+- response;
+- transaction;
+- connection;
+- large buffer;
+- domain graph;
+- timers.
+
+---
+
+## 25.8. G / M / P: точная учебная модель
+
+Три сущности отвечают на три разных вопроса.
+
+```text
+G — что нужно выполнить?
+M — какой OS thread сейчас выполняет инструкции?
+P — какой runtime execution resource позволяет M выполнять Go code?
+```
+
+Упрощённо:
+
+```text
+G
+↓
+M + P
+↓
+OS scheduler
+↓
+CPU
+```
+
+Важно: ОС планирует M, а Go scheduler планирует G.
+
+Получается два scheduler слоя:
+
+```text
+Go scheduler:
+G → M/P
+
+OS scheduler:
+M → CPU
+```
+
+---
+
+## 25.9. Почему нельзя отождествлять P и CPU
+
+Удобно думать:
+
+```text
+GOMAXPROCS ≈ число P ≈ разрешённый parallelism Go code
+```
+
+Но P не является физическим core.
+
+Если:
+
+```text
+GOMAXPROCS = 8
+```
+
+runtime имеет восемь execution resources для параллельного Go code.
+
+Но ОС может физически дать процессу меньше CPU time из-за:
+
+- cgroup quota;
+- competing processes;
+- host load;
+- scheduling policy.
+
+То есть:
+
+```text
+P = runtime capacity token/state
+CPU = hardware
+M = OS-scheduled bridge между ними
+```
+
+---
+
+## 25.10. Почему P нельзя просто убрать
+
+Вообразим runtime только из:
+
+```text
+G + M
+```
+
+Тогда local scheduler state, allocator caches и execution resources сильнее привязываются к OS thread.
+
+Теперь M1 делает blocking syscall:
+
+```text
+M1 blocked in kernel
+```
+
+Если scheduler capacity также привязана к M1, мы временно теряем её.
+
+С P runtime может сделать:
+
+```text
+G1/M1/P0
+↓
+M1 enters syscall
+↓
+P0 detaches
+↓
+M2 acquires P0
+↓
+G2 executes
+```
+
+Именно это делает P самостоятельной полезной сущностью.
+
+---
+
+## 25.11. Что живёт на P
+
+Конкретные поля меняются между версиями, но архитектурная идея стабильна: часть hot runtime state выгодно держать per-P.
+
+Например:
+
+```text
+P
+├── local run queue
+├── runnext
+├── allocator caches
+├── sudog/defer caches
+├── timer/runtime bookkeeping
+└── scheduler state
+```
+
+Это уменьшает global synchronization.
+
+Вместо:
+
+```text
+64 P
+↓
+один global allocator/scheduler lock
+```
+
+много fast paths остаются локальными.
+
+---
+
+## 25.12. GOMAXPROCS — не worker pool
+
+Это одна из самых важных границ.
+
+Пусть:
+
+```text
+GOMAXPROCS = 8
+```
+
+Это не означает:
+
+```text
+не более 8 HTTP requests одновременно
+```
+
+И не означает:
+
+```text
+не более 8 DB requests одновременно
+```
+
+Тысячи G могут:
+
+```text
+немного выполнить Go code
+↓
+уйти в network WAITING
+```
+
+И одновременно иметь тысячи in-flight external operations.
+
+`GOMAXPROCS` ограничивает parallel execution Go code, а downstream concurrency нужно ограничивать отдельно.
+
+---
+
+## 25.13. CPU-bound и I/O-bound сервисы реагируют на GOMAXPROCS по-разному
+
+### CPU-bound
+
+```text
+JSON/crypto/compression/calculation
+```
+
+Здесь больше P до разумного hardware limit может дать больше parallelism.
+
+### I/O-bound
+
+```text
+HTTP dependency
+PostgreSQL
+network storage
+```
+
+Если 95% времени G ждёт внешнюю систему, ещё четыре P могут почти ничего не изменить.
+
+Поэтому tuning начинается с вопроса:
+
+> Где реально проводится время request?
+
+а не с автоматического изменения `GOMAXPROCS`.
+
+---
+
+## 25.14. Container-aware GOMAXPROCS и throttling
+
+Представим Kubernetes container:
+
+```text
+host: 64 CPU
+CPU limit: 2
+```
+
+Если runtime активно ведёт себя как на 64-way machine:
+
+```text
+много parallel CPU work
+↓
+quota быстро исчерпывается
+↓
+cgroup throttling
+↓
+process временно не получает CPU
+↓
+tail latency растёт
+```
+
+Современный Go учитывает container CPU limit при default `GOMAXPROCS` на Linux.
+
+Но это не значит, что runtime решил все capacity problems.
+
+Нужно всё равно смотреть:
+
+- CPU throttling metrics;
+- actual workload;
+- thread count;
+- runnable queue;
+- latency distribution.
+
+
+# 26. Scheduler, run queues и work stealing — подробнее
+
+## 26.1. Scheduler решает не одну задачу
+
+На первый взгляд задача простая:
+
+```text
+есть RUNNABLE G
+↓
+выбрать следующую
+```
+
+Но реальный scheduler одновременно пытается сохранить:
+
+- throughput;
+- fairness;
+- locality;
+- low latency;
+- небольшое количество активных OS threads;
+- progress GC/runtime tasks;
+- баланс между P.
+
+Эти цели конфликтуют.
+
+Например:
+
+```text
+держать G на том же P
+```
+
+полезно для cache locality.
+
+Но:
+
+```text
+если соседний P idle
+```
+
+лучше отдать ему часть work.
+
+Отсюда work stealing.
+
+---
+
+## 26.2. Почему одна global queue плохо масштабируется
+
+Представим:
+
+```text
+P0 ─┐
+P1 ─┤
+P2 ─┼──► GLOBAL RUN QUEUE
+P3 ─┤
+... │
+P63─┘
+```
+
+Каждый P постоянно:
+
+```text
+enqueue
+↓
+dequeue
+↓
+shared synchronization
+```
+
+Одна структура становится hot shared state.
+
+Поэтому Go использует distributed scheduler:
+
+```text
+P0.runq
+P1.runq
+P2.runq
+...
++
+global run queue
+```
+
+Local path дешёвый.
+
+Global structures нужны, когда нужна coordination.
+
+---
+
+## 26.3. Local run queue
+
+Ментальная модель:
+
+```text
+P0
+├── runnext → G17
+└── runq:
+    G21
+    G22
+    G23
+```
+
+Если P уже выполняет связанный workload, держать новые G локально выгодно:
+
+```text
+меньше cross-P synchronization
++
+лучше locality
+```
+
+Но local queue конечна.
+
+При overflow часть work уходит в global scheduling machinery.
+
+Конкретный размер очереди — implementation detail текущего runtime, а не public contract.
+
+---
+
+## 26.4. `runnext`
+
+`runnext` — отдельный slot G, которой дают повышенный шанс выполниться следующей на этом P.
+
+Сценарий:
+
+```text
+G1 выполняется
+↓
+G1 создаёт/разблокирует G2
+↓
+G2 → runnext
+↓
+после G1 scheduler предпочитает G2
+```
+
+Это особенно полезно для producer-consumer chain.
+
+Почему:
+
+```text
+latency меньше
+cache locality потенциально лучше
+```
+
+Но `runnext` не создаёт вечную parent-child связь между G.
+
+«Связанная goroutine» здесь — удобная causal mental model, а не постоянное поле runtime.
+
+---
+
+## 26.5. `inheritTime`
+
+G из `runnext` может продолжить текущую scheduler slice.
+
+Упрощённо:
+
+```text
+G1
+↓
+G2 via runnext
+↓
+G3 via runnext
+```
+
+могут идти в рамках одного внутреннего scheduler tick/accounting interval.
+
+Это уменьшает latency handoff.
+
+Но если бесконечно продолжать такую цепочку:
+
+```text
+G1 → G2 → G3 → G4 → ...
+```
+
+остальные G могут страдать.
+
+Поэтому fairness и preemption остаются необходимы.
+
+---
+
+## 26.6. `schedtick`
+
+Важно не объяснять `schedtick` как аппаратный timer tick.
+
+Это внутренний scheduler progress counter P.
+
+Упрощённо:
+
+```text
+новая scheduler slice
+↓
+schedtick++
+```
+
+Если G запускается с `inheritTime`, отдельный новый tick может не начинаться.
+
+Runtime может смотреть, как долго P остаётся без scheduler progress.
+
+Это помогает обнаруживать слишком длинную execution slice.
+
+---
+
+## 26.7. `schedule()` и `findRunnable()`
+
+Когда M должен найти следующую G:
+
+```text
+schedule()
+↓
+findRunnable()
+↓
+execute(G)
+```
+
+`findRunnable` не читает одну FIFO queue.
+
+Он рассматривает несколько источников work:
+
+```text
+runtime/GC tasks
+local runq
+global runq
+timers
+netpoller
+work stealing
+```
+
+Точный порядок проверок может меняться между версиями.
+
+Нужная студенту модель:
+
+> Scheduler ищет самый разумный доступный источник runnable work, постепенно расширяя область поиска.
+
+---
+
+## 26.8. Fairness против locality
+
+Если всегда выбирать local queue:
+
+```text
+P0 local work never ends
+↓
+global work waits
+```
+
+Плохая fairness.
+
+Если постоянно брать global work:
+
+```text
+shared synchronization ↑
+locality ↓
+```
+
+Плохой throughput.
+
+Поэтому scheduler периодически делает fairness checks.
+
+Это классический tradeoff:
+
+```text
+локальная эффективность
+vs
+глобальная справедливость
+```
+
+---
+
+## 26.9. Work stealing
+
+Пусть:
+
+```text
+P0 empty
+P1 empty
+P2: G1 G2 G3 G4 G5 G6
+P3 empty
+```
+
+Если ничего не делать:
+
+```text
+P2 busy
+P0/P1/P3 idle
+```
+
+Scheduler позволяет idle P украсть часть run queue victim P.
+
+```text
+P0
+↓
+choose victim P2
+↓
+steal batch
+↓
+P0 executes stolen work
+```
+
+Это dynamic load balancing.
+
+---
+
+## 26.10. Почему steal batch
+
+Если воровать по одной G:
+
+```text
+steal
+run
+steal
+run
+steal
+```
+
+coordination overhead высок.
+
+Batch позволяет:
+
+```text
+одна cross-P operation
+↓
+несколько последующих local executions
+```
+
+То есть стоимость stealing амортизируется.
+
+---
+
+## 26.11. Почему work stealing может ухудшить locality
+
+G могла до этого выполняться рядом с данными, горячими в cache одного core.
+
+После steal:
+
+```text
+G → другой P/M/core
+```
+
+новый core может получить cache misses.
+
+Поэтому scheduler постоянно балансирует:
+
+```text
+использовать idle CPU
+vs
+сохранить cache locality
+```
+
+Это особенно важно на больших CPU/NUMA machines.
+
+---
+
+## 26.12. Spinning M
+
+Когда work сейчас не найдено, есть два крайних решения.
+
+### Сразу park
+
+```text
+нет work
+↓
+thread sleep
+```
+
+Если G появится через мгновение, thread нужно снова wake.
+
+### Бесконечно искать
+
+```text
+нет work
+↓
+scan forever
+```
+
+CPU тратится впустую.
+
+Go использует промежуточную стратегию:
+
+```text
+spinning M
+```
+
+M некоторое время активно ищет work.
+
+Если work появляется, latency низкая.
+
+Если нет — M park'ится.
+
+---
+
+## 26.13. Почему нельзя иметь много spinning M
+
+Пусть 64 P и work отсутствует.
+
+Если все M spin:
+
+```text
+64 CPU busy
+полезная работа = 0
+```
+
+Поэтому runtime ограничивает число spinning workers.
+
+Это energy/CPU efficiency tradeoff.
+
+---
+
+## 26.14. `wakep()`
+
+Когда появляется runnable G, runtime решает:
+
+> Нужно ли активировать ещё один worker?
+
+Если будить thread на каждую новую G:
+
+```text
+wake
+↓
+thread обнаружил, что работу уже забрали
+↓
+park
+```
+
+получим thread thrashing.
+
+Поэтому wake policy консервативна.
+
+Идея:
+
+```text
+idle P есть
++
+нет уже spinning worker, который найдёт work
+↓
+имеет смысл wake дополнительный M
+```
+
+---
+
+## 26.15. Scheduler latency
+
+Очень полезная метрика mental model:
+
+```text
+time G became RUNNABLE
+↓
+time G became RUNNING
+```
+
+Если CPU свободен, она мала.
+
+Если CPU saturated:
+
+```text
+run queues grow
+↓
+RUNNABLE wait grows
+↓
+request p99 grows
+```
+
+Это latency без network wait и без mutex wait.
+
+---
+
+## 26.16. Почему scheduler не является backpressure
+
+Пусть endpoint создаёт goroutine на каждую задачу:
+
+```go
+for _, job := range jobs {
+    go process(job)
+}
+```
+
+Scheduler корректно поставит миллионы G в states/queues.
+
+Но если CPU способен завершать:
+
+```text
+10 000 jobs/s
+```
+
+а producer создаёт:
+
+```text
+100 000 jobs/s
+```
+
+очередь будет расти.
+
+Runtime не знает, что вы хотели ограничить latency.
+
+Нужен application-level bounded queue/admission control.
+
+---
+
+# 27. Netpoller, syscalls и preemption — подробнее
+
+## 27.1. Почему blocking-style network API не означает blocking thread
+
+Код:
+
+```go
+n, err := conn.Read(buf)
+```
+
+выглядит синхронным.
+
+Если data нет, function действительно не может продолжить computation.
+
+Но runtime может сделать:
+
+```text
+Read would block
+↓
+зарегистрировать fd в netpoller
+↓
+park G
+↓
+M/P выполняют другую G
+```
+
+То есть:
+
+```text
+blocking API semantics
+```
+
+сохраняются для programmer, но runtime implementation использует readiness-based I/O.
+
+---
+
+## 27.2. Readiness model
+
+Kernel polling API сообщает примерно:
+
+```text
+этот fd теперь имеет шанс выполнить read/write без обычного blocking
+```
+
+а не:
+
+```text
+весь логический HTTP request полностью готов
+```
+
+Поэтому lifecycle может быть:
+
+```text
+RUNNING
+↓
+Read gets some bytes
+↓
+would block again
+↓
+WAITING
+↓
+readiness event
+↓
+RUNNABLE
+↓
+RUNNING
+```
+
+многократно.
+
+---
+
+## 27.3. `pollDesc`
+
+У pollable descriptor runtime хранит структуру состояния.
+
+Для mental model:
+
+```text
+fd
+↓
+pollDesc
+├── reader wait state
+├── writer wait state
+├── read deadline
+└── write deadline
+```
+
+Она связывает kernel fd с waiting goroutines.
+
+---
+
+## 27.4. Что может разбудить network waiter
+
+Не только incoming packet.
+
+Возможные события:
+
+```text
+fd readable/writable
+connection closed
+deadline expired
+runtime cancellation-related path
+```
+
+После этого:
+
+```text
+WAITING → RUNNABLE
+```
+
+а operation продолжает execution и возвращает соответствующий результат/error.
+
+---
+
+## 27.5. Почему timeout не создаёт отдельный sleeping thread
+
+Deadline интегрирован с runtime timer/poll machinery.
+
+Поэтому 100 000 network deadlines не означают:
+
+```text
+100 000 OS threads sleeping with timers
+```
+
+Это ещё один пример multiplexing runtime state поверх ограниченных kernel resources.
+
+---
+
+## 27.6. Blocking syscall принципиально другой
+
+Не всякая I/O operation может быть представлена pollable readiness wait.
+
+Если thread реально вошёл в blocking syscall:
+
+```text
+M blocked by kernel
+```
+
+он физически не может выполнять другую G.
+
+Но P можно освободить/retake и передать другому M.
+
+```text
+G1/M1/P0
+↓
+syscall
+↓
+M1 blocked
+↓
+P0 → M2
+↓
+G2 runs
+```
+
+---
+
+## 27.7. Почему OS thread count может быть больше GOMAXPROCS
+
+Потому что часть M может одновременно:
+
+- находиться в syscall;
+- выполнять cgo;
+- быть в runtime transitions;
+- быть parked/idle.
+
+`GOMAXPROCS` ограничивает число P, а не lifetime всех OS threads runtime.
+
+---
+
+## 27.8. cgo и foreign code
+
+В foreign function runtime не контролирует внутренний blocking так же хорошо, как собственный netpoll path.
+
+Поэтому много long-running cgo calls может привести к:
+
+```text
+more blocked M
+↓
+more M needed for runnable Go work
+↓
+thread count grows
+```
+
+Это важный production diagnostic.
+
+---
+
+## 27.9. Preemption: зачем она вообще нужна
+
+Parking работает только если G сама доходит до operation, которая может её остановить.
+
+CPU-bound code:
+
+```go
+for {
+    compute()
+}
+```
+
+может долго не ждать ничего.
+
+Без preemption такая G потенциально удерживает P слишком долго.
+
+---
+
+## 27.10. Cooperative и asynchronous preemption
+
+Исторически runtime сильнее зависел от cooperative safe points:
+
+```text
+function calls
+stack checks
+runtime calls
+```
+
+Современный Go умеет инициировать asynchronous preemption на поддерживаемых platform paths.
+
+Но это не означает:
+
+```text
+остановить G в любой случайной machine instruction без ограничений
+```
+
+Runtime всё равно должен иметь безопасный state для stack/GC.
+
+---
+
+## 27.11. Почему preemption нужна GC
+
+GC должен получать progress и иметь возможность корректно анализировать goroutine roots/stacks.
+
+Если G бесконечно монополизирует execution:
+
+```text
+scheduler progress плохой
++
+GC coordination плохая
+```
+
+Поэтому async preemption улучшает не только fairness application G, но и runtime progress.
+
+---
+
+## 27.12. Preemption не является cancellation
+
+Context отменился:
+
+```text
+ctx.Done()
+```
+
+Runtime scheduler не обязан автоматически завершить вашу CPU function.
+
+Preemption означает:
+
+```text
+дать CPU другим G
+```
+
+Cancellation означает:
+
+```text
+application должна перестать делать ненужную работу
+```
+
+Это разные задачи.
+
+---
+
+## 27.13. Preemption не решает overload
+
+Пусть CPU может обработать:
+
+```text
+1 000 requests/s
+```
+
+а приходит:
+
+```text
+10 000 requests/s
+```
+
+Preemption может честно делить CPU между requests.
+
+Но суммарная capacity всё равно 1 000 requests/s.
+
+Получаем:
+
+```text
+runnable backlog ↑
+latency ↑
+timeouts ↑
+```
+
+Нужен admission control.
+
+
+# 28. Stack growth и реальная цена goroutine — подробнее
+
+## 28.1. Stack растёт из-за call frames, а не из-за времени жизни
+
+Пусть goroutine живёт час, но call depth небольшой.
+
+Её stack может оставаться маленьким.
+
+Другая goroutine живёт 10 ms, но уходит в глубокую recursion и получает большой stack.
+
+То есть stack pressure определяется прежде всего:
+
+- глубиной вызовов;
+- размером frames;
+- compiler decisions;
+- редкими deep paths.
+
+Модель:
+
+```text
+handler
+↓
+service
+↓
+validation
+↓
+parser
+↓
+recursive traversal
+↓
+ещё frames
+```
+
+---
+
+## 28.2. Что находится в stack frame
+
+Упрощённо frame может содержать:
+
+- local variables;
+- spill slots;
+- return state;
+- arguments/results согласно calling convention;
+- temporary compiler values.
+
+Поэтому два вызова одинаковой глубины могут требовать разный stack footprint.
+
+---
+
+## 28.3. Почему фиксированный большой stack неудобен для goroutine model
+
+Если каждому execution context сразу дать большой stack:
+
+```text
+1 MiB × 100 000 G
+```
+
+получаем огромный memory footprint.
+
+Большинство G в backend большую часть времени не используют такую глубину.
+
+Go предпочитает:
+
+```text
+small initial stack
+↓
+grow when needed
+```
+
+Это переносит цену из постоянного reservation в редкие growth operations.
+
+---
+
+## 28.4. Stack check
+
+Compiler добавляет проверку в начало большинства функций.
+
+Ментальная модель:
+
+```text
+function entry
+↓
+хватит ли stack для frame?
+├── да → continue
+└── нет → morestack
+```
+
+Runtime использует guard, чтобы не ждать фактического выхода SP за границу memory.
+
+Нужно заранее оставить достаточно пространства для самого growth protocol.
+
+---
+
+## 28.5. Почему growth нельзя делать на перемещаемом stack
+
+Runtime собирается:
+
+```text
+allocate new stack
+copy old active stack
+update pointers
+replace bounds
+```
+
+Если machinery выполняется на старом stack:
+
+```text
+мы пытаемся переносить память,
+на которой сами сейчас стоим
+```
+
+Поэтому execution переключается на system stack `g0` текущего M.
+
+```text
+M
+├── current G stack ← объект relocation
+└── g0 stack        ← runtime выполняет relocation
+```
+
+---
+
+## 28.6. Геометрический рост
+
+Stack увеличивается не на несколько bytes.
+
+Используется multiplicative growth idea:
+
+```text
+2
+4
+8
+16
+32
+...
+```
+
+Конкретные размеры/heuristics — implementation detail.
+
+Почему геометрически:
+
+```text
+много маленьких growth
+→ много copies
+```
+
+против:
+
+```text
+редкие более крупные growth
+→ amortized cost
+```
+
+---
+
+## 28.7. Почему `memcpy` недостаточно
+
+Stack содержит managed pointers.
+
+Пример:
+
+```go
+func f() {
+    x := 10
+    p := &x
+    use(p)
+}
+```
+
+Если `x` физически находится в stack:
+
+```text
+old stack: 0x100000...
+new stack: 0x500000...
+```
+
+после простого byte copy `p` может всё ещё содержать старый numeric address.
+
+Runtime должен исправить managed references, которые указывают внутрь перемещённого stack.
+
+---
+
+## 28.8. Stack maps
+
+Откуда runtime знает, что конкретное machine word является pointer?
+
+Не по внешнему виду числа.
+
+Compiler генерирует precise pointer metadata.
+
+Упрощённо:
+
+```text
+frame layout
+├── slot 0: scalar
+├── slot 1: pointer
+├── slot 2: scalar
+└── slot 3: pointer
+```
+
+Эти данные нужны сразу нескольким механизмам:
+
+```text
+GC
++
+stack copying
+```
+
+Это хороший пример тесной связки compiler и runtime.
+
+---
+
+## 28.9. Почему `unsafe`/`uintptr` требуют осторожности
+
+Managed pointer известен runtime как pointer.
+
+`uintptr` — integer representation адреса с особыми правилами.
+
+Если programmer превращает pointer в integer и хранит его произвольно, runtime не обязан рассматривать это число как relocatable managed pointer.
+
+Отсюда строгие правила вокруг `unsafe.Pointer` и `uintptr`.
+
+Именно movable stack делает такие правила особенно понятными.
+
+---
+
+## 28.10. Почему syscall и cgo усложняют relocation
+
+Если stack address передан наружу:
+
+```text
+Go stack pointer
+↓
+kernel/C code
+```
+
+runtime не может свободно переместить stack, пока внешняя сторона потенциально использует старый address.
+
+Поэтому stack copying разрешён только в runtime-safe states.
+
+---
+
+## 28.11. `sudog.elem` и stack pointer
+
+Blocked channel operation может иметь waiter metadata, указывающую на element location в stack G.
+
+```text
+sudog.elem
+↓
+G stack
+```
+
+Если stack перемещается, runtime должен учесть этот reference.
+
+Это показывает, почему stack growth нельзя рассматривать изолированно от synchronization runtime.
+
+---
+
+## 28.12. Stack shrink
+
+Пусть G однажды выросла:
+
+```text
+8 KiB → 256 KiB
+```
+
+затем deep call chain закончился, и используется только малая часть.
+
+Если G долгоживущая, хранить peak forever дорого.
+
+Runtime может shrink stack в безопасный момент.
+
+Разница:
+
+```text
+grow — срочно, иначе function не продолжит
+shrink — optimization, можно выбрать удобный момент
+```
+
+---
+
+## 28.13. Source local не означает stack allocation
+
+Пример:
+
+```go
+func create() *User {
+    u := User{}
+    return &u
+}
+```
+
+`u` написан как local variable, но его lifetime переживает function return.
+
+Compiler решает placement через escape analysis.
+
+Поэтому нельзя оценивать stack usage только по синтаксису исходника.
+
+---
+
+## 28.14. «Stack быстрее heap» — слишком слабая модель
+
+Stack allocation обычно очень дешёвая.
+
+Но production cost включает:
+
+```text
+stack growth
+copying
+pointer adjustment
+GC root scanning
+cache behaviour
+heap escapes
+object lifetime
+```
+
+Правильный вопрос:
+
+> Каков lifetime и ownership данных и сколько runtime work создаёт выбранная модель?
+
+---
+
+## 28.15. Средний stack важнее минимального при capacity planning
+
+Представим:
+
+```text
+100 000 G
+```
+
+Если студент считает:
+
+```text
+100 000 × 2 KiB
+```
+
+он получает лишь грубую нижнюю историческую оценку.
+
+Если реальный средний stack стал:
+
+```text
+16 KiB
+```
+
+масштаб уже совсем другой.
+
+А ещё G удерживает heap graph.
+
+Поэтому capacity model должна опираться на measurement, а не лозунг «goroutine весит 2 KB».
+
+---
+
+# 29. Parking, wakeup и lost wakeup — подробнее
+
+## 29.1. Центральный механизм дешёвого ожидания
+
+Пусть G не может продолжать:
+
+```text
+channel empty
+mutex busy
+network not ready
+timer not fired
+```
+
+Runtime должен сделать:
+
+```text
+RUNNING
+↓
+WAITING
+```
+
+и вернуть execution resource другим G.
+
+Это и есть фундаментальная разница между:
+
+```text
+логически ждать
+```
+
+и:
+
+```text
+физически занимать OS thread
+```
+
+---
+
+## 29.2. Что делает `gopark`
+
+Упрощённо:
+
+```text
+current G RUNNING
+↓
+gopark
+↓
+save wait metadata
+↓
+mcall(park_m)
+↓
+switch to g0
+↓
+RUNNING → WAITING
+↓
+dropg
+↓
+schedule next G
+```
+
+То есть `gopark` — вход в protocol parking текущей G.
+
+---
+
+## 29.3. Почему нужен `g0`
+
+После того как G переводится в WAITING, runtime не должен продолжать scheduler machinery на её user stack как будто это обычный user code.
+
+Поэтому transition выполняется на system stack M.
+
+```text
+user G stack
+↓
+M.g0
+↓
+park_m / scheduler
+```
+
+---
+
+## 29.4. `dropg`
+
+До parking:
+
+```text
+M.curg → G
+G.m → M
+```
+
+После:
+
+```text
+M больше не исполняет эту G
+```
+
+association снимается.
+
+Теперь M/P могут получить другую RUNNABLE G.
+
+---
+
+## 29.5. `goready`
+
+Когда событие произошло:
+
+```text
+WAITING
+↓
+goready/ready
+↓
+RUNNABLE
+```
+
+Ключевой момент:
+
+> Ready — это разрешение выполняться, а не мгновенное выполнение.
+
+После ready G всё ещё конкурирует за scheduler resources.
+
+---
+
+## 29.6. Wakeup latency
+
+Событие произошло в момент `t0`.
+
+G реально продолжилась в `t1`.
+
+Между ними:
+
+```text
+ready bookkeeping
+run queue
+scheduler selection
+M availability
+OS scheduling M
+```
+
+Поэтому:
+
+```text
+resource became available
+```
+
+не равно:
+
+```text
+waiter immediately runs
+```
+
+Это критично для понимания Mutex barging.
+
+---
+
+## 29.7. `Gosched` и parking
+
+`Gosched()` означает примерно:
+
+```text
+я всё ещё могу продолжать
+но добровольно отдам execution другим
+```
+
+State:
+
+```text
+RUNNING → RUNNABLE
+```
+
+Parking:
+
+```text
+я не могу продолжать без события
+```
+
+State:
+
+```text
+RUNNING → WAITING
+```
+
+Разница фундаментальная.
+
+---
+
+## 29.8. Preemption и parking
+
+Preemption:
+
+```text
+G могла продолжать
+но scheduler временно отнял execution
+```
+
+обычно снова ведёт к runnable scheduling state.
+
+Parking:
+
+```text
+G логически не готова продолжать
+```
+
+и должна ждать external/runtime event.
+
+---
+
+## 29.9. Lost wakeup
+
+Наивный protocol:
+
+```text
+G1                    G2
+
+check condition
+false
+unlock
+
+                      event happens
+                      wake G1
+
+park
+```
+
+Wake произошёл, когда G1 ещё не зарегистрирована как waiter.
+
+Затем G1 park'ится.
+
+Нового event может не быть.
+
+Получаем permanent sleep.
+
+---
+
+## 29.10. Почему waiter должен быть зарегистрирован до sleep
+
+Правильная идея:
+
+```text
+lock
+↓
+check condition
+↓
+register waiter
+↓
+prepare parking
+↓
+release lock coordinated with park
+↓
+WAITING
+```
+
+Теперь producer/event side либо увидит waiter, либо waiter успеет заметить изменившееся condition через recheck protocol.
+
+---
+
+## 29.11. `goparkunlock`
+
+Runtime часто использует variant parking, связанный с release internal lock.
+
+Смысл:
+
+```text
+не делать отдельно:
+unlock
+...
+park
+```
+
+с опасным race window.
+
+Вместо этого unlock встроен в parking protocol.
+
+---
+
+## 29.12. Wait reason
+
+WAITING G имеет reason, который помогает diagnostics.
+
+Можно увидеть:
+
+```text
+[chan receive]
+[chan send]
+[semacquire]
+[select]
+[IO wait]
+[sleep]
+```
+
+Это позволяет быстро классифицировать накопившиеся goroutines.
+
+Но один reason недостаточен: нужен stack trace и понимание lifecycle.
+
+---
+
+## 29.13. Почему много WAITING G может быть нормой
+
+Network server может иметь тысячи idle keep-alive connections.
+
+Если G park'ятся через netpoller:
+
+```text
+CPU почти не используется
+```
+
+и число G может быть большим, но стабильным.
+
+Проблема начинается, когда:
+
+```text
+G count растёт без возврата к baseline
+```
+
+или wait reason указывает на condition, которое никогда не наступит.
+
+---
+
+# 30. Channels, `sudog` и wait queues — подробнее
+
+## 30.1. Channel — data structure + synchronization primitive
+
+Плохое упрощение:
+
+> Channel — очередь.
+
+Buffered channel действительно имеет buffer.
+
+Но channel также содержит synchronization state:
+
+```text
+buffer
+send wait queue
+receive wait queue
+closed state
+internal lock
+```
+
+Unbuffered channel вообще не имеет data queue capacity.
+
+---
+
+## 30.2. Ментальная модель `hchan`
+
+```text
+hchan
+├── qcount      сколько элементов сейчас в buffer
+├── dataqsiz    capacity
+├── buf         storage
+├── sendx       позиция записи
+├── recvx       позиция чтения
+├── sendq       blocked senders
+├── recvq       blocked receivers
+├── closed
+└── lock
+```
+
+Конкретный layout — implementation detail.
+
+Архитектурная идея — нет.
+
+---
+
+## 30.3. Что такое `sudog`
+
+`sudog` — waiter object, связывающий конкретную G с конкретным synchronization wait.
+
+Упрощённо:
+
+```text
+sudog
+├── g → waiting goroutine
+├── elem → data/address для operation
+├── next/prev
+└── wait metadata
+```
+
+Почему нельзя просто хранить `*g`?
+
+Потому что relation many-to-many.
+
+---
+
+## 30.4. Many-to-many
+
+Один channel может иметь много waiters:
+
+```text
+ch.recvq
+├── sudog(G1)
+├── sudog(G2)
+└── sudog(G3)
+```
+
+Одна G при `select` может быть представлена сразу несколькими sudog:
+
+```text
+G42
+├── sg1 → ch1.recvq
+├── sg2 → ch2.sendq
+└── sg3 → ch3.recvq
+```
+
+Это и объясняет отдельную structure.
+
+---
+
+## 30.5. Sudog pool
+
+Blocking synchronization очень частая операция.
+
+Если каждый waiter создавать обычной heap allocation:
+
+```text
+contention
+↓
+heap allocations ↑
+↓
+GC pressure ↑
+```
+
+Runtime переиспользует `sudog` через caches/pools.
+
+Модель:
+
+```text
+acquireSudog
+↓
+use in wait queue
+↓
+releaseSudog
+↓
+cache
+```
+
+---
+
+## 30.6. Unbuffered send, receiver уже ждёт
+
+```go
+ch <- x
+```
+
+В `recvq` уже есть waiter.
+
+Runtime может:
+
+```text
+dequeue receiver sudog
+↓
+transfer x
+↓
+ready receiver
+↓
+sender продолжает
+```
+
+Sender сам park'иться не обязан.
+
+---
+
+## 30.7. Unbuffered send, receiver нет
+
+```text
+send cannot complete
+↓
+acquire sudog
+↓
+sg.g = sender
+sg.elem = value location
+↓
+sendq.enqueue
+↓
+gopark
+↓
+sender WAITING
+```
+
+Позже receiver завершит rendezvous и разбудит sender.
+
+---
+
+## 30.8. Unbuffered channel как rendezvous
+
+У него нет места для автономного хранения элемента.
+
+Следовательно, successful send означает, что send и receive synchronization пересеклись.
+
+Это важно для memory ordering semantics channel.
+
+---
+
+## 30.9. Buffered send
+
+Если есть место:
+
+```text
+qcount < dataqsiz
+↓
+copy element into buffer
+↓
+advance send index
+↓
+return
+```
+
+Никакого parking.
+
+Если buffer full:
+
+```text
+blocking send
+↓
+sudog
+↓
+sendq
+↓
+park
+```
+
+---
+
+## 30.10. Buffered channel не создаёт throughput
+
+Пусть producer:
+
+```text
+10 000 msg/s
+```
+
+consumer:
+
+```text
+1 000 msg/s
+```
+
+Buffer 100:
+
+```text
+fills quickly
+```
+
+Buffer 1 000 000:
+
+```text
+fills later
+```
+
+Но mismatch остаётся.
+
+Большой buffer меняет:
+
+- время до saturation;
+- memory usage;
+- queueing latency.
+
+Он не увеличивает consumer service rate.
+
+---
+
+## 30.11. Non-blocking channel operation
+
+```go
+select {
+case ch <- x:
+    // sent
+default:
+    // not ready
+}
+```
+
+Если operation сейчас невозможна:
+
+```text
+текущая G не создаёт waiter
+не gopark
+идёт default
+```
+
+Но она может использовать sudog другой стороны, если opposite waiter уже существует.
+
+То есть:
+
+> Non-blocking значит «не блокировать текущую G», а не «runtime вообще не касается sudog».
+
+---
+
+## 30.12. `select`
+
+Без `default` и без ready cases:
+
+```text
+one G
+↓
+multiple sudog
+↓
+register in multiple channel queues
+↓
+park
+```
+
+После события:
+
+```text
+one case wins
+↓
+G ready
+↓
+losing registrations removed
+```
+
+Здесь `sudog` необходим архитектурно.
+
+---
+
+## 30.13. Internal channel lock
+
+Channel имеет internal synchronization, но G не может уснуть, оставив internal lock навечно захваченным.
+
+Нужен protocol:
+
+```text
+lock channel
+↓
+check buffer/waiters/closed
+↓
+register sudog if needed
+↓
+park with coordinated unlock
+```
+
+Иначе opposite side не сможет прийти и изменить state.
+
+---
+
+## 30.14. `close(ch)`
+
+Close меняет state channel и должен обработать waiters.
+
+После close:
+
+- receivers должны получить возможность завершить operations;
+- buffered values сначала остаются читаемыми;
+- после drain receive возвращает zero value и `ok=false`;
+- send в closed channel приводит к panic.
+
+Close — это synchronization event, а не просто boolean assignment.
+
+---
+
+## 30.15. Channel lifecycle и goroutine leak
+
+Типичный leak:
+
+```go
+go func() {
+    resultCh <- result
+}()
+```
+
+а consumer ушёл по timeout и больше channel не читает.
+
+Если channel unbuffered:
+
+```text
+sender waits forever
+```
+
+Получаем goroutine leak.
+
+Поэтому channel design нужно связывать с cancellation/lifecycle.
+
+---
+
+## 30.16. Когда channel естественен
+
+Channel хорошо выражает:
+
+```text
+ownership transfer
+event stream
+pipeline
+bounded queue
+worker coordination
+```
+
+Mutex естественнее, если нужно:
+
+```text
+коротко защитить shared state
+```
+
+Механизмы пересекаются, но не являются взаимозаменяемыми лозунгами.
+
+
+# 31. `sync.Mutex`, runtime semaphore и contention — подробнее
+
+## 31.1. Главная цель Mutex
+
+Mutex защищает invariant shared state:
+
+```text
+только один owner critical section одновременно
+```
+
+Но runtime implementation должна дополнительно решить:
+
+- как сделать uncontended case дешёвым;
+- что делать при кратком contention;
+- когда park goroutine;
+- кого wake;
+- как не разбудить толпу;
+- как избежать starvation.
+
+Поэтому внутренний Mutex значительно интереснее идеи «locked/unlocked».
+
+---
+
+## 31.2. Fast path
+
+Свободный mutex:
+
+```text
+state = 0
+```
+
+Lock пытается сделать atomic transition:
+
+```text
+0 → mutexLocked
+```
+
+Если CAS успешен:
+
+```text
+Lock complete
+```
+
+Без:
+
+- sudog;
+- runtime semaphore;
+- gopark;
+- scheduler transition.
+
+Именно поэтому uncontended Mutex очень дешёвый.
+
+---
+
+## 31.3. Почему fast path должен быть минимальным
+
+В нормальной хорошо спроектированной программе многие locks большую часть времени uncontended.
+
+Если даже uncontended `Lock` требовал:
+
+```text
+queue lock
+scheduler call
+allocation
+kernel primitive
+```
+
+цена synchronization была бы высокой всегда.
+
+Go выносит сложность в slow path.
+
+---
+
+## 31.4. Failed CAS не означает немедленный sleep
+
+Пусть owner скоро освободит lock.
+
+Если contender сразу park'ится:
+
+```text
+enqueue
+park
+wake
+scheduler
+```
+
+стоимость может быть выше, чем очень короткий active wait.
+
+Поэтому runtime иногда spin'ится.
+
+---
+
+## 31.5. Spinning
+
+Spin означает:
+
+```text
+G остаётся RUNNING
+M/P/CPU заняты
+G несколько раз проверяет возможность progress
+```
+
+Это выгодно только если ожидание действительно короткое.
+
+Цена spin:
+
+```text
+CPU consumption
++
+shared cache-line pressure
+```
+
+Поэтому он bounded и heuristic-based.
+
+---
+
+## 31.6. Почему spin бессмыслен при отсутствии parallelism
+
+При `GOMAXPROCS=1` contender spin'ится на единственном P.
+
+Но owner lock может быть другой runnable G, которой как раз нужен этот P, чтобы сделать Unlock.
+
+Получаем абсурд:
+
+```text
+waiter busy-spins
+↓
+owner не получает execution
+↓
+lock не освобождается
+```
+
+Runtime учитывает scheduler conditions и не spin'ится бездумно.
+
+---
+
+## 31.7. Parking при тяжёлом contention
+
+Если ожидание явно не краткое:
+
+```text
+slow path
+↓
+runtime semaphore
+↓
+register waiter
+↓
+sudog
+↓
+gopark
+↓
+WAITING
+```
+
+Теперь waiter перестаёт потреблять CPU.
+
+M/P могут выполнять другую работу.
+
+---
+
+## 31.8. `Mutex.state`
+
+Текущая implementation кодирует несколько components в одном `int32`:
+
+```text
+31                                3 2 1 0
+┌──────────────────────────────────┬─┬─┬─┐
+│          waiter count            │S│W│L│
+└──────────────────────────────────┴─┴─┴─┘
+```
+
+Где:
+
+```text
+L = locked
+W = woken coordination bit
+S = starvation mode
+```
+
+Смысл packed word:
+
+```text
+несколько связанных state transitions
+↓
+один atomic CAS
+```
+
+---
+
+## 31.9. Waiter count
+
+Когда G понимает, что ей придётся ждать, protocol должен отразить waiter до фактического sleep.
+
+Почему:
+
+```text
+Unlock должен увидеть,
+что кого-то нужно wake
+```
+
+Если сначала park, потом пытаться register waiter, wakeup можно потерять.
+
+---
+
+## 31.10. `mutexWoken`
+
+Пусть несколько G sleeping.
+
+Unlock будит одного waiter.
+
+Без coordination другой concurrent path может решить:
+
+```text
+waiters есть
+→ wake ещё одного
+```
+
+и вызвать thundering herd.
+
+`mutexWoken` означает примерно:
+
+> Уже существует активированный contender; лишний wake сейчас не нужен.
+
+Это не ownership bit.
+
+---
+
+## 31.11. Thundering herd
+
+Наивный Unlock:
+
+```text
+wake all waiters
+```
+
+Если 1000 G waiting:
+
+```text
+1000 WAITING → RUNNABLE
+↓
+1000 scheduler entries
+↓
+1000 contenders на один lock
+↓
+1 winner
+999 losers
+```
+
+Получаем огромную бессмысленную работу.
+
+Правильная стратегия старается активировать ограниченное число contenders.
+
+---
+
+## 31.12. Normal mode и barging
+
+В normal mode wake waiter не означает direct ownership.
+
+Timeline:
+
+```text
+G1 owns lock
+G2 WAITING
+
+G1 Unlock
+↓
+G2 RUNNABLE
+
+G3 already RUNNING
+↓
+G3 Lock
+↓
+G3 wins CAS
+
+G2 later RUNNING
+↓
+lock busy again
+```
+
+G3 barged ahead of older waiter.
+
+Почему это допускается:
+
+```text
+G3 уже на CPU
+↓
+дать ей lock может быть дешевле,
+чем ждать schedule G2
+```
+
+Это throughput optimization.
+
+---
+
+## 31.13. Цена barging
+
+Если поток newcomers непрерывен:
+
+```text
+старый waiter wakes
+↓
+loses
+↓
+sleeps
+↓
+wakes
+↓
+loses
+```
+
+Tail latency отдельной G может стать очень плохой.
+
+Тогда throughput policy начинает нарушать fairness.
+
+---
+
+## 31.14. Starvation mode
+
+После достаточно долгого wait runtime может переключить Mutex в starvation protocol.
+
+Идея:
+
+```text
+старый waiter должен получить progress
+```
+
+В этом режиме newcomers не должны steal ownership так же свободно.
+
+Unlock делает более прямой handoff waiter.
+
+Цена:
+
+```text
+fairness ↑
+throughput может ↓
+```
+
+Конкретный временной threshold текущей implementation — detail, а не public guarantee.
+
+---
+
+## 31.15. Почему starvation mode не включён всегда
+
+Если всегда делать строгий FIFO/direct handoff:
+
+```text
+Unlock
+↓
+wake old waiter
+↓
+ждать его scheduling
+```
+
+можно терять throughput на коротких critical sections.
+
+Normal mode оптимизирован под common fast contention.
+
+Starvation mode — механизм восстановления fairness при плохом сценарии.
+
+---
+
+## 31.16. Critical section и I/O
+
+Опасный код:
+
+```go
+mu.Lock()
+defer mu.Unlock()
+
+state.Value++
+resp, err := client.Do(req)
+```
+
+Если внешний request идёт 3 секунды:
+
+```text
+lock held 3 seconds
+```
+
+Все остальные users shared state стоят в очереди.
+
+Возможный результат:
+
+```text
+CPU low
+throughput low
+hundreds G WAITING [semacquire]
+```
+
+Симптом выглядит не как CPU overload, но сервис практически сериализован.
+
+---
+
+## 31.17. Runtime semaphore
+
+Поле `sema` у Mutex используется внутренней runtime machinery для sleep/wakeup.
+
+Важно разделять:
+
+```text
+Mutex.state
+→ logical ownership/fairness protocol
+
+runtime semaphore
+→ waiter parking/wakeup machinery
+```
+
+Semaphore не является самой логикой Mutex ownership.
+
+---
+
+## 31.18. Почему это не просто kernel semaphore
+
+Если каждый contended lock немедленно делал отдельный kernel synchronization call, runtime терял бы часть преимуществ user-space scheduling.
+
+Go runtime организует waiters как G/sudog и park'ит goroutine.
+
+Kernel thread при этом часто остаётся доступен Go scheduler.
+
+---
+
+## 31.19. `semaRoot`
+
+Mutex не содержит полноценную queue object.
+
+Это держит Mutex маленьким.
+
+Runtime имеет shared semaphore wait structures, выбираемые по адресу semaphore.
+
+Mental model:
+
+```text
+&m.sema
+↓
+semaphore table/hash mapping
+↓
+semaRoot
+↓
+waiter structures
+↓
+sudog
+↓
+G
+```
+
+Конкретная структура таблицы — implementation detail.
+
+---
+
+## 31.20. Recheck против lost wakeup
+
+Acquire slow path должен учитывать race:
+
+```text
+G1 checks resource unavailable
+↓
+G2 releases resource
+↓
+G1 decides to sleep
+```
+
+Если G1 не перепроверит состояние после регистрации waiter, release может потеряться.
+
+Поэтому semaphore protocol имеет waiter accounting + recheck.
+
+Это тот же общий invariant:
+
+> Event и registration waiter должны быть согласованы так, чтобы wakeup нельзя было потерять.
+
+---
+
+## 31.21. Low CPU не исключает contention
+
+Сценарий:
+
+```text
+1 G RUNNING inside lock
+999 G WAITING on lock
+```
+
+CPU может быть 10–20%.
+
+Но throughput ограничен одним critical section.
+
+Поэтому contention ищут:
+
+- mutex profile;
+- block profile;
+- goroutine stacks;
+- trace.
+
+Не по CPU graph alone.
+
+---
+
+## 31.22. Mutex profile
+
+Профиль помогает ответить:
+
+```text
+Где приложение теряет время на lock contention?
+```
+
+Но профиль не говорит автоматически, как исправить architecture.
+
+Нужно понять:
+
+- lock scope;
+- protected invariant;
+- есть ли I/O внутри;
+- можно ли sharding;
+- нужен ли вообще shared mutable state.
+
+---
+
+# 32. Atomics, CAS и Go Memory Model — подробнее
+
+## 32.1. `atomic` отвечает не на один вопрос
+
+Когда разработчик говорит:
+
+> Сделаем поле атомарным.
+
+нужно спросить:
+
+```text
+Какой invariant мы защищаем?
+```
+
+Atomicity одной variable не гарантирует correctness всей state machine.
+
+---
+
+## 32.2. CAS
+
+Compare-And-Swap концептуально:
+
+```text
+if *addr == expected {
+    *addr = desired
+    return true
+}
+return false
+```
+
+но проверка и запись происходят атомарно относительно других atomic participants.
+
+---
+
+## 32.3. CAS loop
+
+Типичный optimistic pattern:
+
+```go
+for {
+    old := state.Load()
+    new := compute(old)
+
+    if state.CompareAndSwap(old, new) {
+        break
+    }
+}
+```
+
+Failure означает:
+
+```text
+кто-то изменил state после нашего Load
+```
+
+Нужно reread и recompute.
+
+---
+
+## 32.4. CAS как основа packed state machine
+
+Mutex state — хороший пример.
+
+Нужно атомарно изменить несколько logical components:
+
+```text
+Locked
+Woken
+Starving
+waiter count
+```
+
+Они упакованы в один word.
+
+Тогда transition:
+
+```text
+old bits
+↓
+compute new bits
+↓
+CAS
+```
+
+сохраняет связность invariant.
+
+---
+
+## 32.5. Atomicity, visibility и ordering
+
+Это три разных вопроса.
+
+### Atomicity
+
+Операция не наблюдается наполовину.
+
+### Visibility
+
+Когда другой participant гарантированно увидит write?
+
+### Ordering
+
+В каком порядке memory effects должны наблюдаться относительно synchronization event?
+
+Memory Model описывает именно эти отношения на language level.
+
+---
+
+## 32.6. Неправильная публикация
+
+```go
+var ready bool
+var data int
+
+func writer() {
+    data = 42
+    ready = true
+}
+
+func reader() {
+    for !ready {
+    }
+    fmt.Println(data)
+}
+```
+
+Интуитивное рассуждение:
+
+```text
+data записан раньше ready
+```
+
+недостаточно.
+
+Здесь data race.
+
+Без synchronization program не получает необходимых visibility/ordering guarantees.
+
+---
+
+## 32.7. Публикация через channel
+
+```go
+var data int
+ready := make(chan struct{})
+
+go func() {
+    data = 42
+    close(ready)
+}()
+
+<-ready
+fmt.Println(data)
+```
+
+Synchronization event связывает write и subsequent read.
+
+Mental model:
+
+```text
+write data
+↓
+channel synchronization
+↓
+reader observes synchronization
+↓
+read data
+```
+
+---
+
+## 32.8. Публикация через Mutex
+
+Writer:
+
+```go
+mu.Lock()
+data = 42
+mu.Unlock()
+```
+
+Reader:
+
+```go
+mu.Lock()
+v := data
+mu.Unlock()
+```
+
+Mutex даёт не только mutual exclusion, но и memory ordering guarantee.
+
+Это принципиально важно.
+
+---
+
+## 32.9. Goroutine creation и ordering
+
+Создание goroutine само по себе имеет определённые memory-order semantics для действий до `go` statement относительно старта новой G.
+
+Но обратного автоматического ordering:
+
+```text
+новая G что-то записала
+↓
+parent потом обязательно увидит без synchronization
+```
+
+нет.
+
+Чтобы дождаться результата, нужен synchronization mechanism.
+
+---
+
+## 32.10. Atomic field не защищает composite invariant
+
+```go
+type State struct {
+    balance atomic.Int64
+    status  atomic.Int32
+}
+```
+
+Допустим invariant:
+
+```text
+status=CLOSED ⇒ balance=0
+```
+
+Отдельно atomic `balance` и `status` не обеспечивают atomic transition пары.
+
+Reader может увидеть промежуточную комбинацию.
+
+Если нужен composite invariant, часто проще Mutex или single packed atomic state.
+
+---
+
+## 32.11. Public Go atomics и ordering
+
+Программист должен рассуждать через Go Memory Model, а не через конкретные CPU instructions.
+
+Implementation может использовать разные sequences на:
+
+- x86-64;
+- ARM64;
+- других architectures.
+
+Публичный contract остаётся Go-level.
+
+---
+
+## 32.12. Почему atomic operation всё равно может быть дорогой
+
+Пусть:
+
+```go
+counter.Add(1)
+```
+
+делают десятки cores.
+
+Логически это lock-free operation.
+
+Физически все пишут одну cache line.
+
+Hardware должен постоянно согласовывать ownership.
+
+Получаем:
+
+```text
+atomic
+≠
+free
+≠
+contention-free
+```
+
+---
+
+## 32.13. Failed CAS под нагрузкой
+
+32 contenders:
+
+```text
+Load old
+↓
+compute new
+↓
+CAS
+```
+
+один winner.
+
+31 делают retry.
+
+Если contention постоянен, значительная часть CPU уходит в coordination, а не business work.
+
+---
+
+## 32.14. Почему Mutex иногда лучше hot CAS loop
+
+При тяжёлом contention Mutex может park лишних contenders.
+
+Hot lock-free CAS loop может держать все cores активными:
+
+```text
+retry
+retry
+retry
+```
+
+Поэтому:
+
+> Lock-free не означает автоматически быстрее под любой нагрузкой.
+
+Выбор требует benchmark конкретного workload.
+
+---
+
+## 32.15. Data race и business race
+
+Race detector ищет data races памяти.
+
+Но backend может иметь logical race при идеальной memory synchronization.
+
+Например два database transactions читают один balance и выполняют lost update.
+
+То есть:
+
+```text
+go test -race clean
+```
+
+не доказывает correctness concurrency на уровне DB/domain.
+
+---
+
+## 32.16. Почему race detector не доказывает отсутствие race
+
+Detector dynamic.
+
+Он наблюдает выполненные paths.
+
+Если тест не создал опасное interleaving/path:
+
+```text
+race exists
+но не executed
+↓
+no report
+```
+
+Поэтому нужны meaningful concurrent tests/load scenarios.
+
+---
+
+## 32.17. Memory Model как запрет «угадывать CPU»
+
+Нельзя строить correctness на фразах:
+
+```text
+"на x86 так обычно видно"
+"compiler вряд ли переставит"
+"эта запись маленькая"
+```
+
+Correct Go program опирается на language synchronization guarantees.
+
+Hardware detail нужен для performance, а не для замены Memory Model.
+
+---
+
+# Источники и ориентиры реализации
 Для деталей текущей реализации использованы и рекомендуются официальные материалы проекта Go:
 
 - `runtime/HACKING` — модель G/M/P и общие правила runtime;

@@ -1,6 +1,8 @@
-# Лекция 2.1. Глубокие internals Go runtime, synchronization и CPU
+# Доп. Лекция 1. Глубокие internals Go runtime, synchronization и CPU
 
 > Дополнительный блок к теме **«Go runtime, concurrency и synchronization internals»**.
+>
+> Эта версия расширена до уровня технического расследования: для каждого слоя рассматриваются не только названия структур и функций, но и причины дизайна, state transitions, contention, стоимость под нагрузкой и связь с диагностикой backend.
 >
 > Здесь мы спускаемся ниже обычного прикладного Go: от scheduler lifecycle и `sudog`
 > до `sync.Mutex.state`, CAS, cache coherence, false sharing и NUMA.
@@ -589,6 +591,273 @@ Runtime переиспользует G structures.
 
 ---
 
+
+## 11.1. Scheduler lifecycle лучше читать как state machine
+
+Если смотреть на scheduler только как на набор функций `newproc`, `schedule`,
+`findRunnable`, `execute`, легко потерять главное: runtime постоянно переводит G
+между небольшим числом состояний.
+
+Упрощённая карта:
+
+```text
+                   newproc
+                     │
+                     ▼
+                 RUNNABLE
+                     │
+                  execute
+                     │
+                     ▼
+                  RUNNING
+                /    |     \
+               /     |      \
+          gopark   preempt   goexit
+             │        │        │
+             ▼        ▼        ▼
+          WAITING  RUNNABLE   DEAD
+             │
+           ready
+             │
+             └──────────────► RUNNABLE
+```
+
+Эта схема полезнее запоминания исходников, потому что объясняет практически любой
+runtime-сценарий.
+
+Например, channel receive без sender:
+
+```text
+RUNNING
+↓
+WAITING
+```
+
+Срабатывание timer:
+
+```text
+WAITING
+↓
+RUNNABLE
+```
+
+Async preemption:
+
+```text
+RUNNING
+↓
+RUNNABLE
+```
+
+Завершение функции goroutine:
+
+```text
+RUNNING
+↓
+DEAD
+```
+
+Разница между `WAITING` и `RUNNABLE` принципиальна. В первом случае G физически
+не может продолжить работу до внешнего события. Во втором она готова работать,
+но пока не получила execution resource.
+
+---
+
+## 11.2. Что именно сохраняется при переключении G
+
+Scheduler не может просто помнить:
+
+```text
+"потом снова вызвать эту функцию"
+```
+
+Потому что goroutine может находиться глубоко внутри call chain:
+
+```text
+handler
+↓
+service
+↓
+repository
+↓
+decoder
+↓
+channel receive
+```
+
+После wakeup нужно продолжить именно после blocking operation, сохранив:
+
+- call stack;
+- локальные переменные;
+- stack pointer;
+- instruction pointer / continuation;
+- runtime bookkeeping.
+
+Поэтому `G` — это descriptor продолжения вычисления.
+
+Ментальная модель:
+
+```text
+G
+├── stack
+├── saved execution context
+├── status
+├── wait metadata
+└── scheduler metadata
+```
+
+Это объясняет, почему parking goroutine принципиально отличается от callback
+модели: application code выглядит как обычный последовательный код, а runtime
+умеет временно остановить и позже восстановить его execution context.
+
+---
+
+## 11.3. Почему scheduler работает через `g0`
+
+Пусть G1 решила park'нуться.
+
+Если runtime продолжит выполнять scheduler code на stack G1, возникает
+неприятная зависимость: мы пытаемся изменять состояние и potentially перестать
+использовать execution context, на котором сами сейчас стоим.
+
+Поэтому у каждого M есть special runtime context:
+
+```text
+M
+├── curg → текущая прикладная G
+└── g0   → system goroutine / system stack
+```
+
+Переход:
+
+```text
+G1 user stack
+↓
+mcall / system transition
+↓
+M.g0 stack
+↓
+park_m / schedule / runtime work
+```
+
+После выбора G2:
+
+```text
+M.g0
+↓
+execute(G2)
+↓
+G2 user stack
+```
+
+`g0` не является обычной пользовательской goroutine. Она не участвует в
+прикладном scheduling lifecycle как обычная G и служит runtime для операций,
+которые должны выполняться вне movable user stack.
+
+---
+
+## 11.4. Почему `RUNNABLE` может быть дорогим состоянием
+
+Waiting G почти не требует CPU:
+
+```text
+WAITING
+↓
+нет события
+↓
+scheduler её не рассматривает как работу
+```
+
+Runnable G — полноценный backlog CPU work:
+
+```text
+RUNNABLE
+↓
+должна получить P/M
+```
+
+Если сервис принимает CPU-bound работу быстрее, чем способен выполнять:
+
+```text
+arrival rate > CPU service rate
+↓
+RUNNABLE queue grows
+↓
+scheduler latency grows
+↓
+request latency grows
+```
+
+В production это важное различие.
+
+Две системы могут иметь:
+
+```text
+50 000 goroutines
+```
+
+но совершенно разное состояние.
+
+Система A:
+
+```text
+49 900 WAITING on network
+100 RUNNING/RUNNABLE
+```
+
+может быть нормальной.
+
+Система B:
+
+```text
+49 000 RUNNABLE
+```
+
+уже имеет огромный CPU backlog.
+
+Поэтому число goroutines без их states почти бессмысленно.
+
+---
+
+## 11.5. Где появляется preemption в lifecycle
+
+Preemption не создаёт отдельное состояние вида:
+
+```text
+PREEMPTED
+```
+
+В практической модели long-running G переводится обратно в runnable work:
+
+```text
+G RUNNING
+↓
+preemption requested
+↓
+safe preemption point
+↓
+G RUNNABLE
+↓
+scheduler может выбрать другую G
+```
+
+Смысл:
+
+> G всё ещё способна продолжить вычисление, но runtime временно отобрал у неё
+> execution resource ради fairness и progress системы.
+
+Это отличается от parking:
+
+```text
+preemption:
+RUNNING → RUNNABLE
+
+parking:
+RUNNING → WAITING
+```
+
+У этих переходов разные причины и разные последствия.
+
 ## Полный scheduler lifecycle
 
 ```text
@@ -630,6 +899,36 @@ RUNNABLE
 ↓
 scheduler
 ```
+
+
+## 11.6. Почему внутренние функции не являются API
+
+Нельзя строить прикладную корректность на предположениях вида:
+
+```text
+newproc всегда кладёт новую G именно сюда
+findRunnable всегда проверяет источники строго в таком порядке
+runqsteal всегда крадёт ровно столько-то элементов
+```
+
+Это runtime implementation policy.
+
+Публичная программа имеет право рассчитывать на семантику языка и
+synchronization primitives, но scheduler internals могут меняться между
+версиями Go.
+
+Для преподавания полезно разделять:
+
+```text
+стабильная модель:
+goroutine становится runnable → scheduler когда-нибудь её выполняет
+
+деталь реализации:
+какая queue, какой batch, какой конкретный helper function
+```
+
+Именно это позволяет изучать internals без превращения implementation detail в
+ложный контракт языка.
 
 ### Что важно запомнить
 
@@ -972,6 +1271,287 @@ Stealing требует atomic synchronization, чтения состояния 
 
 > Миллион goroutines по одной микроскопической операции может масштабироваться хуже, чем более крупные units of work.
 
+
+# 24.1. `runnext` — это приоритет, а не отдельная очередь
+
+Полезно представлять `runnext` как один privileged slot:
+
+```text
+P
+├── runnext → G17
+└── runq    → G42 G43 G44 ...
+```
+
+Это не queue произвольной длины.
+
+Поэтому runtime не может построить бесконечную отдельную очередь «важных G».
+В конкретный момент у P есть только один кандидат, которому даётся шанс стать
+следующим.
+
+Если slot уже занят и появляется ещё одна подходящая G, runtime должен
+разрулить ситуацию через обычную queue machinery.
+
+Такая конструкция ограничивает степень локального приоритета и не позволяет
+`runnext` превратиться во вторую бесконечную priority queue.
+
+---
+
+# 24.2. Почему `runnext` помогает cache locality
+
+Рассмотрим producer:
+
+```text
+G1
+↓
+подготовила объект
+↓
+сделала G2 runnable
+```
+
+Объект и связанные runtime structures могли только что использоваться текущим
+core.
+
+Если G2 быстро продолжит execution на том же P/M/core:
+
+```text
+данные вероятнее остаются в caches
+```
+
+Если G2 уйдёт далеко в global queue, а позже будет stolen другим P:
+
+```text
+cache working set может понадобиться заново подтянуть
+```
+
+Именно поэтому scheduler optimizations одновременно решают:
+
+```text
+latency
++
+locality
+```
+
+а не только «справедливость очередей».
+
+---
+
+# 24.3. Fairness не означает строгий FIFO
+
+Строгий FIFO выглядел бы просто:
+
+```text
+G1 стала runnable раньше G2
+↓
+G1 обязана выполниться раньше G2
+```
+
+Scheduler Go такого контракта не даёт.
+
+Причины:
+
+- `runnext`;
+- local queues;
+- global queue;
+- work stealing;
+- timers;
+- netpoller;
+- GC/runtime work;
+- preemption.
+
+Строгий FIFO ухудшил бы возможность оптимизировать locality и быстро
+реагировать на runtime events.
+
+Поэтому fairness здесь означает скорее:
+
+> Scheduler должен предотвращать патологическое бесконечное голодание work,
+> сохраняя при этом throughput и locality.
+
+---
+
+# 24.4. Почему global queue нужна даже при хороших local queues
+
+Local queue решает scalability problem, но создаёт isolation problem.
+
+Пусть:
+
+```text
+P0.runq = 100 G
+P1.runq = 0
+P2.runq = 0
+P3.runq = 0
+```
+
+Stealing исправляет это.
+
+Но есть и другая ситуация:
+
+```text
+P0.runq постоянно пополняется
+GLOBAL содержит старую work
+```
+
+Если P0 смотрит только local queue, global work может слишком долго не
+получать execution.
+
+Поэтому scheduler периодически учитывает global queue даже когда local work
+существует.
+
+Это tradeoff:
+
+```text
+local queue → cheap/local
+global queue → coordination/fairness
+```
+
+---
+
+# 24.5. Spinning M как latency optimization
+
+Почему idle M не park'ится мгновенно?
+
+Потому что park/unpark OS thread сам имеет цену.
+
+Сценарий:
+
+```text
+t0: work закончилась
+t0+2µs: появляется новая G
+```
+
+Если M мгновенно park:
+
+```text
+park
+↓
+новая G
+↓
+unpark thread
+↓
+OS scheduler
+↓
+execution
+```
+
+Если M короткое время spinning:
+
+```text
+новая G
+↓
+spinning M быстро находит её
+↓
+execution
+```
+
+Latency ниже.
+
+Но если work не появится:
+
+```text
+spin = бесполезный CPU burn
+```
+
+Поэтому runtime ограничивает количество и длительность spinning workers.
+
+---
+
+# 24.6. Почему нужен строгий protocol вокруг `nmspinning`
+
+В scheduler есть глобальная проблема гонки.
+
+Представим:
+
+```text
+M1 решил: work нет, сейчас park
+```
+
+Одновременно:
+
+```text
+G1 создаёт новую runnable G
+```
+
+Если producer увидит:
+
+```text
+"spinning worker ещё существует"
+```
+
+и решит никого не будить, а M1 сразу после этого перестанет spinning и park,
+новая work может остаться без активного worker.
+
+Поэтому transitions между:
+
+```text
+spinning
+idle
+wake
+```
+
+нуждаются в аккуратном atomic protocol.
+
+Это та же общая тема runtime:
+
+> Wait/wakeup correctness почти всегда сложнее, чем кажется из user code.
+
+---
+
+# 24.7. Work stealing — это load balancing, а не бесплатное ускорение
+
+Пусть каждая stolen G выполняет 100 ms полезной CPU work.
+
+Stealing cost почти незаметна.
+
+Пусть каждая G выполняет 100 ns работы.
+
+Тогда:
+
+```text
+victim selection
+atomic queue operations
+cache traffic
+scheduler bookkeeping
+```
+
+могут стать сопоставимы с полезной работой.
+
+Поэтому granularity задач влияет на эффективность scheduler.
+
+Goroutine дешёвая — это не обещание:
+
+> любая микроскопическая операция должна быть отдельной goroutine.
+
+---
+
+# 24.8. Scheduler latency и tail latency backend
+
+Пусть request уже получил все данные от PostgreSQL и network больше не ждёт.
+
+G стала:
+
+```text
+RUNNABLE
+```
+
+Но CPU перегружен.
+
+Она ждёт 20 ms до:
+
+```text
+RUNNING
+```
+
+Эти 20 ms пользователь видит как request latency, хотя:
+
+```text
+DB fast
+network fast
+lock contention нет
+```
+
+Под высоким CPU saturation scheduler queueing становится частью p95/p99.
+
+Именно поэтому latency backend нельзя объяснять только внешним I/O.
+
 ### Что важно запомнить
 
 - `runnext` — latency/locality optimization.
@@ -1307,6 +1887,258 @@ ready G
 ↓
 WAITING → RUNNABLE
 ```
+
+
+# 38.1. Поля `sudog`: что полезно понимать концептуально
+
+Реальный `sudog` содержит больше служебных полей, но для mental model важны:
+
+```text
+sudog
+├── g         → какая G ждёт
+├── next/prev → связь внутри wait structures
+├── elem      → данные channel operation
+├── waitlink  → связь ожиданий одной G
+└── metadata  → protocol-specific state
+```
+
+Не все поля используются одинаково всеми primitives.
+
+Главное:
+
+> `sudog` — не generic business object, а runtime node конкретного wait protocol.
+
+---
+
+# 38.2. Почему G может иметь несколько `sudog`
+
+`select`:
+
+```go
+select {
+case x := <-a:
+	use(x)
+case b <- y:
+case <-c:
+}
+```
+
+Если ничего не ready:
+
+```text
+G
+├── sgA → a.recvq
+├── sgB → b.sendq
+└── sgC → c.recvq
+```
+
+Но физически G должна park только один раз.
+
+Поэтому runtime должен:
+
+1. зарегистрировать все cases;
+2. park G;
+3. при событии определить winner;
+4. удалить losing wait registrations;
+5. вернуть `sudog` в pool.
+
+Это хороший пример, почему `sudog` нельзя просто заменить одним полем wait state
+внутри G.
+
+---
+
+# 38.3. Почему `sudog` pooling важен именно на hot synchronization path
+
+Представим сервер:
+
+```text
+100 000 channel operations/s
+```
+
+Если каждый blocking transition делал:
+
+```text
+malloc sudog
+↓
+GC later
+```
+
+получили бы дополнительный:
+
+- allocation rate;
+- GC pressure;
+- cache traffic.
+
+Runtime вместо этого старается переиспользовать waiter nodes.
+
+Получается:
+
+```text
+acquireSudog
+↓
+use
+↓
+releaseSudog
+↓
+cache/pool
+```
+
+Важный вывод:
+
+> Даже internal synchronization metadata проектируется как high-frequency
+> performance-sensitive path.
+
+---
+
+# 38.4. `semaRoot` и адрес semaphore
+
+`sync.Mutex` содержит маленькое поле:
+
+```text
+sema uint32
+```
+
+Но wait queue лежит не внутри этого поля.
+
+Адрес semaphore используется runtime как identity:
+
+```text
+&m.sema
+↓
+runtime semaphore table
+↓
+root/bucket
+↓
+waiters именно этого semaphore
+```
+
+Это позволяет тысячам Mutex использовать общую infrastructure, не увеличивая
+размер каждого объекта.
+
+---
+
+# 38.5. Почему shared semaphore table сама не должна стать одной global lock
+
+Если бы существовал:
+
+```text
+ONE GLOBAL SEMAPHORE QUEUE LOCK
+```
+
+то contention на разных независимых Mutex начал бы конфликтовать на одном
+runtime lock.
+
+Поэтому semaphore machinery shard'ится/распределяется по table roots.
+
+Общая идея та же, что позже увидим в application sharding:
+
+```text
+одна global synchronization point
+↓
+плохо масштабируется
+
+несколько independent buckets
+↓
+меньше unrelated contention
+```
+
+---
+
+# 38.6. Recheck закрывает race между token и waiter registration
+
+Самая важная логика semaphore acquire:
+
+```text
+проверил token → нет
+```
+
+Этого недостаточно.
+
+Между check и sleep release может вернуть token.
+
+Поэтому protocol должен сделать waiter видимым и повторно проверить state.
+
+Упрощённо:
+
+```text
+fast acquire failed
+↓
+register waiter presence
+↓
+recheck semaphore
+├── token появился → consume, не park
+└── token нет      → enqueue + park
+```
+
+Так runtime избегает сценария:
+
+```text
+release уже произошёл
+↓
+waiter ещё не был виден
+↓
+waiter заснул навсегда
+```
+
+---
+
+# 38.7. Runtime semaphore и OS futex-like идеи
+
+Концептуально runtime semaphore решает ту же инженерную задачу, что многие
+low-level primitives:
+
+```text
+быстрый user-space check
+↓
+если ресурс доступен → не sleep
+↓
+если нет → зарегистрировать waiter
+↓
+park
+↓
+wake on release
+```
+
+Но конкретная Go implementation интегрирована с goroutine scheduler.
+
+Цель — park G, а не обязательно OS thread.
+
+Именно поэтому semaphore path органично связывается с:
+
+```text
+sudog
+gopark
+goready
+```
+
+---
+
+# 38.8. Почему `sudog` может ссылаться на stack
+
+Для channel operation blocked sender может ждать с value, лежащим на stack:
+
+```go
+value := makeThing()
+ch <- value
+```
+
+Runtime должен сохранить связь:
+
+```text
+sudog.elem → location involved in operation
+```
+
+Если stack G переместится при growth, такие ссылки нельзя забыть.
+
+Так `sudog` соединяет две большие темы:
+
+```text
+synchronization
++
+movable goroutine stack
+```
+
+Именно поэтому stack relocation — не простой `memcpy`.
 
 ### Что важно запомнить
 
@@ -1918,6 +2750,353 @@ Woken = 1
 
 Так другой concurrent actor видит, что один waiter уже назначен на wakeup, и не поднимает толпу.
 
+
+# 69.1. Таблица нескольких характерных `Mutex.state`
+
+Упростим младшие биты:
+
+```text
+... waiter bits ... S W L
+```
+
+Несколько полезных примеров.
+
+Свободен:
+
+```text
+0 waiters, S=0, W=0, L=0
+```
+
+Захвачен без waiters:
+
+```text
+0 waiters, S=0, W=0, L=1
+```
+
+Захвачен, один waiter:
+
+```text
+1 waiter, S=0, W=0, L=1
+```
+
+Есть активированный waiter:
+
+```text
+waiters..., S=0, W=1, L=...
+```
+
+Starvation protocol:
+
+```text
+waiters..., S=1, ...
+```
+
+Ключевая мысль:
+
+> Значение `state` читается как состояние целого протокола, а не как четыре
+> независимых переменных.
+
+---
+
+# 69.2. Почему waiter count находится в тех же bits
+
+Состояние:
+
+```text
+Locked
+Woken
+Starving
+waiter count
+```
+
+логически связано.
+
+Например Unlock должен принять решение:
+
+```text
+есть ли waiters?
+уже кто-то woken?
+starvation mode?
+```
+
+Если всё это хранить отдельно, atomic transition усложняется.
+
+Packed word позволяет:
+
+```text
+old
+↓
+calculate new
+↓
+CAS
+```
+
+одним согласованным state change.
+
+---
+
+# 69.3. Что если `int32` waiter count теоретически переполнится
+
+Под waiter count остаётся очень много значений — сотни миллионов.
+
+Runtime не проектируется вокруг реального production-сценария с сотнями
+миллионов одновременно ожидающих goroutines на одном Mutex.
+
+Практически процесс исчерпает память и другие ресурсы значительно раньше.
+
+Это хороший пример engineering assumption:
+
+> Некоторые математически возможные states настолько далеко за пределами
+> реального resource envelope, что отдельная expensive protection от них не
+> входит в common-path design.
+
+При этом нельзя использовать такую деталь как публичную гарантию API.
+
+---
+
+# 69.4. `lockSlow` можно читать как цикл пересчёта гипотезы
+
+Вместо чтения исходника как набора битовых операций полезно видеть:
+
+```text
+1. Снять snapshot old
+2. Решить, что хотим сделать
+3. Построить desired new
+4. CAS
+5. Если CAS failed — snapshot устарел
+6. Пересчитать решение
+```
+
+То есть это optimistic state machine.
+
+Каждый CAS failure означает:
+
+```text
+между read и commit кто-то изменил mutex protocol
+```
+
+Именно поэтому код выглядит как цикл.
+
+---
+
+# 69.5. Локальный `awoke` и глобальный `mutexWoken`
+
+Это два разных уровня состояния.
+
+`mutexWoken`:
+
+```text
+глобальное состояние Mutex protocol
+```
+
+`awoke`:
+
+```text
+локальное состояние текущего contender внутри lockSlow
+```
+
+Текущая G должна помнить:
+
+> Я являюсь contender, который уже был учтён как woken.
+
+После успешного transition она должна корректно убрать/обновить соответствующий
+global bit, чтобы Mutex state не остался в ложном состоянии.
+
+---
+
+# 69.6. Почему waiter может предпочесть LIFO при повторном sleep
+
+Старый waiter уже:
+
+```text
+park
+↓
+wake
+↓
+scheduler delay
+↓
+проиграл barging
+```
+
+Если его всегда отправлять в самый хвост:
+
+```text
+он снова становится самым молодым
+```
+
+и может систематически проигрывать.
+
+При повторном ожидании runtime может дать ему повышенный queue priority.
+
+Это не универсальная гарантия FIFO/LIFO, а локальная fairness optimisation.
+
+---
+
+# 69.7. Timeline normal mode
+
+```text
+t0  G1 owns Mutex
+t1  G2 Lock → slow path → park
+t2  G1 Unlock
+t3  G2 becomes RUNNABLE
+t4  G3 is already RUNNING
+t5  G3 Lock → wins
+t6  G2 finally RUNNING
+t7  G2 sees Mutex busy → waits again
+```
+
+На первый взгляд кажется несправедливым.
+
+Но для throughput это может быть выгодно:
+
+```text
+G3 уже на CPU
+```
+
+Не нужно специально заставлять G3 sleep и ждать, пока scheduler вернёт G2.
+
+---
+
+# 69.8. Timeline starvation mode
+
+После долгого ожидания политика меняется:
+
+```text
+G1 Unlock
+↓
+handoff preference старому waiter G2
+↓
+newcomer G3 не должен steal ownership
+↓
+G2 получает progress
+```
+
+Цена:
+
+```text
+меньше opportunistic throughput
++
+больше fairness
+```
+
+Runtime динамически переключает policy вместо выбора одной стратегии навсегда.
+
+---
+
+# 69.9. Почему starvation threshold нельзя считать API
+
+Даже если текущий runtime использует threshold порядка миллисекунды, прикладной
+код не имеет права писать logic вроде:
+
+```text
+"через 1 ms Mutex гарантированно перейдёт в starvation mode"
+```
+
+Это implementation heuristic.
+
+Публичная гарантия `sync.Mutex` не обещает точную fairness policy или момент
+handoff.
+
+---
+
+# 69.10. Почему `TryLock` не превращает Mutex в polling primitive
+
+Если приложение делает:
+
+```go
+for !mu.TryLock() {
+}
+```
+
+оно фактически реализует собственный unbounded spin.
+
+Цена:
+
+- CPU burn;
+- cache-line contention;
+- отсутствие scheduler-friendly parking;
+- возможно ухудшение progress owner.
+
+`TryLock` полезен в редких algorithmic cases, но постоянный polling обычно
+хуже обычного `Lock`, который умеет адаптироваться от CAS к parking.
+
+---
+
+# 69.11. Critical section определяет реальную capacity Mutex
+
+Если один protected operation занимает:
+
+```text
+10 µs
+```
+
+теоретический upper bound одной serial section порядка:
+
+```text
+~100 000 операций/с
+```
+
+без учёта overhead.
+
+Если туда случайно попало network I/O:
+
+```text
+10 ms
+```
+
+upper bound уже порядка:
+
+```text
+~100 операций/с
+```
+
+Даже 128 CPU cores не отменяют serialization.
+
+Отсюда production-правило:
+
+> Под lock держат invariant, а не всю бизнес-операцию.
+
+---
+
+# 69.12. Mutex contention и queueing theory
+
+Если service rate critical section:
+
+```text
+µ
+```
+
+а incoming contention rate:
+
+```text
+λ
+```
+
+при:
+
+```text
+λ → µ
+```
+
+queueing delay начинает резко расти.
+
+При:
+
+```text
+λ > µ
+```
+
+стабильной очереди уже нет — waiters накапливаются.
+
+Mutex здесь не создаёт проблему; он делает реальный serial bottleneck видимым.
+
+Нужно либо:
+
+- уменьшить critical section;
+- уменьшить arrival rate;
+- shard state;
+- изменить ownership model.
+
 ### Что важно запомнить
 
 - `lockSlow` — CAS-driven state machine.
@@ -2431,6 +3610,315 @@ status
 Atomics удобны, когда invariant помещается в небольшой atomic state.
 
 Для сложного составного invariant `Mutex` часто проще и безопаснее.
+
+
+# 96.1. Cache hierarchy — это ещё и вопрос bandwidth
+
+Обычно обсуждают latency:
+
+```text
+L1 быстрее RAM
+```
+
+Но есть второй ресурс — bandwidth.
+
+Много cores могут одновременно генерировать огромный memory traffic.
+
+Даже если данные не contended логически, workload может упереться в:
+
+```text
+memory bandwidth
+```
+
+Поэтому CPU-bound и memory-bound workloads ведут себя по-разному.
+
+Добавление cores помогает, пока не исчерпан следующий shared resource.
+
+---
+
+# 96.2. Cache locality бывает temporal и spatial
+
+Temporal locality:
+
+```text
+использовали x
+↓
+скоро снова используем x
+```
+
+Spatial locality:
+
+```text
+использовали address A
+↓
+скоро понадобятся соседние addresses
+```
+
+Scheduler locality интересна прежде всего temporal locality рабочего набора G.
+
+Data layout — spatial locality.
+
+Обе влияют на performance, хотя на уровне Go-кода мы просто видим structs,
+slices и goroutines.
+
+---
+
+# 96.3. Почему shared read обычно масштабируется лучше shared write
+
+Пусть 32 cores читают immutable config.
+
+Cache line может быть shared:
+
+```text
+Core0 S
+Core1 S
+Core2 S
+...
+```
+
+Нет постоянной необходимости передавать writable ownership.
+
+Теперь все делают write:
+
+```text
+exclusive ownership нужно каждому
+```
+
+Cache line начинает мигрировать.
+
+Поэтому immutable/read-mostly structures часто масштабируются лучше mutable
+global state.
+
+---
+
+# 96.4. Пример MESI transition для одного counter
+
+Начало:
+
+```text
+Core0: S
+Core1: S
+```
+
+Core0 хочет increment.
+
+Нужно writable ownership:
+
+```text
+Core0 requests ownership
+↓
+Core1 copy invalidated
+↓
+Core0: M
+Core1: I
+```
+
+Теперь Core1 хочет increment:
+
+```text
+Core1 requests line
+↓
+coherence transfer
+↓
+Core1: M
+Core0: I
+```
+
+Если так происходит миллионы раз:
+
+```text
+арифметика +1
+```
+
+становится почти неинтересной по сравнению с movement cache line.
+
+---
+
+# 96.5. MESI не объясняет все modern CPU details
+
+Учебная модель полезна, но реальные processors имеют:
+
+- дополнительные coherence states;
+- directories/snoop filters;
+- complex interconnect;
+- inclusive/non-inclusive cache policies;
+- prefetchers;
+- store buffers;
+- architecture-specific ordering.
+
+Поэтому MESI используют как conceptual language:
+
+```text
+shared copies
+exclusive write ownership
+invalidations
+```
+
+а не как точный transistor-level trace конкретного CPU.
+
+---
+
+# 96.6. Store buffer: почему write не обязана мгновенно стать видимой всем
+
+Core может сначала поместить write в store buffer, продолжая execution.
+
+Это позволяет не останавливать pipeline на каждом store.
+
+Но другой core не обязан мгновенно наблюдать эффект в source-code order без
+соответствующего synchronization contract.
+
+Отсюда возникает необходимость memory model и ordering primitives.
+
+---
+
+# 96.7. Fence — это constraint, а не «команда записать RAM»
+
+Очень распространённая ошибка:
+
+```text
+memory barrier
+=
+flush cache
+```
+
+Нет.
+
+Fence ограничивает ordering memory operations согласно architecture model.
+
+Cache coherence продолжает отдельно обеспечивать согласованность cached copies.
+
+DRAM может вообще не участвовать непосредственно в каждой передаче данных:
+новейшая line может прийти от другого cache через coherence fabric.
+
+---
+
+# 96.8. x86 кажется «сильным», но data race всё равно data race
+
+x86 имеет относительно сильную ordering model по сравнению со многими ARM
+scenarios.
+
+Из этого иногда делают опасный вывод:
+
+> На x86 без synchronization всё обычно работает.
+
+Даже если конкретный hardware часто ведёт себя ожидаемо, Go compiler и Go
+Memory Model не дают программе права зависеть от data race.
+
+Код должен быть корректен на уровне языка, а не «случайно стабилен на моём x86».
+
+---
+
+# 96.9. ARM заставляет лучше видеть абстракцию memory model
+
+На более weakly ordered architecture некоторые hardware reorderings более
+очевидны.
+
+Но прикладной Go-код не должен вручную выбирать:
+
+```text
+DMB
+LDAR
+STLR
+```
+
+Это задача compiler/runtime implementation.
+
+Программист выбирает:
+
+```text
+Mutex
+channel
+atomic
+```
+
+и получает Go-level happens-before / synchronization semantics.
+
+---
+
+# 96.10. CAS и cache line ownership — две стороны одной операции
+
+CAS обещает atomicity на language/ISA уровне.
+
+Hardware для этого должен сериализовать конфликтующие accesses к underlying
+cache line.
+
+Поэтому:
+
+```text
+CAS semantic guarantee
+```
+
+имеет физическую цену:
+
+```text
+coherence ownership
++
+serialization
++
+potential retries
+```
+
+Чем больше cores одновременно спорят за одно word, тем сильнее эта цена.
+
+---
+
+# 96.11. Почему atomics часто быстрее Mutex при low contention
+
+Low contention:
+
+```text
+load/CAS
+↓
+success
+```
+
+Нет:
+
+- parking;
+- sudog;
+- scheduler transition.
+
+Поэтому simple atomic state machine может быть очень дешёвой.
+
+Но при high contention:
+
+```text
+CAS fail
+retry
+cache line moves
+CAS fail
+retry
+```
+
+преимущество уменьшается.
+
+Универсального правила «atomic всегда быстрее mutex» нет.
+
+---
+
+# 96.12. Memory Model — это контракт между programmer, compiler и hardware
+
+Полезная трёхслойная модель:
+
+```text
+Go source
+↓
+Go Memory Model
+↓
+compiler/runtime lowering
+↓
+ISA memory model
+↓
+hardware
+```
+
+Application correctness формулируется на верхнем уровне.
+
+Compiler обязан подобрать такие instructions/barriers, чтобы public Go
+semantics соблюдалась на конкретной architecture.
+
+Именно поэтому переносимый concurrent code нельзя проектировать, рассуждая
+только о конкретном opcode одной CPU family.
 
 ### Что важно запомнить
 
@@ -3003,6 +4491,452 @@ contention
 > «Без mutex» ещё не означает «без synchronization cost».
 
 ---
+
+
+# 121.1. False sharing на структуре метрик
+
+Возьмём:
+
+```go
+type Stats struct {
+	requests atomic.Uint64
+	errors   atomic.Uint64
+}
+```
+
+Две goroutines:
+
+```text
+G1/Core0 постоянно increments requests
+G2/Core1 постоянно increments errors
+```
+
+Логически:
+
+```text
+разные counters
+```
+
+Физически поля могут находиться в одной cache line.
+
+Тогда каждый write требует ownership той же line.
+
+Получаем:
+
+```text
+Core0 writes requests
+↓
+line owned Core0
+
+Core1 writes errors
+↓
+line moves Core1
+
+Core0 writes requests
+↓
+line moves Core0
+```
+
+Это false sharing: application state independent, hardware sharing real.
+
+---
+
+# 121.2. Padding увеличивает memory footprint
+
+Разнести counters по cache lines можно padding'ом.
+
+Но если у нас миллион объектов:
+
+```text
++56 bytes padding
+×
+1 000 000
+```
+
+получаем десятки мегабайт лишней памяти.
+
+То есть tradeoff:
+
+```text
+меньше coherence contention
+vs
+больше memory footprint / worse cache density
+```
+
+Padding оправдан только для действительно hot shared fields.
+
+---
+
+# 121.3. Sharding global counter
+
+Плохая scalability:
+
+```text
+all workers
+↓
+one global atomic
+```
+
+Sharded:
+
+```text
+worker group 0 → counter0
+worker group 1 → counter1
+worker group 2 → counter2
+...
+```
+
+Read total:
+
+```text
+sum(counter0...counterN)
+```
+
+Tradeoff:
+
+```text
+write scalability ↑
+read/aggregation cost ↑
+```
+
+Для metrics это часто приемлемо: writes очень частые, aggregate читается реже.
+
+---
+
+# 121.4. Sharding Mutex-protected map
+
+Было:
+
+```text
+one map
+one mutex
+```
+
+Любые keys конфликтуют:
+
+```text
+key A
+key B
+key C
+↓
+same lock
+```
+
+После sharding:
+
+```text
+hash(key) % N
+↓
+shard
+├── own map
+└── own mutex
+```
+
+Independent keys чаще попадают в разные critical sections.
+
+Это уменьшает logical contention и hardware contention одного `Mutex.state`.
+
+---
+
+# 121.5. Когда sharding не помогает
+
+Если workload skewed:
+
+```text
+90% requests → same key
+```
+
+все всё равно попадут:
+
+```text
+same shard
+```
+
+Также sharding не решает invariant, который по природе глобальный:
+
+```text
+global strict ordering
+global balance
+single global uniqueness decision
+```
+
+Тогда попытка искусственно раздробить state может сделать correctness гораздо
+сложнее.
+
+---
+
+# 121.6. NUMA: local и remote memory
+
+На multi-socket server:
+
+```text
+Socket 0 ─ local memory 0
+Socket 1 ─ local memory 1
+```
+
+Core на Socket 0 может обращаться к памяти, физически ближе к Socket 0, быстрее,
+чем к remote NUMA node.
+
+Hot global data, к которому активно обращаются оба sockets, создаёт:
+
+```text
+inter-socket traffic
+```
+
+а coherence ownership может проходить через межсокетный interconnect.
+
+---
+
+# 121.7. Почему contention резко хуже на большой машине
+
+На ноутбуке:
+
+```text
+8 cores
+1 socket
+```
+
+global atomic может выглядеть приемлемо.
+
+На production server:
+
+```text
+96 cores
+2 sockets
+```
+
+количество contenders выше, расстояние между ними больше, coherence traffic
+дороже.
+
+Поэтому benchmark обязательно должен учитывать target hardware class.
+
+---
+
+# 121.8. Goroutine migration и cache locality
+
+G не закреплена навечно за одним core.
+
+Если work stealing переносит G:
+
+```text
+Core0
+↓
+Core7
+```
+
+её data working set может остаться преимущественно в caches предыдущего core.
+
+Новый core получает cache misses.
+
+Это цена load balancing.
+
+Именно поэтому scheduler не пытается бесконечно перемешивать runnable G ради
+идеально равных queue lengths.
+
+---
+
+# 121.9. False sharing диагностика начинается не с padding
+
+Правильная последовательность:
+
+```text
+benchmark плохо масштабируется
+↓
+CPU profile
+↓
+mutex/atomic hotspot?
+↓
+hardware counters / perf при необходимости
+↓
+подозрение на cache-line contention
+↓
+только потом layout/padding experiment
+```
+
+Если заранее добавить padding во все structs, легко:
+
+- раздуть memory;
+- ухудшить cache density;
+- не решить реальный bottleneck.
+
+---
+
+# 121.10. `perf c2c` и hardware counters — последний слой
+
+На Linux hardware performance tools могут помочь увидеть:
+
+- cache misses;
+- coherence-related events;
+- contested cache lines;
+- NUMA effects.
+
+Но это уже следующий диагностический уровень.
+
+До него нужно исключить очевидные причины:
+
+```text
+slow SQL
+external API
+large allocations
+GC pressure
+Mutex profile hotspot
+scheduler backlog
+```
+
+CPU internals полезны тогда, когда обычные application/runtime profiles уже
+показывают, что bottleneck действительно локальный и CPU/cache-sensitive.
+
+---
+
+# 121.11. Практический benchmark global atomic
+
+```go
+func BenchmarkGlobalAtomic(b *testing.B) {
+	var n atomic.Uint64
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			n.Add(1)
+		}
+	})
+}
+```
+
+Запуск:
+
+```bash
+go test -bench=BenchmarkGlobalAtomic -cpu=1,2,4,8,16
+```
+
+Смотреть нужно не на одно число, а на scaling curve.
+
+Идеальный linear scaling:
+
+```text
+CPU ×2
+→ throughput ×2
+```
+
+для одного hot atomic обычно быстро перестаёт выполняться.
+
+Именно график масштабирования показывает contention лучше, чем один benchmark
+на default CPU count.
+
+---
+
+# 121.12. Практический benchmark sharded state
+
+Можно создать N independent counters и распределить workers по ним.
+
+Нужно сравнить:
+
+```text
+global atomic
+vs
+N shards
+```
+
+и отдельно учитывать стоимость чтения aggregate.
+
+Цель:
+
+> Показать, что уменьшение sharing может дать больше, чем оптимизация самой
+> arithmetic operation.
+
+---
+
+# 121.13. Полная причинная цепочка hot Mutex
+
+```text
+many goroutines call Lock
+↓
+fast CAS fails
+↓
+some contenders spin
+↓
+Mutex.state cache line becomes hot
+↓
+coherence traffic grows
+↓
+runtime starts parking waiters
+↓
+active contention decreases
+↓
+semaphore/scheduler cost appears
+↓
+throughput determined by critical section capacity
+```
+
+Здесь одновременно работают:
+
+- application design;
+- runtime synchronization;
+- scheduler;
+- CPU cache coherence.
+
+Вот зачем весь этот дополнительный блок изучается вместе.
+
+---
+
+# 121.14. Полная причинная цепочка hot atomic
+
+```text
+many goroutines
+↓
+one atomic word
+↓
+atomic RMW
+↓
+exclusive cache-line ownership
+↓
+ownership moves between cores
+↓
+failed retries / serialization
+↓
+throughput scaling flattens
+```
+
+Нет Mutex.
+Нет `gopark`.
+Но contention никуда не исчез.
+
+Он просто живёт на hardware layer.
+
+---
+
+# 121.15. Главная граница глубины
+
+Для обычного production incident сначала нужны:
+
+```text
+metrics
+logs
+trace
+pprof
+database diagnostics
+```
+
+И только если они приводят к:
+
+```text
+hot synchronization
+CPU scaling anomaly
+atomic hotspot
+```
+
+имеет смысл идти:
+
+```text
+cache line
+MESI
+NUMA
+```
+
+Знание CPU internals нужно не для того, чтобы любой slow request объяснять
+coherence protocol.
+
+Оно нужно, чтобы последний слой диагностики тоже оставался причинным, а не
+магическим.
 
 # 122. Что важно запомнить по всему дополнительному блоку
 
