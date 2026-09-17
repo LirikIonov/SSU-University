@@ -3,7 +3,7 @@
 docs_dir: data
 site_dir: site
 site_name: База данных
-site_url: https://lirikonov.github.io/university/
+site_url: https://lirikonov.github.io/SSU-University/
 
 markdown_extensions:
   - tables
