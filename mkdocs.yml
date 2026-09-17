@@ -2,7 +2,7 @@
 
 docs_dir: data
 site_dir: site
-site_name: Go — углублённое изучение
+site_name: Go
 site_url: https://lirikonov.github.io/SSU-University/
 
 markdown_extensions:
@@ -41,6 +41,8 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
 
+not_in_nav: |
+  /index.md
 
 plugins:
   - search:
@@ -101,7 +103,8 @@ theme:
     - navigation.tracking
     - navigation.top
     - navigation.footer
-     - navigation.expand
+    - navigation.expand
+    - navigation.indexes
 
     # Правый TOC следует за текущим разделом
     - toc.follow
