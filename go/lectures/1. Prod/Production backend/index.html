@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html class="no-js" lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<link href="https://lirikonov.github.io/university/go/lectures/1.%20Prod/Production%20backend/" rel="canonical"/>
+<link href="../../../../university/go/slides/" rel="next"/>
+<link href="../../../../assets/images/favicon.png" rel="icon"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.7.7" name="generator"/>
+<title>Лекция 1. Production backend и эволюция Go - База данных</title>
+<link href="../../../../assets/stylesheets/main.ec1eaa64.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+<script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+</head>
+<body data-md-color-accent="indigo" data-md-color-primary="indigo" data-md-color-scheme="default" dir="ltr">
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#1-production-backend-go">
+          Перейти к содержанию
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header md-header--shadow" data-md-component="header">
+<nav aria-label="Верхний колонтитул" class="md-header__inner md-grid">
+<a aria-label="База данных" class="md-header__button md-logo" data-md-component="logo" href="../../../.." title="База данных">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            База данных
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              Лекция 1. Production backend и эволюция Go
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Тёмная тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: light)" data-md-color-primary="indigo" data-md-color-scheme="default" id="__palette_0" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Тёмная тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+<input aria-label="Светлая тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-primary="indigo" data-md-color-scheme="slate" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_0" hidden="" title="Светлая тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+</form>
+<script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Поиск" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Поиск" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</label>
+<nav aria-label="Поиск" class="md-search__options">
+<button aria-label="Очистить" class="md-search__icon md-icon" tabindex="-1" title="Очистить" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+</nav>
+<div class="md-search__suggest" data-md-component="search-suggest"></div>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="" tabindex="0">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Инициализация поиска
+          </div>
+<ol class="md-search-result__list" role="presentation"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Навигация" class="md-nav md-nav--primary" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="База данных" class="md-nav__button md-logo" data-md-component="logo" href="../../../.." title="База данных">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+    База данных
+  </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--active md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Go
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_1_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Go
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--active md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_1_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1_1" id="__nav_1_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Lectures
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_1_1_label" class="md-nav" data-md-level="2">
+<label class="md-nav__title" for="__nav_1_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Lectures
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--active md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_1_1_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1_1_1" id="__nav_1_1_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    1. Prod
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_1_1_1_label" class="md-nav" data-md-level="3">
+<label class="md-nav__title" for="__nav_1_1_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    1. Prod
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--active">
+<input class="md-nav__toggle md-toggle" id="__toc" type="checkbox"/>
+<label class="md-nav__link md-nav__link--active" for="__toc">
+<span class="md-ellipsis">
+    
+  
+    Лекция 1. Production backend и эволюция Go
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<a class="md-nav__link md-nav__link--active" href="./">
+<span class="md-ellipsis">
+    
+  
+    Лекция 1. Production backend и эволюция Go
+  
+
+    
+  </span>
+</a>
+<nav aria-label="Содержание" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_1">
+<span class="md-ellipsis">
+      
+        Введение
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_2">
+<span class="md-ellipsis">
+      
+        Как читать эту лекцию
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" id="__nav_2" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    University
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_2">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    University
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" id="__nav_2_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2_1" id="__nav_2_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Go
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_1_label" class="md-nav" data-md-level="2">
+<label class="md-nav__title" for="__nav_2_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Go
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" id="__nav_2_1_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2_1_1" id="__nav_2_1_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Slides
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_1_1_label" class="md-nav" data-md-level="3">
+<label class="md-nav__title" for="__nav_2_1_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Slides
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../university/go/slides/">
+<span class="md-ellipsis">
+    
+  
+    Презентации
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Содержание" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_1">
+<span class="md-ellipsis">
+      
+        Введение
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_2">
+<span class="md-ellipsis">
+      
+        Как читать эту лекцию
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<h1 id="1-production-backend-go">Лекция 1. Production backend и эволюция Go<a class="headerlink" href="#1-production-backend-go" title="Permanent link">¶</a></h1>
+<h2 id="_1">Введение<a class="headerlink" href="#_1" title="Permanent link">¶</a></h2>
+<p>На первой лекции важно сразу убрать опасную иллюзию: если программа компилируется, запускается и отвечает <code>200 OK</code>, это ещё не означает, что мы получили production backend.</p>
+<p>Локально всё может выглядеть идеально:</p>
+<div class="highlight"><pre><span></span><code>HTTP request
+↓
+handler
+↓
+service
+↓
+repository
+↓
+PostgreSQL
+↓
+200 OK
+</code></pre></div>
+<p>Но реальная система живёт в другой среде. Запросы приходят одновременно. Процессы перезапускаются. Несколько версий приложения какое-то время работают параллельно. База данных тормозит. Внешний API отвечает через пять секунд вместо пятидесяти миллисекунд. Соединения заканчиваются. Клиент не получает ответ и повторяет запрос. Ошибка может случиться после того, как часть операции уже была выполнена.</p>
+<p>Поэтому центральный вопрос этой лекции:</p>
+<blockquote>
+<p>Что позволяет доверить программе реальные запросы?</p>
+</blockquote>
+<p>Ответ лежит не только в синтаксисе Go. Нужно понимать, как приложение собирается, что именно разворачивается, чем отличаются окружения, где хранится конфигурация, от каких внешних ресурсов зависит сервис, как Go эволюционировал как production-платформа и какие гарантии действительно даёт язык и toolchain.</p>
+<hr/>
+<h2 id="_2">Как читать эту лекцию<a class="headerlink" href="#_2" title="Permanent link">¶</a></h2>
+<p>Материал построен слоями. Сначала рассматриваем backend как эксплуатируемую систему: окружения, артефакт, конфигурацию и внешние зависимости. Затем разбираем, почему Go как язык и платформа эволюционировал именно в таком направлении. После этого отдельно закрепляем три механизма, которые нужны практически в любом современном Go-проекте: compatibility promise, modules/generics и toolchain.</p>
+<p>У каждого механизма нас интересуют четыре вопроса:</p>
+<div class="highlight"><pre><span></span><code>какую проблему решает?
+↓
+как устроена ментальная модель?
+↓
+какие ограничения и компромиссы?
+↓
+что это меняет в production backend?
+</code></pre></div>
+<p>Поэтому дальше некоторые вещи будут разобраны глубже, чем требуется просто для написания синтаксически правильного Go-кода.</p>
+<h1 id="1-production-backend">1. Production backend<a class="headerlink" href="#1-production-backend" title="Permanent link">¶</a></h1>
+<h2 id="11-production">1.1. Что такое production<a class="headerlink" href="#11-production" title="Permanent link">¶</a></h2>
+<p>Production — это среда, где система выполняет реальную работу для пользователей или других систем.</p>
+<p>Ключевой признак production — последствия.</p>
+<p>Если ошибка приложения может:</p>
+<ul>
+<li>потерять данные;</li>
+<li>создать дубликат;</li>
+<li>сорвать бизнес-процесс;</li>
+<li>сделать функцию недоступной;</li>
+<li>нарушить интеграцию с другой системой;</li>
+<li>привести к финансовым или операционным последствиям;</li>
+</ul>
+<p>то речь уже идёт о production-нагрузке, даже если приложение работает на одном сервере и обслуживает десять человек.</p>
+<p>И наоборот: огромный тестовый кластер из сотни машин остаётся тестовым, если он не обслуживает настоящую работу.</p>
+<p>Поэтому production определяется назначением системы, а не количеством серверов.</p>
+<h2 id="12-http-">1.2. Почему успешный HTTP-запрос почти ничего не доказывает<a class="headerlink" href="#12-http-" title="Permanent link">¶</a></h2>
+<p>Возьмём простейший сервер:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="s">"fmt"</span>
+<span class="w">    </span><span class="s">"net/http"</span>
+<span class="p">)</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">HandleFunc</span><span class="p">(</span><span class="s">"/hello"</span><span class="p">,</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintln</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">"hello"</span><span class="p">)</span>
+<span class="w">    </span><span class="p">})</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ListenAndServe</span><span class="p">(</span><span class="s">":8080"</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Он компилируется, запускается и отвечает:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://localhost:8080/hello
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>hello
+</code></pre></div>
+<p>Это подтверждает только один сценарий:</p>
+<div class="highlight"><pre><span></span><code>процесс запустился
++
+порт доступен
++
+handler отработал
++
+ответ дошёл до клиента
+</code></pre></div>
+<p>Ничего из этого не проверяет отказ базы данных, задержку внешнего API, перегрузку, нехватку соединений, корректность retry, повтор запроса, rolling update, graceful shutdown и диагностику после сбоя.</p>
+<p>Production начинается там, где happy path перестаёт быть единственным рассматриваемым сценарием.</p>
+<h2 id="13">1.3. Частичный успех<a class="headerlink" href="#13" title="Permanent link">¶</a></h2>
+<p>Рассмотрим создание заказа.</p>
+<div class="highlight"><pre><span></span><code>1. HTTP handler принимает запрос
+2. PostgreSQL сохраняет заказ
+3. приложение публикует событие OrderCreated
+4. клиент получает ответ
+</code></pre></div>
+<p>Идеальный сценарий:</p>
+<div class="highlight"><pre><span></span><code>request
+↓
+INSERT
+↓
+COMMIT
+↓
+publish
+↓
+200 OK
+</code></pre></div>
+<p>Теперь ломаем публикацию:</p>
+<div class="highlight"><pre><span></span><code>request
+↓
+INSERT
+↓
+COMMIT
+↓
+publish
+↓
+ERROR
+</code></pre></div>
+<p>Заказ уже существует, но событие не опубликовано.</p>
+<p>Если клиент получает <code>500</code>, он может повторить запрос:</p>
+<div class="highlight"><pre><span></span><code>request #1
+→ order created
+→ response failed
+
+request #2
+→ order created again
+</code></pre></div>
+<p>Так появляется дубликат.</p>
+<p>Отсюда фундаментальный принцип backend:</p>
+<blockquote>
+<p>Ошибка ответа не означает, что операция ничего не сделала.</p>
+</blockquote>
+<p>То же относится к timeout. Если клиент перестал ждать ответ, это не доказывает, что удалённая система не обработала запрос. Timeout означает только прекращение ожидания результата.</p>
+<p>Именно поэтому в production появляются отдельные инженерные темы: идемпотентность, retry, транзакции, outbox, дедупликация и восстановление после частичного выполнения.</p>
+<p>Go сам по себе не делает независимые операции атомарными.</p>
+<hr/>
+<h2 id="14-production">1.4. Production как набор инженерных обязательств<a class="headerlink" href="#14-production" title="Permanent link">¶</a></h2>
+<p>Удобно мыслить production не как «сервер где-то в дата-центре», а как набор обязательств системы перед внешним миром. У backend обычно есть как минимум четыре измерения качества:</p>
+<div class="highlight"><pre><span></span><code>correctness   — результат операции логически корректен
+availability  — систему можно использовать тогда, когда она нужна
+latency       — ответ приходит за приемлемое время
+operability   — проблему можно обнаружить, локализовать и объяснить
+</code></pre></div>
+<p>Эти свойства связаны. Например, можно повысить availability агрессивными retry и одновременно уничтожить latency перегруженной зависимости. Можно ускорить запрос кешированием и получить проблему consistency. Можно вернуть <code>200 OK</code> очень быстро, но потерять событие, необходимое другой системе.</p>
+<p>Поэтому production-разработка почти всегда состоит из компромиссов. Нас интересует не только «работает ли код», но и <strong>какое поведение система демонстрирует при отклонении от happy path</strong>.</p>
+<h3 id="_3">Жизненный цикл одного запроса<a class="headerlink" href="#_3" title="Permanent link">¶</a></h3>
+<p>Даже простой HTTP-запрос проходит несколько границ:</p>
+<div class="highlight"><pre><span></span><code>client
+↓
+TCP / TLS
+↓
+HTTP server
+↓
+handler
+↓
+application logic
+↓
+DB pool / HTTP client pool
+↓
+external resource
+↓
+обратный путь ответа
+</code></pre></div>
+<p>На каждой границе есть собственная очередь, собственный timeout и собственное ограничение capacity. Из-за этого симптом в одном месте может быть вызван bottleneck совершенно в другом.</p>
+<p>Пример: handler выполняется медленно, но CPU процесса почти свободен. Это не противоречие. Goroutine может большую часть времени ждать свободное соединение из пула или ответ БД. С точки зрения CPU она почти ничего не делает, но с точки зрения пользователя запрос всё равно медленный.</p>
+<h3 id="_4">Ошибка, отказ и деградация — разные ситуации<a class="headerlink" href="#_4" title="Permanent link">¶</a></h3>
+<p>Полезно различать три режима:</p>
+<div class="highlight"><pre><span></span><code>ошибка       — конкретная операция завершилась неуспешно
+отказ        — компонент не способен выполнять свою функцию
+деградация   — функция выполняется, но хуже ожидаемого уровня
+</code></pre></div>
+<p>Например, PostgreSQL может не быть «упавшей»: она отвечает, но вместо 20 мс запрос занимает 8 секунд. Для пользователя это уже практически отказ, хотя TCP-соединение установлено и SQL в итоге выполняется.</p>
+<h3 id="observability-production-">Почему observability входит в production-модель<a class="headerlink" href="#observability-production-" title="Permanent link">¶</a></h3>
+<p>Локально разработчик видит программу непосредственно. В production проблема часто расследуется после события. Поэтому система должна оставлять следы:</p>
+<ul>
+<li>логи — что произошло;</li>
+<li>метрики — как менялось состояние во времени;</li>
+<li>traces — где конкретный request провёл время;</li>
+<li>версия артефакта — какой код вообще работал.</li>
+</ul>
+<p>Если сервис тормозит, а у нас есть только строка <code>request failed</code>, проблема почти не диагностируема. Production-ready система должна позволять восстановить причинную цепочку хотя бы постфактум.</p>
+<h1 id="2-dev-test-stage-prod">2. Dev / Test / Stage / Prod<a class="headerlink" href="#2-dev-test-stage-prod" title="Permanent link">¶</a></h1>
+<p>Разные окружения существуют не ради названий. Каждое проверяет свой набор предположений.</p>
+<table>
+<thead>
+<tr>
+<th>Среда</th>
+<th>Назначение</th>
+<th>Типичные условия</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dev</td>
+<td>Быстрая разработка</td>
+<td>Отладчик, локальные сервисы, частые изменения</td>
+</tr>
+<tr>
+<td>Test</td>
+<td>Автоматическая проверка</td>
+<td>Контролируемые сценарии и данные</td>
+</tr>
+<tr>
+<td>Stage</td>
+<td>Репетиция релиза</td>
+<td>Интеграции и topology близки к production</td>
+</tr>
+<tr>
+<td>Prod</td>
+<td>Реальная работа</td>
+<td>Настоящие данные, нагрузка и обязательства</td>
+</tr>
+</tbody>
+</table>
+<h2 id="21-dev">2.1. Dev<a class="headerlink" href="#21-dev" title="Permanent link">¶</a></h2>
+<p>Dev-среда оптимизирована под скорость разработки. Здесь нормальны debugger, mock-сервисы, локальная PostgreSQL, упрощённая конфигурация, подробное логирование и частые перезапуски.</p>
+<p>Главная задача dev:</p>
+<div class="highlight"><pre><span></span><code>изменил код
+↓
+быстро запустил
+↓
+быстро проверил гипотезу
+</code></pre></div>
+<p>Но dev почти никогда не воспроизводит настоящую topology и нагрузку production.</p>
+<h2 id="22-test">2.2. Test<a class="headerlink" href="#22-test" title="Permanent link">¶</a></h2>
+<p>Test-среда нужна для воспроизводимых проверок:</p>
+<div class="highlight"><pre><span></span><code>build
+↓
+unit tests
+↓
+integration tests
+↓
+API tests
+</code></pre></div>
+<p>Тестовая среда должна быть достаточно контролируемой, чтобы результат зависел прежде всего от программы, а не от случайного состояния окружения.</p>
+<h2 id="23-stage">2.3. Stage<a class="headerlink" href="#23-stage" title="Permanent link">¶</a></h2>
+<p>Stage обычно используется как репетиция production. Здесь можно воспроизвести реальные способы deployment, сетевую topology, несколько экземпляров сервиса, настоящую СУБД, реальные интеграционные протоколы, health checks и близкую к production конфигурацию.</p>
+<p>Но stage почти никогда не совпадает с production полностью.</p>
+<table>
+<thead>
+<tr>
+<th>Фактор</th>
+<th style="text-align: right;">Stage</th>
+<th style="text-align: right;">Prod</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Строк в таблице</td>
+<td style="text-align: right;">1 000</td>
+<td style="text-align: right;">100 000 000</td>
+</tr>
+<tr>
+<td>Экземпляров сервиса</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">20</td>
+</tr>
+<tr>
+<td>Внешний API</td>
+<td style="text-align: right;">быстрый mock</td>
+<td style="text-align: right;">реальная задержка и квоты</td>
+</tr>
+<tr>
+<td>Deployment</td>
+<td style="text-align: right;">полная замена</td>
+<td style="text-align: right;">rolling update</td>
+</tr>
+</tbody>
+</table>
+<p>Поэтому фраза «на stage всё прошло» означает только, что сценарий прошёл в условиях stage.</p>
+<h2 id="24-stage">2.4. Почему stage может пропустить проблему<a class="headerlink" href="#24-stage" title="Permanent link">¶</a></h2>
+<p>Допустим запрос:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">$</span><span class="mi">1</span><span class="p">;</span>
+</code></pre></div>
+<p>На stage он работает на тысяче строк, а в production — на ста миллионах. Поведение может измениться из-за плана выполнения, статистики, объёма индекса, конкуренции за I/O, cache hit ratio и количества одновременных запросов.</p>
+<p>То же самое относится к нагрузке: 10 req/s на stage и 20 000 req/s в production — разные режимы системы.</p>
+<h2 id="25-rolling-update">2.5. Rolling update<a class="headerlink" href="#25-rolling-update" title="Permanent link">¶</a></h2>
+<p>При rolling update некоторое время одновременно существуют разные версии:</p>
+<div class="highlight"><pre><span></span><code>v1
+v1
+v2
+v2
+v2
+</code></pre></div>
+<p>Следовательно, старая и новая версии могут одновременно читать одну БД, формат сообщений должен быть совместим, schema migration должна учитывать несколько версий приложения, а изменения API должны переживать переходный период.</p>
+<h3 id="_5">Что важно запомнить<a class="headerlink" href="#_5" title="Permanent link">¶</a></h3>
+<ol>
+<li>Dev, test, stage и prod решают разные задачи.</li>
+<li>Stage уменьшает риск, но не доказывает эквивалентность production.</li>
+<li>Объём данных и интенсивность нагрузки меняют поведение системы.</li>
+<li>Production надо рассматривать как отдельный режим эксплуатации.</li>
+</ol>
+<hr/>
+<h2 id="26">2.6. Окружения проверяют разные гипотезы<a class="headerlink" href="#26" title="Permanent link">¶</a></h2>
+<p>Полезная модель: каждое окружение — это не «копия production разного размера», а инструмент для проверки определённых предположений.</p>
+<div class="highlight"><pre><span></span><code>Dev   → можно ли быстро разрабатывать и воспроизводить локальные сценарии?
+Test  → выполняются ли автоматизированные проверки в контролируемых условиях?
+Stage → переживает ли артефакт интеграцию и deployment-процесс?
+Prod  → как система ведёт себя при реальной нагрузке и реальных последствиях?
+</code></pre></div>
+<p>Отсюда важный вывод: переход между средами не превращает слабую проверку в сильную автоматически. Если stage не воспроизводит реальный объём данных, он не проверяет работу planner на таком объёме. Если test использует mock внешнего API, он не проверяет его реальные latency и quotas.</p>
+<h3 id="environment-drift">Environment drift<a class="headerlink" href="#environment-drift" title="Permanent link">¶</a></h3>
+<p>Со временем среды расходятся. Отличаться могут:</p>
+<ul>
+<li>версии PostgreSQL;</li>
+<li>количество реплик;</li>
+<li>feature flags;</li>
+<li>лимиты cgroup;</li>
+<li>сетевые политики;</li>
+<li>TLS certificates;</li>
+<li>настройки connection pool;</li>
+<li>объём и распределение данных.</li>
+</ul>
+<p>Поэтому утверждение «у нас stage такой же, как prod» нужно раскладывать на конкретные параметры. Полной идентичности почти никогда нет.</p>
+<h3 id="_6">Почему данные особенно важны<a class="headerlink" href="#_6" title="Permanent link">¶</a></h3>
+<p>Размер таблицы — только часть картины. Два окружения с одинаковым количеством строк всё равно могут вести себя по-разному, если различается распределение данных.</p>
+<p>Например, индекс по <code>status</code> полезен по-разному, если на stage значения распределены равномерно, а в production 99.9% строк имеют <code>status = 'DONE'</code>.</p>
+<p>То есть production realism — это ещё и реализм статистики данных.</p>
+<h3 id="rolling-update">Совместимость во время rolling update<a class="headerlink" href="#rolling-update" title="Permanent link">¶</a></h3>
+<p>Во время rolling update сервис временно является распределённой системой из нескольких версий собственного кода. Поэтому изменения должны быть совместимы во времени.</p>
+<p>Типичный безопасный порядок изменения схемы:</p>
+<div class="highlight"><pre><span></span><code>1. добавить новую колонку так, чтобы старая версия продолжала работать
+2. развернуть код, умеющий читать/писать новую схему
+3. дождаться исчезновения старой версии
+4. только потом удалить старую колонку или старый формат
+</code></pre></div>
+<p>Это пример того, как deployment-механика напрямую влияет на дизайн application code и schema migration.</p>
+<h1 id="3">3. Артефакт приложения<a class="headerlink" href="#3" title="Permanent link">¶</a></h1>
+<h2 id="31-executable">3.1. Исходный код и executable<a class="headerlink" href="#31-executable" title="Permanent link">¶</a></h2>
+<p>Исходный код описывает программу:</p>
+<div class="highlight"><pre><span></span><code>main.go
+handler.go
+service.go
+repository.go
+go.mod
+go.sum
+</code></pre></div>
+<p>Но production запускает не Git-репозиторий. Нужен исполняемый результат:</p>
+<div class="highlight"><pre><span></span><code>source
+↓
+compiler
+↓
+binary
+</code></pre></div>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>build<span class="w"> </span>-o<span class="w"> </span>app<span class="w"> </span>.
+</code></pre></div>
+<h2 id="32-go-binary">3.2. Что находится внутри Go binary<a class="headerlink" href="#32-go-binary" title="Permanent link">¶</a></h2>
+<p>Обычный Go binary содержит скомпилированный application code, значительную часть используемой standard library и Go runtime.</p>
+<p>Runtime отвечает за goroutines, scheduler, garbage collection, stacks, allocation, timers, часть network polling и panic/recover.</p>
+<p>Отдельная VM для обычного Go-приложения не требуется, но runtime никуда не исчезает — он поставляется вместе с программой.</p>
+<h2 id="33-binary">3.3. Binary не работает «где угодно»<a class="headerlink" href="#33-binary" title="Permanent link">¶</a></h2>
+<p>Компиляция имеет target:</p>
+<div class="highlight"><pre><span></span><code>GOOS
+GOARCH
+</code></pre></div>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">GOOS</span><span class="o">=</span>linux<span class="w"> </span><span class="nv">GOARCH</span><span class="o">=</span>amd64<span class="w"> </span>go<span class="w"> </span>build<span class="w"> </span>.
+</code></pre></div>
+<p>создаёт binary для Linux/amd64, а:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">GOOS</span><span class="o">=</span>darwin<span class="w"> </span><span class="nv">GOARCH</span><span class="o">=</span>arm64<span class="w"> </span>go<span class="w"> </span>build<span class="w"> </span>.
+</code></pre></div>
+<p>— другой binary.</p>
+<h2 id="34-cgo">3.4. cgo и внешняя среда<a class="headerlink" href="#34-cgo" title="Permanent link">¶</a></h2>
+<p>При использовании cgo могут появляться dynamic libraries и дополнительные требования к ОС.</p>
+<p>Даже статический binary может зависеть от сертификатов, timezone data, filesystem, DNS, базы данных и внешних сервисов.</p>
+<p>Поэтому «один бинарник» описывает способ доставки executable, а не отсутствие окружения.</p>
+<h2 id="35-container-image-container">3.5. Container image и container<a class="headerlink" href="#35-container-image-container" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>Go binary
+↓
+container image
+↓
+container
+</code></pre></div>
+<p>Image — сохранённый артефакт. Container — запущенный экземпляр image.</p>
+<p>Важно различать:</p>
+<div class="highlight"><pre><span></span><code>Git commit
+≠
+binary
+≠
+container image
+≠
+running container
+</code></pre></div>
+<h2 id="36">3.6. Один артефакт через окружения<a class="headerlink" href="#36" title="Permanent link">¶</a></h2>
+<p>Хорошая delivery model:</p>
+<div class="highlight"><pre><span></span><code>source
+↓
+build
+↓
+artifact
+↓
+test
+↓
+stage
+↓
+prod
+</code></pre></div>
+<p>Плохая схема:</p>
+<div class="highlight"><pre><span></span><code>build #1
+↓
+test OK
+
+build #2
+↓
+prod
+</code></pre></div>
+<p>Второй build может использовать другую toolchain, dependency, base image, generated code или build flags.</p>
+<p>Практический принцип:</p>
+<blockquote>
+<p>Build once, promote the same artifact.</p>
+</blockquote>
+<h2 id="37">3.7. Идентификация артефакта<a class="headerlink" href="#37" title="Permanent link">¶</a></h2>
+<p>Нужно уметь ответить:</p>
+<ul>
+<li>из какого commit собран artifact;</li>
+<li>какой toolchain использовался;</li>
+<li>какие dependencies вошли;</li>
+<li>какие build flags применялись;</li>
+<li>какой image digest развернут.</li>
+</ul>
+<hr/>
+<h2 id="38">3.8. Что именно определяет результат сборки<a class="headerlink" href="#38" title="Permanent link">¶</a></h2>
+<p>Git commit — важный вход сборки, но не единственный. На итоговый artifact могут влиять:</p>
+<div class="highlight"><pre><span></span><code>source revision
++
+Go toolchain version
++
+dependency graph
++
+build tags / flags
++
+GOOS / GOARCH
++
+generated sources
++
+cgo environment
++
+container base image
+</code></pre></div>
+<p>Если любой из этих входов изменился, строго говоря, у нас уже другая сборка.</p>
+<p>Именно поэтому версия приложения в production должна связываться не только с Git tag, но и с конкретным binary или image digest.</p>
+<h3 id="reproducible-build-promotion">Reproducible build и promotion — разные идеи<a class="headerlink" href="#reproducible-build-promotion" title="Permanent link">¶</a></h3>
+<p>Есть два связанных, но разных свойства.</p>
+<p><strong>Reproducible build</strong> означает, что одинаковые входы позволяют воспроизвести одинаковый или эквивалентный результат сборки.</p>
+<p><strong>Artifact promotion</strong> означает, что мы вообще не пересобираем приложение между test, stage и prod, а двигаем уже полученный artifact.</p>
+<p>Вторая модель проще с точки зрения доказательства: production получает именно то, что проверялось ранее.</p>
+<h3 id="_7">Что даёт контейнерный образ<a class="headerlink" href="#_7" title="Permanent link">¶</a></h3>
+<p>Image фиксирует больше окружения, чем голый binary:</p>
+<ul>
+<li>базовую файловую систему;</li>
+<li>системные certificates;</li>
+<li>timezone data;</li>
+<li>дополнительные shared libraries;</li>
+<li>entrypoint;</li>
+<li>metadata.</li>
+</ul>
+<p>Но image всё равно не содержит PostgreSQL, DNS, сеть и внешние API. Контейнеризация уменьшает часть environmental variability, но не устраняет распределённую природу backend.</p>
+<h1 id="4">4. Конфигурация<a class="headerlink" href="#4" title="Permanent link">¶</a></h1>
+<h2 id="41">4.1. Конфигурация отделяется от артефакта<a class="headerlink" href="#41" title="Permanent link">¶</a></h2>
+<p>Один artifact может работать в разных средах:</p>
+<div class="highlight"><pre><span></span><code>TEST:
+DATABASE_URL=postgres://test-db/orders
+
+STAGE:
+DATABASE_URL=postgres://stage-db/orders
+
+PROD:
+DATABASE_URL=postgres://prod-db/orders
+</code></pre></div>
+<p>Binary тот же, параметры разные.</p>
+<h2 id="42-secrets">4.2. Артефакт, конфигурация и secrets<a class="headerlink" href="#42-secrets" title="Permanent link">¶</a></h2>
+<p>Артефакт содержит application code и встроенные resources.</p>
+<p>Конфигурация задаёт адреса, timeouts, pool sizes и другие параметры поведения.</p>
+<p>Secrets — passwords, tokens, private keys — требуют отдельной модели доступа и ротации.</p>
+<h2 id="43">4.3. Пример загрузки конфигурации<a class="headerlink" href="#43" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="s">"errors"</span>
+<span class="w">    </span><span class="s">"os"</span>
+<span class="p">)</span>
+
+<span class="kd">type</span><span class="w"> </span><span class="nx">Config</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">HTTPAddr</span><span class="w">    </span><span class="kt">string</span>
+<span class="w">    </span><span class="nx">DatabaseURL</span><span class="w"> </span><span class="kt">string</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">loadConfig</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="nx">Config</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">cfg</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">Config</span><span class="p">{</span>
+<span class="w">        </span><span class="nx">HTTPAddr</span><span class="p">:</span><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">"HTTP_ADDR"</span><span class="p">),</span>
+<span class="w">        </span><span class="nx">DatabaseURL</span><span class="p">:</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">"DATABASE_URL"</span><span class="p">),</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">HTTPAddr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">""</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">HTTPAddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">":8080"</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">DatabaseURL</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">""</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">Config</span><span class="p">{},</span><span class="w"> </span><span class="nx">errors</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">"DATABASE_URL is required"</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">cfg</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Для <code>HTTP_ADDR</code> допустим default. Для обязательного DSN лучше завершиться на старте, чем получить случайный <code>500</code> на первом пользовательском запросе.</p>
+<h2 id="44">4.4. Валидация<a class="headerlink" href="#44" title="Permanent link">¶</a></h2>
+<p>Наличие значения не означает корректность:</p>
+<div class="highlight"><pre><span></span><code>DB_POOL_SIZE=-100
+</code></pre></div>
+<p>Нормальная цепочка:</p>
+<div class="highlight"><pre><span></span><code>read configuration
+↓
+parse types
+↓
+validate ranges
+↓
+start application
+</code></pre></div>
+<h3 id="_8">Что важно запомнить<a class="headerlink" href="#_8" title="Permanent link">¶</a></h3>
+<ol>
+<li>Артефакт и environment-specific configuration лучше разделять.</li>
+<li>Конфигурация должна валидироваться при старте.</li>
+<li>Secrets требуют отдельной модели безопасности.</li>
+<li>Корректная строка конфигурации ещё не доказывает доступность внешнего ресурса.</li>
+</ol>
+<hr/>
+<h2 id="45">4.5. Конфигурация имеет жизненный цикл<a class="headerlink" href="#45" title="Permanent link">¶</a></h2>
+<p>Конфигурация проходит несколько стадий:</p>
+<div class="highlight"><pre><span></span><code>получить значение
+↓
+преобразовать к типу
+↓
+проверить диапазон и взаимные ограничения
+↓
+применить
+↓
+сделать наблюдаемым факт применения
+</code></pre></div>
+<p>Например, <code>HTTP_TIMEOUT=abc</code> — ошибка parsing. <code>HTTP_TIMEOUT=-5s</code> может быть синтаксически корректным duration, но логически недопустимым значением. А <code>DB_POOL_SIZE=10000</code> может быть формально допустимым integer, но разрушительным для конкретной базы данных.</p>
+<h3 id="_9">Независимая и связанная валидация<a class="headerlink" href="#_9" title="Permanent link">¶</a></h3>
+<p>Иногда одного диапазона мало:</p>
+<div class="highlight"><pre><span></span><code>connect_timeout = 5s
+request_timeout = 2s
+</code></pre></div>
+<p>Такой набор может быть нелогичен: полный request timeout меньше времени, которое разрешено потратить только на соединение.</p>
+<p>То есть конфигурация может иметь <strong>межпараметрические инварианты</strong>.</p>
+<h3 id="static-dynamic-configuration">Static и dynamic configuration<a class="headerlink" href="#static-dynamic-configuration" title="Permanent link">¶</a></h3>
+<p>Часть настроек обычно читается на старте процесса:</p>
+<div class="highlight"><pre><span></span><code>HTTP port
+DB DSN
+pool size
+</code></pre></div>
+<p>Другие системы могут поддерживать dynamic config без рестарта. Это усложняет модель: нужно понимать, когда изменение становится видимым, все ли goroutines видят его одновременно и что происходит с уже выполняющимися запросами.</p>
+<p>Для вводной лекции достаточно основной идеи: конфигурация — такой же вход программы, как request. Её тоже нужно валидировать и наблюдать.</p>
+<h3 id="secrets">Secrets нельзя печатать ради удобства диагностики<a class="headerlink" href="#secrets" title="Permanent link">¶</a></h3>
+<p>Очень частая ошибка — логировать полностью загруженную структуру <code>Config</code>. Если там есть token или password, observability внезапно становится каналом утечки.</p>
+<p>Практический подход: логировать безопасные параметры и факт наличия secret, но не само значение.</p>
+<div class="highlight"><pre><span></span><code>DATABASE_HOST=db.prod
+DATABASE_PASSWORD=&lt;configured&gt;
+</code></pre></div>
+<h1 id="5">5. Внешние зависимости<a class="headerlink" href="#5" title="Permanent link">¶</a></h1>
+<h2 id="51">5.1. За одной строкой скрывается система<a class="headerlink" href="#51" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nx">resp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Do</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span>
+</code></pre></div>
+<p>За этой строкой могут находиться DNS, connection pool, TCP, TLS, network, remote load balancer, remote application, remote database и обратный путь response.</p>
+<p>Количество строк application code ничего не говорит о количестве участвующих подсистем.</p>
+<h2 id="52-latency-concurrency">5.2. Latency превращается в concurrency<a class="headerlink" href="#52-latency-concurrency" title="Permanent link">¶</a></h2>
+<p>Пусть сервис получает 100 requests/s, а средняя операция занимает 0.05 s.</p>
+<p>По закону Литтла:</p>
+<div class="highlight"><pre><span></span><code>L = λ × W
+</code></pre></div>
+<p>получаем:</p>
+<div class="highlight"><pre><span></span><code>100 × 0.05 = 5
+</code></pre></div>
+<p>Если dependency начинает отвечать за 5 s:</p>
+<div class="highlight"><pre><span></span><code>100 × 5 = 500
+</code></pre></div>
+<p>Входной поток тот же, но число одновременно находящихся в системе операций выросло в сто раз.</p>
+<p>Причинная цепочка:</p>
+<div class="highlight"><pre><span></span><code>downstream latency ↑
+↓
+in-flight requests ↑
+↓
+goroutines ↑
+↓
+memory ↑
+↓
+connections occupied ↑
+↓
+queueing ↑
+↓
+overall latency ↑
+</code></pre></div>
+<h2 id="53-goroutine-downstream">5.3. Goroutine не делает downstream бесконечным<a class="headerlink" href="#53-goroutine-downstream" title="Permanent link">¶</a></h2>
+<p>Можно создать тысячи goroutines, но база может иметь двадцать соединений, внешний API — quota 100 requests/s, а CPU — конечное количество ядер.</p>
+<p>Дешёвая goroutine не увеличивает capacity внешнего ресурса.</p>
+<h2 id="54-deadline">5.4. Deadline<a class="headerlink" href="#54-deadline" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithTimeout</span><span class="p">(</span>
+<span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">(),</span>
+<span class="w">    </span><span class="mi">2</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">cancel</span><span class="p">()</span>
+</code></pre></div>
+<p>Deadline ограничивает время ожидания, но не ограничивает количество одновременно начавшихся операций.</p>
+<h2 id="55-concurrency">5.5. Ограничение concurrency<a class="headerlink" href="#55-concurrency" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">slots</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kt">chan</span><span class="w"> </span><span class="kd">struct</span><span class="p">{},</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">callDependency</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">slots</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="kd">struct</span><span class="p">{}{}:</span>
+<span class="w">        </span><span class="k">defer</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">slots</span><span class="w"> </span><span class="p">}()</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">Done</span><span class="p">():</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">ctx</span><span class="p">.</span><span class="nx">Err</span><span class="p">()</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">doRequest</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Теперь одновременно выполняется не более 50 операций.</p>
+<h2 id="56">5.6. Ограниченная очередь<a class="headerlink" href="#56" title="Permanent link">¶</a></h2>
+<p>Если incoming rate выше processing capacity, очередь растёт, а вместе с ней memory и latency.</p>
+<p>Поэтому очередь должна иметь capacity, а после исчерпания capacity система должна сделать явный выбор: reject, shed load или backpressure.</p>
+<h2 id="57-retry">5.7. Retry<a class="headerlink" href="#57-retry" title="Permanent link">¶</a></h2>
+<p>Retry создаёт дополнительную нагрузку:</p>
+<div class="highlight"><pre><span></span><code>1000 requests
+×
+до 3 попыток
+=
+до 3000 обращений
+</code></pre></div>
+<p>При перегрузке легко получить:</p>
+<div class="highlight"><pre><span></span><code>overload
+↓
+errors
+↓
+retry
+↓
+more load
+↓
+more errors
+</code></pre></div>
+<p>Retry policy должна учитывать тип ошибки, количество попыток, backoff, оставшийся deadline и идемпотентность.</p>
+<h3 id="_10">Что важно запомнить<a class="headerlink" href="#_10" title="Permanent link">¶</a></h3>
+<ol>
+<li>Latency внешней системы напрямую увеличивает concurrency внутри сервиса.</li>
+<li>Timeout и concurrency limit решают разные задачи.</li>
+<li>Неограниченные очереди скрывают проблему, но не решают её.</li>
+<li>Retry способен усилить перегрузку.</li>
+<li>Backend — система ограниченных ресурсов.</li>
+</ol>
+<hr/>
+<h2 id="58-timeout-deadline-cancellation">5.8. Timeout, deadline и cancellation — связанные, но разные понятия<a class="headerlink" href="#58-timeout-deadline-cancellation" title="Permanent link">¶</a></h2>
+<p>Их часто сваливают в одно слово «таймаут».</p>
+<p><strong>Timeout</strong> — длительность, которую мы разрешаем операции.</p>
+<p><strong>Deadline</strong> — абсолютный момент времени, после которого операция уже не нужна.</p>
+<p><strong>Cancellation</strong> — сигнал о том, что работу следует прекратить.</p>
+<p>В Go <code>context.Context</code> позволяет переносить deadline и cancellation вниз по call chain. Но отмена остаётся кооперативной: вызываемый код должен её поддерживать.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithTimeout</span><span class="p">(</span><span class="nx">parent</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">cancel</span><span class="p">()</span>
+
+<span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">repository</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">)</span>
+</code></pre></div>
+<p>Если <code>repository.Load</code> игнорирует <code>ctx</code>, сам факт наличия context у caller проблему не решает.</p>
+<h2 id="59-littles-law">5.9. Little's Law требует устойчивого режима<a class="headerlink" href="#59-littles-law" title="Permanent link">¶</a></h2>
+<p>Формула:</p>
+<div class="highlight"><pre><span></span><code>L = λ × W
+</code></pre></div>
+<p>очень полезна, но её нельзя воспринимать как магический калькулятор для любой перегрузки.</p>
+<p>Она хорошо описывает устойчивый поток, когда система находится примерно в стационарном режиме. Если входной поток постоянно выше service capacity, очередь растёт без ограничения и стационарного значения <code>L</code> уже нет.</p>
+<p>То есть пример <code>100 req/s × 5 s = 500 in-flight</code> — полезная инженерная оценка, пока система способна находиться в устойчивом режиме.</p>
+<h2 id="510">5.10. Пул соединений — отдельная очередь<a class="headerlink" href="#510" title="Permanent link">¶</a></h2>
+<p>Пусть HTTP server принял 500 requests одновременно, а database pool имеет 20 connections.</p>
+<div class="highlight"><pre><span></span><code>500 request goroutines
+↓
+20 выполняют SQL
+480 ждут pool
+</code></pre></div>
+<p>PostgreSQL может быть относительно свободна, но latency приложения уже растёт из-за ожидания ресурса внутри самого процесса.</p>
+<p>Поэтому при диагностике полезно разделять:</p>
+<div class="highlight"><pre><span></span><code>время до получения соединения
++
+время выполнения SQL
+</code></pre></div>
+<p>Иначе вся задержка ошибочно будет записана на «медленную базу».</p>
+<h2 id="511-backpressure">5.11. Backpressure<a class="headerlink" href="#511-backpressure" title="Permanent link">¶</a></h2>
+<p>Backpressure — это способность системы ограничить поступление новой работы, когда downstream уже насыщен.</p>
+<p>Без backpressure:</p>
+<div class="highlight"><pre><span></span><code>incoming work
+↓
+unbounded goroutines / queue
+↓
+memory growth
+↓
+GC pressure
+↓
+latency growth
+↓
+OOM или collapse
+</code></pre></div>
+<p>С bounded concurrency:</p>
+<div class="highlight"><pre><span></span><code>incoming work
+↓
+capacity check
+↓
+есть слот? → выполнить
+нет слота? → ждать ограниченно / отклонить
+</code></pre></div>
+<p>Важно: scheduler Go сам по себе backpressure не создаёт. Он умеет планировать runnable goroutines, но не знает capacity PostgreSQL или quota внешнего API.</p>
+<h2 id="512-retry">5.12. Retry должен жить внутри общего временного бюджета<a class="headerlink" href="#512-retry" title="Permanent link">¶</a></h2>
+<p>Пусть request имеет deadline 2 секунды. Нельзя бездумно выполнить три попытки по 2 секунды каждая — это разрушает исходный SLA.</p>
+<p>Более корректная модель:</p>
+<div class="highlight"><pre><span></span><code>request deadline
+↓
+attempt #1 использует часть бюджета
+↓
+backoff
+↓
+проверяем остаток времени
+↓
+attempt #2 только если ещё есть смысл
+</code></pre></div>
+<p>Retry — не способ превратить ненадёжную систему в надёжную. Это инструмент обработки отдельных временных сбоев.</p>
+<h2 id="513">5.13. Что измерять у зависимости<a class="headerlink" href="#513" title="Permanent link">¶</a></h2>
+<p>Для каждой важной external dependency полезно видеть хотя бы:</p>
+<ul>
+<li>latency;</li>
+<li>error rate;</li>
+<li>timeout count;</li>
+<li>active/in-flight operations;</li>
+<li>pool usage;</li>
+<li>queue/wait time;</li>
+<li>retry count.</li>
+</ul>
+<p>Тогда причинная цепочка становится наблюдаемой, а не предполагаемой.</p>
+<h1 id="6-go">6. Почему появился Go<a class="headerlink" href="#6-go" title="Permanent link">¶</a></h1>
+<p>Go начал разрабатываться в 2007 году. Первоначальными авторами дизайна были Robert Griesemer, Rob Pike и Ken Thompson. В 2009 году проект был публично открыт.</p>
+<p>Контекст:</p>
+<div class="highlight"><pre><span></span><code>большие codebase
++
+долгие сборки
++
+сложные dependency graph
++
+много команд
++
+сетевые сервисы
++
+многоядерные машины
+</code></pre></div>
+<p>Стоимость создавалась не только выполнением программы, но и самой разработкой: как собрать, как понять зависимости, как читать чужой код, как выражать concurrency и как сопровождать систему годами.</p>
+<p>Go проектировался как инженерный компромисс: сравнительно небольшой язык, GC, goroutines, structural interfaces, единый formatter и toolchain.</p>
+<p>Простой язык не означает простую систему. Сложность production backend остаётся, просто она не обязательно прячется за большим количеством language features.</p>
+<hr/>
+<h2 id="61">6.1. Язык проектировали вокруг стоимости инженерного процесса<a class="headerlink" href="#61" title="Permanent link">¶</a></h2>
+<p>Обычно язык обсуждают через syntax: есть ли классы, generics, exceptions, pattern matching. Для Go полезнее смотреть на другую ось: сколько стоит сопровождение большого проекта большой командой.</p>
+<p>Если язык позволяет выразить одну идею двадцатью способами, это повышает выразительность отдельного разработчика, но увеличивает пространство решений, которое должен понимать каждый следующий читатель кода.</p>
+<p>Go сознательно делает другой компромисс:</p>
+<div class="highlight"><pre><span></span><code>меньше language mechanisms
+↓
+меньше локальной выразительности
+↓
+больше единообразия
+↓
+ниже стоимость чтения и tooling
+</code></pre></div>
+<p>Это не делает Go объективно «лучше» более сложных языков. Это конкретный design trade-off.</p>
+<h2 id="62-concurrency">6.2. Concurrency была встроена в модель языка с самого начала<a class="headerlink" href="#62-concurrency" title="Permanent link">¶</a></h2>
+<p>В конце 2000-х server software уже массово работало с тысячами одновременно ожидающих сетевых операций. Модель «одна задача = один тяжёлый OS thread» плохо масштабировалась по памяти и scheduling overhead.</p>
+<p>Go предлагает goroutines и channels как высокоуровневые primitives, а runtime берёт на себя multiplexing goroutines на OS threads.</p>
+<p>При этом goroutine не является магией: она потребляет stack, runtime metadata, участвует в GC и scheduler. Это будет предметом следующей лекции.</p>
+<h2 id="63-tooling">6.3. Tooling — часть языка как платформы<a class="headerlink" href="#63-tooling" title="Permanent link">¶</a></h2>
+<p><code>gofmt</code>, <code>go test</code>, <code>go vet</code>, module tooling и build command поставляются как единая экосистема. Это уменьшает количество решений, которые каждая команда вынуждена собирать самостоятельно.</p>
+<p>То есть Go — это не только grammar языка. Это комбинация:</p>
+<div class="highlight"><pre><span></span><code>language
++
+compiler
++
+runtime
++
+standard library
++
+toolchain
+</code></pre></div>
+<p>Именно эту платформу мы и изучаем.</p>
+<h1 id="7-go">7. История Go по релизам<a class="headerlink" href="#7-go" title="Permanent link">¶</a></h1>
+<h2 id="71-go-10-2012">7.1. Go 1.0 — 2012<a class="headerlink" href="#71-go-10-2012" title="Permanent link">¶</a></h2>
+<p>Главное событие — стабилизация платформы и Go 1 compatibility promise.</p>
+<p>Закрепились <code>error</code>, <code>rune</code>, <code>delete</code>, структура standard library и использование сравнимых структур и массивов как map keys.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">UserKey</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">TenantID</span><span class="w"> </span><span class="kt">int64</span>
+<span class="w">    </span><span class="nx">UserID</span><span class="w">   </span><span class="kt">int64</span>
+<span class="p">}</span>
+
+<span class="nx">users</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kt">map</span><span class="p">[</span><span class="nx">UserKey</span><span class="p">]</span><span class="kt">string</span><span class="p">{}</span>
+</code></pre></div>
+<p>Главная идея: обновление языка не должно регулярно требовать переписывания работающей системы.</p>
+<h3 id="_11">Почему этот релиз фундаментален<a class="headerlink" href="#_11" title="Permanent link">¶</a></h3>
+<p>До Go 1 язык ещё мог заметно меняться. Для production adoption это серьёзная проблема: бизнес-система живёт годами, а не до следующего compiler release. Go 1 проводит границу между периодом активного поиска языка и периодом долгосрочной совместимости.</p>
+<p>Именно отсюда появляется важная философия Go: новые возможности должны по возможности добавляться так, чтобы старый корректный source продолжал жить. Это ограничивает свободу designers, но резко уменьшает стоимость миграций для пользователей языка.</p>
+<h2 id="72-go-11-2013">7.2. Go 1.1 — 2013<a class="headerlink" href="#72-go-11-2013" title="Permanent link">¶</a></h2>
+<p>Появился race detector:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-race<span class="w"> </span>./...
+</code></pre></div>
+<p>Он исследует выполненные execution paths. Если опасный сценарий не активирован, отсутствие report ничего не доказывает.</p>
+<p>Также улучшались map, inlining, GC и networking runtime integration.</p>
+<h3 id="race-detector">Почему race detector меняет практику разработки<a class="headerlink" href="#race-detector" title="Permanent link">¶</a></h3>
+<p>Race condition часто не проявляется как стабильный bug. Один запуск проходит, второй тоже, а на сотом другая interleaving операций повреждает состояние.</p>
+<p>Race detector делает проблему наблюдаемой динамически: инструмент следит за обращениями к памяти и synchronization events во время выполнения. Цена — заметный overhead, поэтому это инструмент test/debug режима, а не обычный production runtime.</p>
+<p>Главное ограничение остаётся принципиальным: не выполненный путь невозможно проверить динамически.</p>
+<h2 id="73-go-12-2013">7.3. Go 1.2 — 2013<a class="headerlink" href="#73-go-12-2013" title="Permanent link">¶</a></h2>
+<p>Появился full slice expression:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">part</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">source</span><span class="p">[:</span><span class="mi">2</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+</code></pre></div>
+<p>Третий индекс ограничивает capacity, но не копирует элементы.</p>
+<p>Появился coverage:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-cover<span class="w"> </span>./...
+</code></pre></div>
+<p>Scheduler получил дополнительные preemption points на function entry, но длинный цикл без вызовов оставался сложным случаем.</p>
+<h3 id="full-slice-expression">Почему full slice expression важнее, чем кажется<a class="headerlink" href="#full-slice-expression" title="Permanent link">¶</a></h3>
+<p>Slice — descriptor над backing array. Контроль <code>cap</code> позволяет управлять тем, сможет ли будущий <code>append</code> продолжить использовать тот же array.</p>
+<p>Это не memory isolation. До тех пор пока два slices адресуют одни и те же элементы backing array, обычная запись остаётся общей. Full slice expression управляет будущим ростом, а не создаёт копию данных.</p>
+<p>Изменение scheduler в 1.2 также показывает раннюю проблему Go runtime: concurrency model языка уже существовала, но механизм fairness scheduler ещё продолжал активно развиваться.</p>
+<h2 id="74-go-13-2014">7.4. Go 1.3 — 2014<a class="headerlink" href="#74-go-13-2014" title="Permanent link">¶</a></h2>
+<p>Runtime перешёл от segmented stacks к copying contiguous stacks:</p>
+<div class="highlight"><pre><span></span><code>small stack
+↓
+space exhausted
+↓
+allocate larger stack
+↓
+copy active frames
+↓
+continue
+</code></pre></div>
+<p>Это устранило hot stack split.</p>
+<p>Появился <code>sync.Pool</code> для временного переиспользования объектов. Он не является resource pool: runtime может удалить его содержимое.</p>
+<h3 id="copying-stack">Почему copying stack — архитектурно важное решение<a class="headerlink" href="#copying-stack" title="Permanent link">¶</a></h3>
+<p>Маленький stack делает goroutine дешёвой только если stack способен расти. Segmented stack решал эту задачу кусками памяти, но создавал expensive boundary crossings.</p>
+<p>Copying stack выбирает другой trade-off: редкая дорогая операция копирования в обмен на обычное быстрое выполнение между growth events.</p>
+<p>Чтобы это работало, runtime должен понимать, какие значения на stack являются pointers, и уметь корректировать ссылки после relocation. То есть stack growth связан не только со scheduler, но и с compiler metadata и GC.</p>
+<h2 id="75-go-14-2014">7.5. Go 1.4 — 2014<a class="headerlink" href="#75-go-14-2014" title="Permanent link">¶</a></h2>
+<p>Начальный stack goroutine был уменьшен с 8 KiB до 2 KiB.</p>
+<p>Появились <code>go generate</code> и <code>internal</code>.</p>
+<p>2 KiB — историческая деталь implementation, а не вечная гарантия языка и не полная стоимость goroutine.</p>
+<h3 id="initial-stack">Почему уменьшение initial stack влияет на масштабирование<a class="headerlink" href="#initial-stack" title="Permanent link">¶</a></h3>
+<p>Если одна goroutine резервирует меньше памяти на старте, процесс может дешевле создать большое количество goroutines. Но initial size нельзя путать с фактическим memory footprint длительно живущей G.</p>
+<p>Stack растёт по мере необходимости, сама <code>g</code> имеет runtime metadata, а объекты, на которые ссылается goroutine, могут находиться в heap. Поэтому «goroutine стоит 2 KiB» — плохая capacity model.</p>
+<h2 id="76-go-15-2015">7.6. Go 1.5 — 2015<a class="headerlink" href="#76-go-15-2015" title="Permanent link">¶</a></h2>
+<p>Появился concurrent GC.</p>
+<div class="highlight"><pre><span></span><code>pause time ↓
+↓
+concurrent GC work ↑
+↓
+CPU overhead + write barriers
+</code></pre></div>
+<p><code>GOMAXPROCS</code> по умолчанию стал учитывать доступные CPU вместо значения 1.</p>
+<p>Больше parallelism могло проявить уже существующие concurrency bugs.</p>
+<h3 id="concurrent-gc-latency-model">Почему concurrent GC меняет latency model<a class="headerlink" href="#concurrent-gc-latency-model" title="Permanent link">¶</a></h3>
+<p>Stop-the-world collector концентрирует работу в паузе. Concurrent GC переносит значительную часть работы на время выполнения приложения.</p>
+<p>Это улучшает latency pauses, но GC начинает конкурировать с application goroutines за CPU и требует write barriers для корректности concurrent marking.</p>
+<p>Следовательно, GC improvement — не исчезновение стоимости memory management, а изменение того, где и как эта стоимость оплачивается.</p>
+<h2 id="77-go-16-2016">7.7. Go 1.6 — 2016<a class="headerlink" href="#77-go-16-2016" title="Permanent link">¶</a></h2>
+<p><code>net/http</code> получил автоматическую поддержку HTTP/2 в подходящих HTTPS-соединениях.</p>
+<p>Vendoring включён по умолчанию, уточнены cgo pointer rules, runtime начал обнаруживать часть concurrent map misuse.</p>
+<p>Обычная <code>map</code> не стала concurrency-safe.</p>
+<h3 id="http2-api">HTTP/2 как пример изменения под API<a class="headerlink" href="#http2-api" title="Permanent link">¶</a></h3>
+<p>Handler source может не измениться, но transport behaviour меняется существенно. Несколько logical requests способны идти через одно TCP connection.</p>
+<p>Это влияет на connection usage, head-of-line characteristics разных уровней и pattern нагрузки на server. Хороший пример того, что standard library может менять operational behaviour без переписывания business code.</p>
+<h2 id="78-go-17-2016">7.8. Go 1.7 — 2016<a class="headerlink" href="#78-go-17-2016" title="Permanent link">¶</a></h2>
+<p>В standard library появился <code>context</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithTimeout</span><span class="p">(</span>
+<span class="w">    </span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">(),</span>
+<span class="w">    </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">cancel</span><span class="p">()</span>
+</code></pre></div>
+<p>Context задаёт контракт cancellation, deadline и request-scoped values.</p>
+<p>Cancellation кооперативна: <code>cancel()</code> не уничтожает goroutine.</p>
+<p>Также появился SSA backend compiler.</p>
+<h3 id="context">Context — управление жизненным циклом работы<a class="headerlink" href="#context" title="Permanent link">¶</a></h3>
+<p>До появления общего <code>context</code> каждый library/API мог изобретать собственную модель timeout и cancellation. Standard contract позволил передавать lifetime request через несколько слоёв приложения.</p>
+<p>Но context не является механизмом принудительного прерывания. Если функция выполняет бесконечный CPU loop и никогда не проверяет cancellation, context сам её не остановит.</p>
+<p>Поэтому cancellation в Go — протокол сотрудничества между caller и callee.</p>
+<h2 id="79-go-18-2017">7.9. Go 1.8 — 2017<a class="headerlink" href="#79-go-18-2017" title="Permanent link">¶</a></h2>
+<p>Появился <code>http.Server.Shutdown(ctx)</code> для graceful HTTP shutdown.</p>
+<p><code>database/sql</code> получил context-aware operations.</p>
+<p>Появились mutex profiles.</p>
+<p>Shutdown HTTP server не завершает автоматически все фоновые goroutines приложения.</p>
+<h3 id="graceful-shutdown-close">Graceful shutdown — не просто <code>Close()</code><a class="headerlink" href="#graceful-shutdown-close" title="Permanent link">¶</a></h3>
+<p>Production service должен перестать принимать новую работу, дать ограниченное время уже принятым requests и затем освободить ресурсы.</p>
+<p><code>Server.Shutdown</code> стандартизирует HTTP-часть процесса, но application lifecycle обычно шире: background consumers, timers, message handlers и собственные goroutines требуют отдельного управления.</p>
+<p>Это важное ограничение abstraction: библиотека управляет только теми ресурсами, которыми владеет сама.</p>
+<h2 id="710-go-19-2017">7.10. Go 1.9 — 2017<a class="headerlink" href="#710-go-19-2017" title="Permanent link">¶</a></h2>
+<p>Появились type aliases:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">User</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">model</span><span class="p">.</span><span class="nx">User</span>
+</code></pre></div>
+<p><code>time.Time</code> получил monotonic component для измерения durations.</p>
+<p>Появился <code>sync.Map</code>, но он не делает атомарной произвольную последовательность <code>Load → logic → Store</code>.</p>
+<h3 id="monotonic-time-production-">Monotonic time закрывает реальную production-проблему<a class="headerlink" href="#monotonic-time-production-" title="Permanent link">¶</a></h3>
+<p>Wall clock может измениться из-за NTP correction или ручного перевода времени. Если измерять latency простым вычитанием wall-clock timestamps, можно получить странные результаты.</p>
+<p>Monotonic component позволяет <code>time.Since</code> измерять elapsed duration независимо от таких изменений.</p>
+<p>Это хороший пример маленького API change с большим operational смыслом.</p>
+<h2 id="711-go-110-2018">7.11. Go 1.10 — 2018<a class="headerlink" href="#711-go-110-2018" title="Permanent link">¶</a></h2>
+<p>Улучшилось кеширование build и successful test results.</p>
+<p>Для принудительного повторного запуска:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-count<span class="o">=</span><span class="m">1</span><span class="w"> </span>./...
+</code></pre></div>
+<p>Появился <code>strings.Builder</code>.</p>
+<h3 id="engineering-performance">Скорость обратной связи — часть engineering performance<a class="headerlink" href="#engineering-performance" title="Permanent link">¶</a></h3>
+<p>Если полный build/test занимает долго, разработчики реже запускают проверки и позже получают feedback. Build cache уменьшает стоимость повторной работы.</p>
+<p>Но кеширование требует понимать его contract: иногда нужен реальный повтор integration test, и тогда используется <code>-count=1</code>.</p>
+<h2 id="712-go-111-2018">7.12. Go 1.11 — 2018<a class="headerlink" href="#712-go-111-2018" title="Permanent link">¶</a></h2>
+<p>Появилась предварительная поддержка Go Modules.</p>
+<p><code>go.mod</code> начал описывать module и requirements, dependency management стал отделяться от GOPATH.</p>
+<h3 id="modules-dependency">Modules решают проблему идентичности dependency<a class="headerlink" href="#modules-dependency" title="Permanent link">¶</a></h3>
+<p>GOPATH хорошо работал в ранней экосистеме, но плохо выражал вопрос «какая именно версия этой библиотеки нужна проекту».</p>
+<p>Module делает dependency version частью явной модели build. Это фундамент для reproducibility, но одновременно добавляет правила versioning, module paths и private access.</p>
+<h2 id="713-go-112-2019">7.13. Go 1.12 — 2019<a class="headerlink" href="#713-go-112-2019" title="Permanent link">¶</a></h2>
+<p>Продолжились improvements timers, network deadlines и memory behaviour.</p>
+<p>На Linux runtime начал использовать <code>MADV_FREE</code>.</p>
+<p>Это объясняет, почему Go heap может уменьшиться, а RSS некоторое время оставаться высоким.</p>
+<h3 id="rss-go-heap">Почему RSS и Go heap расходятся<a class="headerlink" href="#rss-go-heap" title="Permanent link">¶</a></h3>
+<p>Освободить объект для GC, освободить runtime span и вернуть physical pages операционной системе — разные события.</p>
+<p>Поэтому диагностика memory leak должна смотреть на несколько уровней. Один высокий RSS без анализа heap profile и runtime metrics недостаточен для вывода об утечке.</p>
+<h2 id="714-go-113-2019">7.14. Go 1.13 — 2019<a class="headerlink" href="#714-go-113-2019" title="Permanent link">¶</a></h2>
+<p>Появилась современная error wrapping model:</p>
+<div class="highlight"><pre><span></span><code><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">"load user %d: %w"</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="nx">errors</span><span class="p">.</span><span class="nx">Is</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span><span class="w"> </span><span class="nx">sql</span><span class="p">.</span><span class="nx">ErrNoRows</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Появился <code>errors.As</code>.</p>
+<p>TLS 1.3 включён по умолчанию, module proxy и checksum database стали стандартной частью module ecosystem.</p>
+<h3 id="error-wrapping">Error wrapping сохраняет два уровня информации<a class="headerlink" href="#error-wrapping" title="Permanent link">¶</a></h3>
+<p>До <code>%w</code> разработчик часто выбирал между двумя плохими вариантами: вернуть original error без контекста или создать красивый текст и потерять machine-readable cause.</p>
+<p>Wrapping позволяет иметь оба уровня:</p>
+<div class="highlight"><pre><span></span><code>человеческий контекст
++
+программно распознаваемая причина
+</code></pre></div>
+<p>Но если внешний caller начинает зависеть от конкретной wrapped error через <code>errors.Is</code>, внутренняя ошибка фактически становится частью observable API contract.</p>
+<h2 id="715-go-114-2020">7.15. Go 1.14 — 2020<a class="headerlink" href="#715-go-114-2020" title="Permanent link">¶</a></h2>
+<p>Появилась asynchronous preemption.</p>
+<p>CPU-bound goroutine без cooperative scheduling points стало проще вытеснять, что улучшило progress scheduler и GC.</p>
+<p>Многие случаи <code>defer</code> стали дешевле.</p>
+<h3 id="async-preemption">Почему async preemption понадобилась вообще<a class="headerlink" href="#async-preemption" title="Permanent link">¶</a></h3>
+<p>Scheduler Go управляет goroutines на ограниченном количестве execution resources. Если CPU-bound G слишком долго не отдаёт управление, страдают другие goroutines и GC.</p>
+<p>Asynchronous preemption добавляет runtime возможность прервать выполнение в большем числе точек. Это улучшает fairness, но Go всё равно не становится real-time системой: точный момент исполнения goroutine не гарантируется.</p>
+<h2 id="716-go-115-2020">7.16. Go 1.15 — 2020<a class="headerlink" href="#716-go-115-2020" title="Permanent link">¶</a></h2>
+<p>Улучшился linker: снизились build time и linker memory.</p>
+<p>Появился <code>time/tzdata</code>.</p>
+<p>Изменения TLS certificate validation могли проявить устаревшие сертификаты без изменения business code.</p>
+<h3 id="security-rules-platform-evolution">Security rules тоже являются частью platform evolution<a class="headerlink" href="#security-rules-platform-evolution" title="Permanent link">¶</a></h3>
+<p>Изменение certificate validation показывает важную границу compatibility: сохранение старого небезопасного поведения не является абсолютной ценностью.</p>
+<p>Production upgrade нужно проверять на реальных integration contracts, потому что compiler/runtime/standard library взаимодействуют с внешним миром, который может опираться на устаревшие assumptions.</p>
+<h2 id="717-go-116-2021">7.17. Go 1.16 — 2021<a class="headerlink" href="#717-go-116-2021" title="Permanent link">¶</a></h2>
+<p>Появился <code>embed</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="s">"embed"</span>
+
+<span class="c1">//go:embed templates/*.html</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">templates</span><span class="w"> </span><span class="nx">embed</span><span class="p">.</span><span class="nx">FS</span>
+</code></pre></div>
+<p>Можно связывать templates, static files и другие resources с binary.</p>
+<p>Secrets так хранить нельзя.</p>
+<p>Modules стали default mode, появилась поддержка Apple Silicon.</p>
+<h3 id="embed"><code>embed</code> уменьшает риск рассинхронизации артефактов<a class="headerlink" href="#embed" title="Permanent link">¶</a></h3>
+<p>Без embedding executable и templates могут поставляться отдельно. Тогда возможна ситуация: binary обновили, а directory с templates осталась старой.</p>
+<p>Embedding связывает versions этих ресурсов. Цена — изменение embedded file требует пересборки binary, а сам binary становится больше.</p>
+<h2 id="718-go-117-2021">7.18. Go 1.17 — 2021<a class="headerlink" href="#718-go-117-2021" title="Permanent link">¶</a></h2>
+<p>На основных amd64-платформах появился register-based calling convention.</p>
+<p>Для safe Go source это почти прозрачно, но runtime performance может измениться без изменения исходников.</p>
+<p>Также появились <code>//go:build</code>, <code>unsafe.Add</code>, <code>unsafe.Slice</code>, module graph pruning и lazy loading.</p>
+<h3 id="calling-convention-implementation-changes">Calling convention показывает силу скрытых implementation changes<a class="headerlink" href="#calling-convention-implementation-changes" title="Permanent link">¶</a></h3>
+<p>Application source не меняется, но compiler иначе передаёт arguments между functions. Это уменьшает часть memory traffic и overhead вызовов.</p>
+<p>Такие изменения особенно хорошо показывают смысл Go 1 promise: source API стабилен, а implementation под ним продолжает эволюционировать.</p>
+<h2 id="719-go-118-2022">7.19. Go 1.18 — 2022<a class="headerlink" href="#719-go-118-2022" title="Permanent link">¶</a></h2>
+<p>Появились generics:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">Contains</span><span class="p">[</span><span class="nx">T</span><span class="w"> </span><span class="kt">comparable</span><span class="p">](</span><span class="nx">items</span><span class="w"> </span><span class="p">[]</span><span class="nx">T</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">item</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">items</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">item</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Также появились <code>any</code>, <code>comparable</code>, fuzzing и <code>go.work</code>.</p>
+<h3 id="generics-static-typing">Generics расширяют язык, сохраняя static typing<a class="headerlink" href="#generics-static-typing" title="Permanent link">¶</a></h3>
+<p>До 1.18 повторно используемый type-safe algorithm часто требовал duplication или code generation. <code>interface{}</code> снимал часть duplication, но переносил type checks в runtime и ухудшал API clarity.</p>
+<p>Type parameters позволяют compiler сохранить связь input/output types на этапе компиляции.</p>
+<p>Цена — type system становится сложнее, а library authors получают новый способ создавать как полезные abstractions, так и чрезмерно сложные API.</p>
+<h2 id="720-go-119-2022">7.20. Go 1.19 — 2022<a class="headerlink" href="#720-go-119-2022" title="Permanent link">¶</a></h2>
+<p>Появился <code>GOMEMLIMIT</code> и <code>debug.SetMemoryLimit</code>.</p>
+<p>Это soft runtime memory limit, а не жёсткий RSS limit.</p>
+<p>Появились typed atomics:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">counter</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nx">Int64</span>
+<span class="nx">counter</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+<p>Уточнена Go Memory Model.</p>
+<h3 id="gomemlimit-gc-memory-budget">GOMEMLIMIT — попытка связать GC с реальным memory budget<a class="headerlink" href="#gomemlimit-gc-memory-budget" title="Permanent link">¶</a></h3>
+<p>До memory limit основной tuning GC строился вокруг отношения объёма heap между cycles. В контейнере реальный вопрос другой: сколько памяти вообще разрешено процессу.</p>
+<p><code>GOMEMLIMIT</code> даёт runtime ориентир, но не является жёстким process limit и не отменяет live data. Если приложение действительно удерживает слишком много достижимых объектов, GC не сможет их освободить.</p>
+<h2 id="721-go-120-2023">7.21. Go 1.20 — 2023<a class="headerlink" href="#721-go-120-2023" title="Permanent link">¶</a></h2>
+<p>Появился <code>errors.Join</code>, а также <code>context.WithCancelCause</code> и <code>context.Cause</code>.</p>
+<p>PGO появилась в предварительном виде:</p>
+<div class="highlight"><pre><span></span><code>run workload
+↓
+collect profile
+↓
+build using profile
+↓
+compiler optimizes hot paths
+</code></pre></div>
+<h3 id="cause-cancellation-lifecycle">Cause cancellation улучшает диагностику lifecycle<a class="headerlink" href="#cause-cancellation-lifecycle" title="Permanent link">¶</a></h3>
+<p>Раньше факт <code>context canceled</code> сообщал, что работа отменена, но плохо объяснял почему. Cause позволяет передать более содержательную причину.</p>
+<p>Для distributed backend это важно: одинаковый симптом cancellation может означать client disconnect, exceeded deadline, shutdown или отмену бизнес-операции.</p>
+<h2 id="722-go-121-2023">7.22. Go 1.21 — 2023<a class="headerlink" href="#722-go-121-2023" title="Permanent link">¶</a></h2>
+<p>Появились generic packages <code>slices</code>, <code>maps</code>, <code>cmp</code>.</p>
+<p>В язык вошли <code>min</code>, <code>max</code>, <code>clear</code>.</p>
+<p>Появился <code>log/slog</code>.</p>
+<p>PGO стала пригодна для общего использования.</p>
+<p>Появился современный механизм toolchain selection.</p>
+<h3 id="toolchain-module-workflow">Toolchain становится управляемой частью module workflow<a class="headerlink" href="#toolchain-module-workflow" title="Permanent link">¶</a></h3>
+<p>Автоматический выбор toolchain уменьшает friction разработки: module может требовать более новую версию Go, а tool способен подобрать её автоматически.</p>
+<p>Но convenience локальной разработки превращается в dependency CI на наличие нужной toolchain или возможности её скачать. Поэтому production build pipeline должен явно контролировать эту часть environment.</p>
+<h2 id="723-go-122-2024">7.23. Go 1.22 — 2024<a class="headerlink" href="#723-go-122-2024" title="Permanent link">¶</a></h2>
+<p>Изменилась semantics loop variables.</p>
+<p>Классический код:</p>
+<div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">user</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">users</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">process</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}()</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>в новом language mode получает отдельную declared variable для каждой iteration.</p>
+<p>Появился range по integer и расширенный <code>ServeMux</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">mux</span><span class="p">.</span><span class="nx">HandleFunc</span><span class="p">(</span><span class="s">"GET /users/{id}"</span><span class="p">,</span><span class="w"> </span><span class="nx">handler</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="loop-variable-semantic-trap">Изменение loop variable чинит старый semantic trap<a class="headerlink" href="#loop-variable-semantic-trap" title="Permanent link">¶</a></h3>
+<p>Старая semantics позволяла closure захватить одну переменную, значение которой менялось между iterations. Ошибка особенно часто проявлялась с goroutines, потому что execution происходило позже.</p>
+<p>Новая semantics уменьшает класс bugs на уровне языка. Но shared objects внутри переменной по-прежнему остаются shared: новая loop variable не делает deep copy данных.</p>
+<h2 id="724-go-123-2024">7.24. Go 1.23 — 2024<a class="headerlink" href="#724-go-123-2024" title="Permanent link">¶</a></h2>
+<p>Появился range-over-function и package <code>iter</code>.</p>
+<p>Изменилась реализация timers: недостижимые <code>Timer</code> и <code>Ticker</code> могут освобождаться GC, усилились гарантии <code>Stop</code> и <code>Reset</code>.</p>
+<p>Появился package <code>unique</code>.</p>
+<h3 id="iterators-goroutine">Iterators без обязательной goroutine<a class="headerlink" href="#iterators-goroutine" title="Permanent link">¶</a></h3>
+<p>Range-over-function позволяет описывать последовательность как protocol вызовов, не создавая промежуточный slice и не используя channel только ради iteration.</p>
+<p>Это важный design point: channel — synchronization primitive, и использовать его как универсальный iterator не всегда выгодно.</p>
+<h2 id="725-go-124-2025">7.25. Go 1.24 — 2025<a class="headerlink" href="#725-go-124-2025" title="Permanent link">¶</a></h2>
+<p>Map implementation перешла на Swiss Tables.</p>
+<p>Language semantics осталась прежней, хотя internal algorithm изменился.</p>
+<p>Также появились generic aliases, <code>tool</code> directive, <code>testing.B.Loop</code>, <code>os.Root</code>, <code>weak</code> и <code>AddCleanup</code>.</p>
+<h3 id="swiss-tables-surface-api">Swiss Tables — изменение внутренностей с сохранением surface API<a class="headerlink" href="#swiss-tables-surface-api" title="Permanent link">¶</a></h3>
+<p>Map остаётся тем же language construct, но внутренний алгоритм хранения и lookup меняется ради performance characteristics.</p>
+<p>Это ещё один пример: оптимизация runtime может быть гораздо важнее нового syntax для конкретного backend, хотя в source diff нет ни одной строки.</p>
+<h2 id="726-go-125-2025">7.26. Go 1.25 — 2025<a class="headerlink" href="#726-go-125-2025" title="Permanent link">¶</a></h2>
+<p>Runtime стал учитывать Linux cgroup CPU bandwidth limit при выборе default <code>GOMAXPROCS</code>.</p>
+<p>Это снизило риск избыточного parallelism и cgroup throttling внутри контейнеров.</p>
+<p>Также появились <code>WaitGroup.Go</code>, стабильный <code>testing/synctest</code> и Trace FlightRecorder.</p>
+<h3 id="container-aware-gomaxprocs-leakage-abstraction">Container-aware GOMAXPROCS закрывает leakage abstraction<a class="headerlink" href="#container-aware-gomaxprocs-leakage-abstraction" title="Permanent link">¶</a></h3>
+<p>Контейнер может видеть множество CPU host, но иметь CPU quota, эквивалентную нескольким ядрам по времени. Если runtime ориентируется только на видимые CPUs, он создаёт слишком много parallel work относительно разрешённого budget.</p>
+<p>Container-aware default уменьшает oversubscription и throttling. Но CPU quota всё равно остаётся budget времени, а не гарантией физически выделенных cores.</p>
+<h2 id="727-go-126-2026">7.27. Go 1.26 — 2026<a class="headerlink" href="#727-go-126-2026" title="Permanent link">¶</a></h2>
+<p>Green Tea GC стал default garbage collector.</p>
+<p>Основные цели — locality, эффективная работа с большим количеством small objects и scalability GC.</p>
+<p>Появился синтаксис:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">new</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+</code></pre></div>
+<p>Продолжились improvements generics, <code>go fix</code>, cgo и goroutine leak diagnostics.</p>
+<h3 id="green-tea-gc-backend">Green Tea GC оптимизирует то, что backend обычно не пишет вручную<a class="headerlink" href="#green-tea-gc-backend" title="Permanent link">¶</a></h3>
+<p>Application developer не вызывает collector напрямую, но allocation pattern сервиса формирует его нагрузку. Улучшение locality и обработки small objects может снизить GC overhead без изменений application source.</p>
+<p>Однако общий speedup всегда ограничен долей времени, которую приложение вообще тратило на GC. Это обычный закон оптимизации: ускорение одного компонента не может бесконечно ускорять всю систему.</p>
+<h2 id="728-go-127-2026">7.28. Go 1.27 — 2026<a class="headerlink" href="#728-go-127-2026" title="Permanent link">¶</a></h2>
+<p>В материале рассматривается ветка Go 1.27 как текущая.</p>
+<p>Ключевые изменения:</p>
+<ul>
+<li>методы могут объявлять собственные type parameters;</li>
+<li>JSON v2 и <code>jsontext</code> становятся общедоступными;</li>
+<li>goroutine leak diagnostics выходят из экспериментального состояния;</li>
+<li>появляется UUID package;</li>
+<li>продолжаются improvements small allocations;</li>
+<li>SIMD остаётся experimental.</li>
+</ul>
+<p>Для свежих runtime changes важно отделять подтверждённый механизм от широких production-выводов.</p>
+<hr/>
+<h3 id="_12">Свежая версия требует особенно аккуратных выводов<a class="headerlink" href="#_12" title="Permanent link">¶</a></h3>
+<p>У нового API можно описать documented contract сразу, но реальные production trade-offs проявляются только после эксплуатации на разных workloads.</p>
+<p>Поэтому для свежих возможностей полезно разделять:</p>
+<div class="highlight"><pre><span></span><code>что гарантирует документация
+что делает текущая implementation
+что измерено на нашем workload
+что пока является ожиданием
+</code></pre></div>
+<p>Это правило применимо ко всему курсу, особенно к runtime internals.</p>
+<h1 id="8-go">8. Сквозные линии эволюции Go<a class="headerlink" href="#8-go" title="Permanent link">¶</a></h1>
+<h2 id="81-goroutine-scheduler">8.1. Goroutine и scheduler<a class="headerlink" href="#81-goroutine-scheduler" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>segmented stacks
+↓
+copying stacks
+↓
+smaller initial stack
+↓
+scheduler improvements
+↓
+async preemption
+↓
+container-aware parallelism
+</code></pre></div>
+<h2 id="82-garbage-collector">8.2. Garbage collector<a class="headerlink" href="#82-garbage-collector" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>старый GC
+↓
+concurrent GC
+↓
+меньше pauses
+↓
+GOMEMLIMIT
+↓
+Green Tea GC
+</code></pre></div>
+<h2 id="83-lifecycle-request">8.3. Lifecycle request<a class="headerlink" href="#83-lifecycle-request" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>context
+↓
+SQL operations with context
+↓
+HTTP shutdown
+↓
+cancel causes
+</code></pre></div>
+<h2 id="84-dependency-management">8.4. Dependency management<a class="headerlink" href="#84-dependency-management" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>GOPATH
+↓
+vendoring
+↓
+modules
+↓
+proxy/checksum database
+↓
+workspaces
+↓
+toolchain management
+</code></pre></div>
+<h2 id="85-type-system">8.5. Type system<a class="headerlink" href="#85-type-system" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>маленький static type system
+↓
+aliases
+↓
+generics
+↓
+iterators
+↓
+generic aliases
+↓
+generic methods
+</code></pre></div>
+<h2 id="86-diagnostics">8.6. Diagnostics<a class="headerlink" href="#86-diagnostics" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>race detector
+↓
+coverage
+↓
+mutex profiles
+↓
+PGO profiles
+↓
+FlightRecorder
+↓
+goroutine leak diagnostics
+</code></pre></div>
+<p>Главный вывод:</p>
+<blockquote>
+<p>Новая версия Go может серьёзно изменить production behaviour даже тогда, когда application source почти не меняется.</p>
+</blockquote>
+<hr/>
+<h1 id="9-go-1-compatibility-promise">9. Go 1 Compatibility Promise<a class="headerlink" href="#9-go-1-compatibility-promise" title="Permanent link">¶</a></h1>
+<p>Compatibility promise создаёт долгосрочный контракт.</p>
+<p>Упрощённо:</p>
+<blockquote>
+<p>Корректный Go 1 source должен продолжать компилироваться и работать с последующими Go 1 releases, кроме оговорённых исключений.</p>
+</blockquote>
+<p>Но promise не фиксирует:</p>
+<ul>
+<li>производительность;</li>
+<li>количество allocations;</li>
+<li>scheduler internals;</li>
+<li>GC algorithm;</li>
+<li>exact scheduling;</li>
+<li>binary format;</li>
+<li>compiler optimizations;</li>
+<li>runtime implementation.</li>
+</ul>
+<p>Поэтому correct result может сохраниться, а latency, memory и CPU измениться.</p>
+<p>Обновление toolchain всё равно требует:</p>
+<div class="highlight"><pre><span></span><code>compile
+↓
+tests
+↓
+race tests
+↓
+integration tests
+↓
+benchmarks/load tests
+↓
+production metrics
+</code></pre></div>
+<hr/>
+<h2 id="91">9.1. Совместимость исходников не означает заморозку платформы<a class="headerlink" href="#91" title="Permanent link">¶</a></h2>
+<p>Это один из центральных design principles Go. Проект старается позволить старому корректному source code продолжать работать, одновременно меняя внутренности compiler и runtime.</p>
+<p>Именно поэтому возможна такая ситуация:</p>
+<div class="highlight"><pre><span></span><code>тот же source
+↓
+новая версия Go
+↓
+другой machine code
+↓
+другая GC implementation
+↓
+другое scheduling behaviour
+↓
+тот же предусмотренный программой результат
+</code></pre></div>
+<p>Compatibility promise защищает разработчика от постоянной миграции syntax/API, но оставляет implementers пространство для оптимизации runtime.</p>
+<h2 id="92">9.2. На что нельзя опираться как на контракт<a class="headerlink" href="#92" title="Permanent link">¶</a></h2>
+<p>Если приложение корректно работает только потому, что goroutines «обычно» запускаются в определённом порядке, оно уже содержит ошибку design.</p>
+<p>То же относится к зависимости от:</p>
+<ul>
+<li>конкретного времени GC pause;</li>
+<li>случайного порядка <code>map</code> iteration;</li>
+<li>точного количества OS threads;</li>
+<li>внутренней структуры scheduler;</li>
+<li>конкретного allocation behaviour compiler.</li>
+</ul>
+<p>Это либо implementation details, либо поведение, которое нужно измерять, а не считать гарантией языка.</p>
+<h2 id="93-go">9.3. Практический смысл при обновлении Go<a class="headerlink" href="#93-go" title="Permanent link">¶</a></h2>
+<p>Обновление toolchain имеет два независимых вопроса:</p>
+<div class="highlight"><pre><span></span><code>1. сохранилась ли логическая корректность?
+2. сохранились ли приемлемые operational characteristics?
+</code></pre></div>
+<p>Первый проверяется tests и compatibility contract. Второй — benchmark, load testing и production telemetry.</p>
+<h1 id="10-go-modules">10. Go Modules<a class="headerlink" href="#10-go-modules" title="Permanent link">¶</a></h1>
+<h2 id="101-package-module-repository">10.1. Package, module и repository<a class="headerlink" href="#101-package-module-repository" title="Permanent link">¶</a></h2>
+<p>Package — единица импорта и организации кода.</p>
+<p>Module — версионируемый набор packages.</p>
+<p>Repository — хранилище исходников, которое может содержать один или несколько modules.</p>
+<div class="highlight"><pre><span></span><code>package ≠ module ≠ repository
+</code></pre></div>
+<h2 id="102-gomod">10.2. <code>go.mod</code><a class="headerlink" href="#102-gomod" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nx">module</span><span class="w"> </span><span class="nx">example</span><span class="p">.</span><span class="nx">org</span><span class="o">/</span><span class="nx">shop</span>
+
+<span class="k">go</span><span class="w"> </span><span class="mf">1.27</span>
+
+<span class="nx">require</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="nx">example</span><span class="p">.</span><span class="nx">org</span><span class="o">/</span><span class="nx">database</span><span class="w"> </span><span class="nx">v1</span><span class="mf">.5.0</span>
+<span class="p">)</span>
+</code></pre></div>
+<p><code>go.mod</code> описывает module и dependency requirements.</p>
+<h2 id="103-gosum">10.3. <code>go.sum</code><a class="headerlink" href="#103-gosum" title="Permanent link">¶</a></h2>
+<p><code>go.sum</code> хранит cryptographic checksums содержимого modules и metadata.</p>
+<p>Он не является обычным lock-file.</p>
+<h2 id="104-minimal-version-selection">10.4. Minimal Version Selection<a class="headerlink" href="#104-minimal-version-selection" title="Permanent link">¶</a></h2>
+<p>Пусть:</p>
+<div class="highlight"><pre><span></span><code>A requires C v1.3.0
+B requires C v1.5.0
+</code></pre></div>
+<p>Приложение требует A и B.</p>
+<p>Минимальная версия C, удовлетворяющая всему graph:</p>
+<div class="highlight"><pre><span></span><code>C v1.5.0
+</code></pre></div>
+<p>Это ключевая идея MVS.</p>
+<h2 id="105-major-versions">10.5. Major versions<a class="headerlink" href="#105-major-versions" title="Permanent link">¶</a></h2>
+<p>Для <code>v2+</code> module path обычно содержит major suffix:</p>
+<div class="highlight"><pre><span></span><code>example.org/lib
+example.org/lib/v2
+</code></pre></div>
+<p>Для Go это разные module paths.</p>
+<h2 id="106-private-modules">10.6. Private modules<a class="headerlink" href="#106-private-modules" title="Permanent link">¶</a></h2>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">GOPRIVATE</span><span class="o">=</span>git.example.org/*
+</code></pre></div>
+<p>Эта настройка сообщает toolchain, что соответствующие module paths требуют private handling.</p>
+<h3 id="_13">Что важно запомнить<a class="headerlink" href="#_13" title="Permanent link">¶</a></h3>
+<ol>
+<li>Module — не package и не repository.</li>
+<li><code>go.mod</code> описывает requirements.</li>
+<li><code>go.sum</code> хранит checksums.</li>
+<li>MVS выбирает минимальные versions, удовлетворяющие всему graph.</li>
+<li>Major version может быть частью module path.</li>
+</ol>
+<hr/>
+<h2 id="107-dependency-graph">10.7. Dependency graph — это граф, а не плоский список<a class="headerlink" href="#107-dependency-graph" title="Permanent link">¶</a></h2>
+<p>Если ваш <code>go.mod</code> содержит пять прямых dependencies, итоговая программа может зависеть от десятков transitive modules.</p>
+<div class="highlight"><pre><span></span><code>application
+├── A
+│   ├── C
+│   └── D
+└── B
+    └── C
+</code></pre></div>
+<p>Поэтому вопрос «какая версия C используется?» решается не чтением одной строки, а построением module graph и применением правил MVS.</p>
+<p>Полезные команды:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>list<span class="w"> </span>-m<span class="w"> </span>all
+go<span class="w"> </span>mod<span class="w"> </span>graph
+go<span class="w"> </span>mod<span class="w"> </span>tidy
+</code></pre></div>
+<p><code>go list -m all</code> показывает выбранные modules, <code>go mod graph</code> помогает увидеть requirements graph, а <code>go mod tidy</code> приводит <code>go.mod</code> и <code>go.sum</code> в соответствие с реально импортируемыми packages и требованиями module.</p>
+<h2 id="108-mvs">10.8. MVS пошагово<a class="headerlink" href="#108-mvs" title="Permanent link">¶</a></h2>
+<p>Пусть приложение требует:</p>
+<div class="highlight"><pre><span></span><code>A v1.0
+B v1.0
+</code></pre></div>
+<p>A требует:</p>
+<div class="highlight"><pre><span></span><code>C v1.3
+</code></pre></div>
+<p>B требует:</p>
+<div class="highlight"><pre><span></span><code>C v1.5
+</code></pre></div>
+<p>Для module path C build list выбирает <code>v1.5</code>, потому что она удовлетворяет обоим minimum requirements.</p>
+<p>Важно: MVS не ищет «самую новую версию в интернете». Если граф требует максимум <code>v1.5</code>, наличие <code>v1.9</code> само по себе не заставляет build выбрать <code>v1.9</code>.</p>
+<p>Это принципиально отличает MVS от resolver'ов, ориентированных на поиск наиболее свежей версии в допустимом range.</p>
+<h2 id="109-gosum-lock-file">10.9. Почему <code>go.sum</code> не lock-file<a class="headerlink" href="#109-gosum-lock-file" title="Permanent link">¶</a></h2>
+<p>Lock-file обычно мыслят как полную фиксацию конкретного resolved graph. <code>go.sum</code> выполняет другую основную функцию: хранит checksums модулей, которые toolchain видел и должен уметь проверять.</p>
+<p>Поэтому наличие строки в <code>go.sum</code> не означает, что именно этот module обязательно входит в текущую сборку.</p>
+<h2 id="1010-semantic-import-versioning">10.10. Semantic Import Versioning<a class="headerlink" href="#1010-semantic-import-versioning" title="Permanent link">¶</a></h2>
+<p>Для несовместимой major version путь становится частью identity module:</p>
+<div class="highlight"><pre><span></span><code>example.org/lib
+example.org/lib/v2
+</code></pre></div>
+<p>Это позволяет зависимостям использовать разные major versions одновременно, потому что для Go это разные import/module paths.</p>
+<p>Цена — major upgrade становится видимым в source imports.</p>
+<h1 id="11-generics">11. Generics<a class="headerlink" href="#11-generics" title="Permanent link">¶</a></h1>
+<h2 id="111">11.1. Зачем они появились<a class="headerlink" href="#111" title="Permanent link">¶</a></h2>
+<p>До Go 1.18 общий алгоритм для разных типов часто требовал duplication, code generation или <code>interface{}</code>.</p>
+<p>Generics добавили type parameters.</p>
+<h2 id="112">11.2. Простой пример<a class="headerlink" href="#112" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">Contains</span><span class="p">[</span><span class="nx">T</span><span class="w"> </span><span class="kt">comparable</span><span class="p">](</span>
+<span class="w">    </span><span class="nx">items</span><span class="w"> </span><span class="p">[]</span><span class="nx">T</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">target</span><span class="w"> </span><span class="nx">T</span><span class="p">,</span>
+<span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">item</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">items</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">item</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Использование:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">hasID</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">Contains</span><span class="p">(</span>
+<span class="w">    </span><span class="p">[]</span><span class="kt">int</span><span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">},</span>
+<span class="w">    </span><span class="mi">20</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nx">hasEnv</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">Contains</span><span class="p">(</span>
+<span class="w">    </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">"dev"</span><span class="p">,</span><span class="w"> </span><span class="s">"stage"</span><span class="p">,</span><span class="w"> </span><span class="s">"prod"</span><span class="p">},</span>
+<span class="w">    </span><span class="s">"prod"</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h2 id="113-constraints">11.3. Constraints<a class="headerlink" href="#113-constraints" title="Permanent link">¶</a></h2>
+<p><code>T</code> — type parameter.</p>
+<p><code>comparable</code> — constraint, разрешающий операции <code>==</code> и <code>!=</code>.</p>
+<p>Compiler проверяет допустимость операций статически.</p>
+<h2 id="114-any">11.4. <code>any</code><a class="headerlink" href="#114-any" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">First</span><span class="p">[</span><span class="nx">T</span><span class="w"> </span><span class="kt">any</span><span class="p">](</span><span class="nx">items</span><span class="w"> </span><span class="p">[]</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">T</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">zero</span><span class="w"> </span><span class="nx">T</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">items</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">zero</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">items</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>any</code> подходит, когда алгоритм не требует специфических операций над типом.</p>
+<h2 id="115-generics">11.5. Когда generics полезны<a class="headerlink" href="#115-generics" title="Permanent link">¶</a></h2>
+<p>Хороший случай:</p>
+<div class="highlight"><pre><span></span><code>одинаковый алгоритм
++
+разные типы
+</code></pre></div>
+<p>Например containers, reusable algorithms, collection helpers и common data structures.</p>
+<p>Если domain invariants и lifecycle различаются, generic abstraction может только скрыть реальные различия.</p>
+<h3 id="_14">Что важно запомнить<a class="headerlink" href="#_14" title="Permanent link">¶</a></h3>
+<ol>
+<li>Generics полезны прежде всего для повторно используемых алгоритмов.</li>
+<li>Constraints задают допустимые операции.</li>
+<li>Generic abstraction должна уменьшать реальную сложность.</li>
+<li>Наличие generics не означает, что ими нужно оборачивать каждый слой приложения.</li>
+</ol>
+<hr/>
+<h2 id="116-type-parameter">11.6. Type parameter — это неизвестный конкретный тип с известными возможностями<a class="headerlink" href="#116-type-parameter" title="Permanent link">¶</a></h2>
+<p>В generic function compiler не знает заранее конкретный <code>T</code>, но знает constraint.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">Max</span><span class="p">[</span><span class="nx">T</span><span class="w"> </span><span class="nx">constraints</span><span class="p">.</span><span class="nx">Ordered</span><span class="p">](</span><span class="nx">a</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="w"> </span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="nx">T</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="nx">b</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">a</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">b</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Ментальная модель:</p>
+<div class="highlight"><pre><span></span><code>T может быть разным
+но операции над T ограничены constraint
+</code></pre></div>
+<p>То есть generic code остаётся statically typed. Мы не теряем проверку типов ради повторного использования алгоритма.</p>
+<h2 id="117-any">11.7. <code>any</code> не даёт операций над значением<a class="headerlink" href="#117-any" title="Permanent link">¶</a></h2>
+<p><code>any</code> означает: конкретный тип может быть любым.</p>
+<p>Это не означает, что внутри generic function можно выполнять над <code>T</code> любые операции.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">F</span><span class="p">[</span><span class="nx">T</span><span class="w"> </span><span class="kt">any</span><span class="p">](</span><span class="nx">a</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="w"> </span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// return a == b // нельзя для произвольного T</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Для <code>==</code> нужен как минимум <code>comparable</code>.</p>
+<p>Так constraints превращаются в compile-time contract generic algorithm.</p>
+<h2 id="118-type-inference">11.8. Type inference<a class="headerlink" href="#118-type-inference" title="Permanent link">¶</a></h2>
+<p>Во многих вызовах type arguments можно не указывать явно:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">Contains</span><span class="p">([]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">},</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span>
+</code></pre></div>
+<p>Compiler выводит <code>T = int</code> из arguments.</p>
+<p>Явная форма тоже возможна:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">Contains</span><span class="p">[</span><span class="kt">int</span><span class="p">]([]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">},</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span>
+</code></pre></div>
+<p>Обычно она нужна только тогда, когда inference недостаточен или явное указание улучшает читаемость.</p>
+<h2 id="119-generics-polymorphism">11.9. Generics не заменяют polymorphism поведения<a class="headerlink" href="#119-generics-polymorphism" title="Permanent link">¶</a></h2>
+<p>Если нужно выбрать реализацию поведения по набору методов, interface по-прежнему естественен.</p>
+<p>Если нужен один и тот же алгоритм для множества типов, generics часто естественнее.</p>
+<p>Поэтому вопрос выбора механизма начинается не с «что современнее», а с формы задачи:</p>
+<div class="highlight"><pre><span></span><code>общий алгоритм над разными типами → type parameters
+общий контракт поведения → interface
+один конкретный сценарий → обычная функция
+</code></pre></div>
+<h1 id="12-go-toolchain">12. Go Toolchain<a class="headerlink" href="#12-go-toolchain" title="Permanent link">¶</a></h1>
+<p>Go объединяет базовые engineering operations в единый toolchain.</p>
+<h2 id="121">12.1. Версия<a class="headerlink" href="#121" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>version
+</code></pre></div>
+<h2 id="122-environment">12.2. Environment<a class="headerlink" href="#122-environment" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>env
+go<span class="w"> </span>env<span class="w"> </span>GOTOOLCHAIN
+</code></pre></div>
+<h2 id="123">12.3. Форматирование<a class="headerlink" href="#123" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>fmt<span class="w"> </span>./...
+</code></pre></div>
+<p>Formatter изменяет оформление source code, но ничего не говорит о business correctness.</p>
+<h2 id="124-static-analysis">12.4. Static analysis<a class="headerlink" href="#124-static-analysis" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>vet<span class="w"> </span>./...
+</code></pre></div>
+<p><code>go vet</code> ищет подозрительные конструкции. Это полезная эвристическая проверка, но не доказательство корректности.</p>
+<h2 id="125-tests">12.5. Tests<a class="headerlink" href="#125-tests" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>./...
+</code></pre></div>
+<p>Для принудительного повторного запуска:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-count<span class="o">=</span><span class="m">1</span><span class="w"> </span>./...
+</code></pre></div>
+<h2 id="126-race-detector">12.6. Race detector<a class="headerlink" href="#126-race-detector" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-race<span class="w"> </span>./...
+</code></pre></div>
+<p>Отсутствие race report означает только, что на выполненных execution paths race не обнаружена.</p>
+<h2 id="127-build">12.7. Build<a class="headerlink" href="#127-build" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>build<span class="w"> </span>-o<span class="w"> </span>bin/server<span class="w"> </span>./cmd/server
+</code></pre></div>
+<p>Metadata binary:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>version<span class="w"> </span>-m<span class="w"> </span>./bin/server
+</code></pre></div>
+<hr/>
+<h2 id="128-toolchain">12.8. Toolchain — часть воспроизводимости<a class="headerlink" href="#128-toolchain" title="Permanent link">¶</a></h2>
+<p>Когда мы говорим «собрали приложение», важно знать, <strong>чем</strong> оно было собрано.</p>
+<p>Разные версии compiler могут генерировать разный machine code, менять inlining, escape decisions, GC/runtime behaviour и performance characteristics.</p>
+<p>Поэтому версия Go — такой же build input, как dependencies.</p>
+<h2 id="129-go-test">12.9. <code>go test</code> проверяет только написанные свойства<a class="headerlink" href="#129-go-test" title="Permanent link">¶</a></h2>
+<p>Успешный test suite означает:</p>
+<div class="highlight"><pre><span></span><code>выполненные tests
++
+их assertions
+→ прошли
+</code></pre></div>
+<p>Он не доказывает correctness поведения, для которого тестов нет.</p>
+<p>А race detector дополнительно зависит от executed schedules и paths. Поэтому сильный test suite — это не просто высокое coverage, а набор сценариев, действительно воспроизводящих важные interactions.</p>
+<h2 id="1210-go-vet-compiler-theorem-prover">12.10. <code>go vet</code> — не compiler и не theorem prover<a class="headerlink" href="#1210-go-vet-compiler-theorem-prover" title="Permanent link">¶</a></h2>
+<p><code>go vet</code> анализирует известные suspicious patterns. Он полезен именно как дополнительный слой диагностики.</p>
+<p>Правильная цепочка выглядит скорее так:</p>
+<div class="highlight"><pre><span></span><code>compiler catches type/syntax errors
+↓
+vet catches suspicious constructs
+↓
+tests verify expected behaviour
+↓
+race detector observes concurrent accesses
+↓
+benchmarks/load tests measure performance
+</code></pre></div>
+<p>Каждый инструмент закрывает свой класс рисков.</p>
+<h1 id="13-toolchain">13. Версия языка и версия toolchain<a class="headerlink" href="#13-toolchain" title="Permanent link">¶</a></h1>
+<p>В <code>go.mod</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">module</span><span class="w"> </span><span class="nx">example</span><span class="p">.</span><span class="nx">org</span><span class="o">/</span><span class="nx">shop</span>
+
+<span class="k">go</span><span class="w"> </span><span class="mf">1.27</span>
+</code></pre></div>
+<p><code>go</code> directive задаёт минимальную версию Go для module и влияет на language semantics.</p>
+<p>Она не означает точную фиксацию patch-version compiler.</p>
+<p>Современный Go поддерживает <code>toolchain</code> directive и управление через:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>env<span class="w"> </span>GOTOOLCHAIN
+</code></pre></div>
+<p>Toolchain selection может автоматически подбирать подходящую version.</p>
+<p>Для закрытого CI это означает, что необходимые toolchains должны быть заранее доступны, иначе automatic download может оказаться невозможен.</p>
+<hr/>
+<h2 id="131">13.1. Почему это вообще разделили<a class="headerlink" href="#131" title="Permanent link">¶</a></h2>
+<p>Module может декларировать language baseline, а реально установленный или автоматически выбранный toolchain может быть новее.</p>
+<p>Это позволяет использовать современный compiler для сборки module, не включая автоматически semantics более новой версии языка там, где они зависят от <code>go</code> directive.</p>
+<p>Практически это означает, что при расследовании сборки нужно знать как минимум:</p>
+<div class="highlight"><pre><span></span><code>версию языка module
++
+реально выбранную toolchain
+</code></pre></div>
+<p>Одна строка <code>go version</code> на ноутбуке разработчика ещё не всегда описывает toolchain, которую выбрал конкретный build environment.</p>
+<h1 id="14-ci">14. Что должен фиксировать CI<a class="headerlink" href="#14-ci" title="Permanent link">¶</a></h1>
+<p>Для воспроизводимого build важно знать:</p>
+<ul>
+<li>source revision;</li>
+<li>Go toolchain version;</li>
+<li>module graph;</li>
+<li>build flags;</li>
+<li>target OS/arch;</li>
+<li>base image;</li>
+<li>generated files;</li>
+<li>artifact digest.</li>
+</ul>
+<p>Git commit сам по себе не всегда описывает весь результат сборки.</p>
+<hr/>
+<h1 id="15">15. Что проверяют инструменты<a class="headerlink" href="#15" title="Permanent link">¶</a></h1>
+<table>
+<thead>
+<tr>
+<th>Команда</th>
+<th>Что подтверждает</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>go fmt</code></td>
+<td>Оформление соответствует formatter</td>
+</tr>
+<tr>
+<td><code>go vet</code></td>
+<td>Не обнаружены известные подозрительные конструкции</td>
+</tr>
+<tr>
+<td><code>go test</code></td>
+<td>Прошли написанные tests</td>
+</tr>
+<tr>
+<td><code>go test -race</code></td>
+<td>На выполненных путях не обнаружена race</td>
+</tr>
+<tr>
+<td><code>go build</code></td>
+<td>Программа собирается для выбранной configuration</td>
+</tr>
+<tr>
+<td><code>go version -m</code></td>
+<td>Можно получить build/module metadata binary</td>
+</tr>
+</tbody>
+</table>
+<p>Ни одна отдельная команда не означает production readiness.</p>
+<hr/>
+<h1 id="16">16. Итоговая модель<a class="headerlink" href="#16" title="Permanent link">¶</a></h1>
+<div class="highlight"><pre><span></span><code>SOURCE
+  │
+  ▼
+TOOLCHAIN
+  │
+  ▼
+ARTIFACT
+  │
+  ▼
+CONFIGURATION
+  │
+  ▼
+ENVIRONMENT
+  │
+  ▼
+GO APPLICATION
+  │
+  ├── PostgreSQL
+  ├── Broker
+  └── External API
+  │
+  ▼
+PRODUCTION
+  │
+  ▼
+latency / failures / load
+  │
+  ▼
+DIAGNOSTICS
+</code></pre></div>
+<p>Go предоставляет язык, runtime, standard library и toolchain.</p>
+<p>Но production backend появляется только тогда, когда инженер понимает:</p>
+<ul>
+<li>что именно запускается;</li>
+<li>где это запускается;</li>
+<li>как конфигурируется;</li>
+<li>от каких систем зависит;</li>
+<li>какие ресурсы ограничены;</li>
+<li>что происходит при частичном отказе;</li>
+<li>как найти причину деградации;</li>
+<li>как проверить, какой artifact и toolchain реально работают.</li>
+</ul>
+<hr/>
+<h1 id="17">17. Что важно запомнить после лекции<a class="headerlink" href="#17" title="Permanent link">¶</a></h1>
+<h2 id="production">Production<a class="headerlink" href="#production" title="Permanent link">¶</a></h2>
+<ul>
+<li>Production определяется реальными последствиями.</li>
+<li>Happy path проверяет только один сценарий.</li>
+<li>Ошибка ответа не означает отсутствие side effect.</li>
+<li>Timeout означает прекращение ожидания, а не доказательство отмены операции.</li>
+</ul>
+<h2 id="_15">Окружения<a class="headerlink" href="#_15" title="Permanent link">¶</a></h2>
+<ul>
+<li>Dev, test, stage и prod решают разные задачи.</li>
+<li>Stage снижает риск, но не копирует production полностью.</li>
+<li>Объём данных и нагрузка принципиально меняют поведение.</li>
+</ul>
+<h2 id="_16">Артефакт<a class="headerlink" href="#_16" title="Permanent link">¶</a></h2>
+<ul>
+<li>Source code и executable artifact — разные сущности.</li>
+<li>Binary, image и running container — разные уровни.</li>
+<li>Лучше продвигать один и тот же artifact между окружениями.</li>
+</ul>
+<h2 id="_17">Конфигурация<a class="headerlink" href="#_17" title="Permanent link">¶</a></h2>
+<ul>
+<li>Environment-specific параметры должны быть отделены от артефакта.</li>
+<li>Конфигурацию нужно валидировать при старте.</li>
+<li>Secrets требуют отдельного контроля.</li>
+</ul>
+<h2 id="_18">Внешние зависимости<a class="headerlink" href="#_18" title="Permanent link">¶</a></h2>
+<ul>
+<li>Latency увеличивает число in-flight operations.</li>
+<li>Goroutine не увеличивает capacity базы или внешнего API.</li>
+<li>Timeout ограничивает время.</li>
+<li>Semaphore/pool ограничивает concurrency.</li>
+<li>Bounded queue ограничивает накопление работы.</li>
+<li>Retry способен усилить перегрузку.</li>
+</ul>
+<h2 id="go">История Go<a class="headerlink" href="#go" title="Permanent link">¶</a></h2>
+<ul>
+<li>Go развивается как платформа, а не только как syntax.</li>
+<li>Важные изменения происходят в runtime, GC, scheduler, compiler и toolchain.</li>
+<li>Новая версия может изменить production behaviour без изменения application source.</li>
+</ul>
+<h2 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">¶</a></h2>
+<ul>
+<li>Go 1 compatibility прежде всего защищает source compatibility.</li>
+<li>Performance и runtime internals не фиксируются.</li>
+<li>Toolchain update всё равно требует tests и measurements.</li>
+</ul>
+<h2 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link">¶</a></h2>
+<ul>
+<li><code>package != module != repository</code>.</li>
+<li><code>go.mod</code> описывает requirements.</li>
+<li><code>go.sum</code> хранит checksums.</li>
+<li>MVS выбирает минимальные versions, удовлетворяющие всему graph.</li>
+</ul>
+<h2 id="generics">Generics<a class="headerlink" href="#generics" title="Permanent link">¶</a></h2>
+<ul>
+<li>Полезны, когда алгоритм одинаковый, а типы разные.</li>
+<li>Constraints определяют допустимые операции.</li>
+<li>Абстракция должна уменьшать сложность.</li>
+</ul>
+<h2 id="toolchain">Toolchain<a class="headerlink" href="#toolchain" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>fmt
+↓
+vet
+↓
+test
+↓
+race
+↓
+build
+↓
+artifact inspection
+</code></pre></div>
+<p>У каждого инструмента есть своя область проверки.</p>
+<hr/>
+<h1 id="18">18. Переход к следующей лекции<a class="headerlink" href="#18" title="Permanent link">¶</a></h1>
+<p>После первой лекции важно понимать, что Go-приложение — это не только исходный код и handlers.</p>
+<p>Под ним работает runtime.</p>
+<p>Следующий технический слой:</p>
+<div class="highlight"><pre><span></span><code>goroutine
+↓
+G / M / P
+↓
+scheduler
+↓
+run queues
+↓
+work stealing
+↓
+netpoller
+↓
+stack growth
+↓
+parking / wakeup
+↓
+synchronization
+</code></pre></div>
+<p>Первая лекция отвечает на вопрос:</p>
+<blockquote>
+<p>В каких реальных условиях живёт backend и как Go как платформа дошёл до современной формы?</p>
+</blockquote>
+<p>Следующая отвечает:</p>
+<blockquote>
+<p>Что происходит внутри Go runtime, когда этот backend начинает выполнять тысячи конкурентных операций?</p>
+</blockquote>
+</article>
+</div>
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+</div>
+<button class="md-top md-icon" data-md-component="top" hidden="" type="button">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  К началу
+</button>
+</main>
+<footer class="md-footer">
+<nav aria-label="Нижний колонтитул" class="md-footer__inner md-grid">
+<a aria-label="Вперед: Презентации" class="md-footer__link md-footer__link--next" href="../../../../university/go/slides/">
+<div class="md-footer__title">
+<span class="md-footer__direction">
+                Вперед
+              </span>
+<div class="md-ellipsis">
+                Презентации
+              </div>
+</div>
+<div class="md-footer__button md-icon">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"></path></svg>
+</div>
+</a>
+</nav>
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}, "version": null}</script>
+<script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+</body>
+</html>
