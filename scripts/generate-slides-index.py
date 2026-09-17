@@ -4,8 +4,8 @@ from urllib.parse import quote
 import mkdocs_gen_files
 
 
-PHYSICAL_DIR = Path("memory/university/go/slides")
-VIRTUAL_DIR = Path("university/go/slides")
+PHYSICAL_DIR = Path("go/slides")
+VIRTUAL_DIR = Path("go/slides")
 
 pdf_files = sorted(
     PHYSICAL_DIR.glob("*.pdf"),
