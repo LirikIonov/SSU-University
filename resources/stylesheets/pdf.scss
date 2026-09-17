@@ -1,0 +1,27 @@
+@page {
+  size: A4;
+  margin: 18mm 16mm 20mm 16mm;
+}
+
+h1 {
+  break-before: page;
+}
+
+h1:first-child {
+  break-before: auto;
+}
+
+h2,
+h3 {
+  break-after: avoid;
+}
+
+pre,
+table,
+blockquote {
+  break-inside: avoid;
+}
+
+img {
+  max-width: 100%;
+}

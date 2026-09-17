@@ -1,0 +1,4050 @@
+<!DOCTYPE html>
+<html class="no-js" lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<link href="../../assets/images/favicon.png" rel="icon"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.7.7" name="generator"/>
+<title>Doom - База данных</title>
+<link href="../../assets/stylesheets/main.ec1eaa64.min.css" rel="stylesheet"/>
+<link href="../../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+<script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+</head>
+<body data-md-color-accent="indigo" data-md-color-primary="indigo" data-md-color-scheme="default" dir="ltr">
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#doom">
+          Перейти к содержанию
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header md-header--shadow" data-md-component="header">
+<nav aria-label="Верхний колонтитул" class="md-header__inner md-grid">
+<a aria-label="База данных" class="md-header__button md-logo" data-md-component="logo" href="../.." title="База данных">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            База данных
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              Doom
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Тёмная тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: light)" data-md-color-primary="indigo" data-md-color-scheme="default" id="__palette_0" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Тёмная тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+<input aria-label="Светлая тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-primary="indigo" data-md-color-scheme="slate" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_0" hidden="" title="Светлая тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+</form>
+<script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Поиск" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Поиск" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</label>
+<nav aria-label="Поиск" class="md-search__options">
+<button aria-label="Очистить" class="md-search__icon md-icon" tabindex="-1" title="Очистить" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+</nav>
+<div class="md-search__suggest" data-md-component="search-suggest"></div>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="" tabindex="0">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Инициализация поиска
+          </div>
+<ol class="md-search-result__list" role="presentation"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Навигация" class="md-nav md-nav--primary" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="База данных" class="md-nav__button md-logo" data-md-component="logo" href="../.." title="База данных">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+    База данных
+  </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" id="__nav_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Игры
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_1_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Игры
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../people/index.html">
+<span class="md-ellipsis">
+    
+  
+    Люди
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../devs/index.html">
+<span class="md-ellipsis">
+    
+  
+    Разработчики
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="index.html">
+<span class="md-ellipsis">
+    
+  
+    Серии
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../technology/index.html">
+<span class="md-ellipsis">
+    
+  
+    Технологии
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../personal/index.html">
+<span class="md-ellipsis">
+    
+  
+    Личное
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Содержание" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#1-doom-id">
+<span class="md-ellipsis">
+      
+        1. До DOOM: как id пришла к формуле
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#2-doom-1993">
+<span class="md-ellipsis">
+      
+        2. DOOM (1993)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#3-doom-ii-hell-on-earth-1994">
+<span class="md-ellipsis">
+      
+        3. DOOM II: Hell on Earth (1994)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#combat-vocabulary">
+<span class="md-ellipsis">
+      
+        combat vocabulary.
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#4-ultimate-doom-thy-flesh-consumed">
+<span class="md-ellipsis">
+      
+        4. Ultimate Doom / Thy Flesh Consumed
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#5-master-levels-for-doom-ii">
+<span class="md-ellipsis">
+      
+        5. Master Levels for Doom II
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#6-final-doom">
+<span class="md-ellipsis">
+      
+        6. Final Doom
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#7-tnt-evilution">
+<span class="md-ellipsis">
+      
+        7. TNT: Evilution
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#8-the-plutonia-experiment">
+<span class="md-ellipsis">
+      
+        8. The Plutonia Experiment
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#9">
+<span class="md-ellipsis">
+      
+        9. Ранние консольные порты
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#10-atari-jaguar-doom">
+<span class="md-ellipsis">
+      
+        10. Atari Jaguar DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#11-32x-doom">
+<span class="md-ellipsis">
+      
+        11. 32X DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#12-snes-doom">
+<span class="md-ellipsis">
+      
+        12. SNES DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#13-3do-doom">
+<span class="md-ellipsis">
+      
+        13. 3DO DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#14-playstation-doom">
+<span class="md-ellipsis">
+      
+        14. PlayStation DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#15-dreamcast-ps2-original-xbox">
+<span class="md-ellipsis">
+      
+        15. Dreamcast / PS2 / original Xbox
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#16-doom-64">
+<span class="md-ellipsis">
+      
+        16. DOOM 64
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#doom-64-doom">
+<span class="md-ellipsis">
+      
+        DOOM 64 — новая DOOM, а не порт.
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#17-source-release-1997">
+<span class="md-ellipsis">
+      
+        17. Source release 1997
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#18-source-release-wad-dehacked">
+<span class="md-ellipsis">
+      
+        18. До source release: WAD + DeHackEd
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#19-boom">
+<span class="md-ellipsis">
+      
+        19. Boom
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#20-mbf-marines-best-friend">
+<span class="md-ellipsis">
+      
+        20. MBF — Marine's Best Friend
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#21-prboom-prboom-dsda-doom">
+<span class="md-ellipsis">
+      
+        21. PrBoom → PrBoom+ → DSDA-Doom
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#22-zdoom-gzdoom">
+<span class="md-ellipsis">
+      
+        22. ZDoom → GZDoom
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#23-udmf">
+<span class="md-ellipsis">
+      
+        23. UDMF
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#24-doom-builder">
+<span class="md-ellipsis">
+      
+        24. Doom Builder
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#25-chocolate-doom">
+<span class="md-ellipsis">
+      
+        25. Chocolate Doom
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#26-compatibility-targets">
+<span class="md-ellipsis">
+      
+        26. Современные compatibility targets
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#27-cacowards">
+<span class="md-ellipsis">
+      
+        27. Cacowards
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#28-memento-mori">
+<span class="md-ellipsis">
+      
+        28. Memento Mori
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#29-hell-revealed">
+<span class="md-ellipsis">
+      
+        29. Hell Revealed
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#30-alien-vendetta">
+<span class="md-ellipsis">
+      
+        30. Alien Vendetta
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#31-scythe">
+<span class="md-ellipsis">
+      
+        31. Scythe
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#32-scythe-2">
+<span class="md-ellipsis">
+      
+        32. Scythe 2
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#33-going-down">
+<span class="md-ellipsis">
+      
+        33. Going Down
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#34-sunlust">
+<span class="md-ellipsis">
+      
+        34. Sunlust
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#35-ancient-aliens">
+<span class="md-ellipsis">
+      
+        35. Ancient Aliens
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#36-eviternity">
+<span class="md-ellipsis">
+      
+        36. Eviternity
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#37-myhousepk3">
+<span class="md-ellipsis">
+      
+        37. MyHouse.pk3
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#38-brutal-doom">
+<span class="md-ellipsis">
+      
+        38. Brutal Doom
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#39-community-wad-recommendation-matrix">
+<span class="md-ellipsis">
+      
+        39. Community WAD recommendation matrix
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#40-community-content">
+<span class="md-ellipsis">
+      
+        40. Рекомендуемый маршрут по community content
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#41-no-rest-for-the-living">
+<span class="md-ellipsis">
+      
+        41. No Rest for the Living
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#42-sigil">
+<span class="md-ellipsis">
+      
+        42. SIGIL
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#43-sigil-ii">
+<span class="md-ellipsis">
+      
+        43. SIGIL II
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#44-one-humanity-hellion">
+<span class="md-ellipsis">
+      
+        44. One Humanity и HELLION
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#45-legacy-of-rust">
+<span class="md-ellipsis">
+      
+        45. Legacy of Rust
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#46-monsters-legacy-of-rust">
+<span class="md-ellipsis">
+      
+        46. Новые monsters Legacy of Rust
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#47-legacy-of-rust">
+<span class="md-ellipsis">
+      
+        47. Карты Legacy of Rust
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#48-id24">
+<span class="md-ellipsis">
+      
+        48. ID24
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#49-classic">
+<span class="md-ellipsis">
+      
+        49. Сводная оценка официальных classic кампаний
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#50-doom">
+<span class="md-ellipsis">
+      
+        50. Мобильная ветка DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#51-pocket-pc-windows-mobile-doom">
+<span class="md-ellipsis">
+      
+        51. Pocket PC / Windows Mobile DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#52-doom-rpg">
+<span class="md-ellipsis">
+      
+        52. DOOM RPG
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_11">
+<span class="md-ellipsis">
+      
+        меняем жанр.
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#realtime-doom-movement">
+<span class="md-ellipsis">
+      
+        нет realtime Doom movement.
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#53-id-mobile">
+<span class="md-ellipsis">
+      
+        53. id Mobile
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#54-doom-ii-rpg">
+<span class="md-ellipsis">
+      
+        54. DOOM II RPG
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#55-doom-resurrection">
+<span class="md-ellipsis">
+      
+        55. DOOM Resurrection
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#56-doom-classic-iphone">
+<span class="md-ellipsis">
+      
+        56. DOOM Classic iPhone
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#57-iosandroid-ports-2019">
+<span class="md-ellipsis">
+      
+        57. Современные iOS/Android ports 2019
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#58-mighty-doom">
+<span class="md-ellipsis">
+      
+        58. Mighty DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#59-doom-rpg-preservation">
+<span class="md-ellipsis">
+      
+        59. Doom RPG preservation
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#60-unity-doomdoom-ii-2019">
+<span class="md-ellipsis">
+      
+        60. Unity-переиздание DOOM/DOOM II 2019
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#61-unity-launch-problems">
+<span class="md-ellipsis">
+      
+        61. Unity launch problems
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#62-updates-unity-port-2020">
+<span class="md-ellipsis">
+      
+        62. Большие updates Unity-port 2020
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#63-unity-official-add-ons">
+<span class="md-ellipsis">
+      
+        63. Unity Official Add-ons
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#64-unity-port">
+<span class="md-ellipsis">
+      
+        64. Unity-port — итоговая оценка
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#65-nightdive-doom-64-2020">
+<span class="md-ellipsis">
+      
+        65. Nightdive и DOOM 64 (2020)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#66-kex-philosophy">
+<span class="md-ellipsis">
+      
+        66. KEX philosophy
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#67-doom-64-2020">
+<span class="md-ellipsis">
+      
+        67. Что меняет Doom 64 2020
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#68-the-lost-levels">
+<span class="md-ellipsis">
+      
+        68. The Lost Levels
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#69-doom-64-2020">
+<span class="md-ellipsis">
+      
+        69. Doom 64 2020 — итог
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#70-doom-doom-ii-kex-2024">
+<span class="md-ellipsis">
+      
+        70. DOOM + DOOM II — KEX (2024)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#classic-doom">
+<span class="md-ellipsis">
+      
+        официальный современный дом classic Doom.
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#71-doom-doom-ii">
+<span class="md-ellipsis">
+      
+        71. Встроенный контент DOOM + DOOM II
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#72-kex-">
+<span class="md-ellipsis">
+      
+        72. Технология KEX-релиза
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#73-multiplayer">
+<span class="md-ellipsis">
+      
+        73. Multiplayer
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#74-performance">
+<span class="md-ellipsis">
+      
+        74. Performance
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#75-mod-browser">
+<span class="md-ellipsis">
+      
+        75. Mod browser
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#doom-workshop">
+<span class="md-ellipsis">
+      
+        официальный Doom Workshop.
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#76">
+<span class="md-ellipsis">
+      
+        76. Музыка
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#77-preservation">
+<span class="md-ellipsis">
+      
+        77. Preservation
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#78-nightdive">
+<span class="md-ellipsis">
+      
+        78. Nightdive — главный исторический вывод
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#79-classic-doom">
+<span class="md-ellipsis">
+      
+        79. Главные дизайнерские принципы всей classic DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#80-classic-doom">
+<span class="md-ellipsis">
+      
+        80. Исторические фазы classic DOOM
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#81">
+<span class="md-ellipsis">
+      
+        81. Главный итог
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#82_1">
+<span class="md-ellipsis">
+      
+        82. Что вынесено в отдельный будущий файл
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<h1 id="doom">Doom<a class="headerlink" href="#doom" title="Permanent link">¶</a></h1>
+<h3 id="doom-classic">DOOM Classic — единая база знаний<a class="headerlink" href="#doom-classic" title="Permanent link">¶</a></h3>
+<blockquote>
+<p>Консолидированный справочник по всей обсуждённой классической ветке DOOM: происхождение серии, DOOM/DOOM II, официальные дополнения, консольные версии, DOOM 64, source-port и modding-культура, крупные WAD'ы, мобильные ответвления и современные ремастеры.</p>
+<p>Состояние базы: сентябрь 2026.</p>
+<p>Область: <strong>классический DOOM / id Tech 1 / DOOM 64 и прямые ответвления</strong>. DOOM 3, RAGE, отменённый DOOM 4, DOOM (2016), Eternal и The Dark Ages вынесены за пределы этого файла.</p>
+</blockquote>
+<hr/>
+<h3 id="0">0. Короткий итог всей классической ветки<a class="headerlink" href="#0" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>Hovertank One
+↓
+Catacomb 3-D
+↓
+Wolfenstein 3D
+↓
+DOOM (1993)
+↓
+DOOM II (1994)
+↓
+Ultimate Doom / Thy Flesh Consumed
+↓
+Master Levels
+↓
+Final Doom
+├─ TNT: Evilution
+└─ The Plutonia Experiment
+↓
+PS1 Doom
+↓
+DOOM 64
+↓
+source release
+↓
+Boom / MBF / PrBoom / ZDoom / GZDoom / Chocolate
+↓
+30 лет WAD-культуры
+↓
+No Rest for the Living
+↓
+SIGIL / SIGIL II
+↓
+Legacy of Rust
+↓
+DOOM + DOOM II (KEX, 2024)
+</code></pre></div>
+<p>Главные выводы:</p>
+<ul>
+<li>
+<p><strong>DOOM (1993)</strong> создала грамматику современного FPS.</p>
+</li>
+<li>
+<p><strong>DOOM II</strong> расширила словарь: SSG + лучший классический bestiary.</p>
+</li>
+<li>
+<p><strong>Ultimate Doom / E4</strong> официально делает DOOM для игрока, который уже знает DOOM.</p>
+</li>
+<li>
+<p><strong>Master Levels</strong> превращает моддера в профессионального level designer.</p>
+</li>
+<li>
+<p><strong>Final Doom</strong> показывает, что community способна самостоятельно производить официальный DOOM.</p>
+</li>
+<li>
+<p><strong>Plutonia</strong> демонстрирует более зрелое понимание DOOM II combat, чем большая часть оригинальной кампании.</p>
+</li>
+<li>
+<p><strong>PS1 Doom</strong> доказывает, что порт может быть художественной интерпретацией.</p>
+</li>
+<li>
+<p><strong>DOOM 64</strong> — полноценная альтернативная третья классическая DOOM, а не порт.</p>
+</li>
+<li>
+<p><strong>Source release 1997</strong> превращает DOOM из игры в платформу.</p>
+</li>
+<li>
+<p><strong>Boom/MBF</strong> создают стандартизированный язык расширенного classic mapping/gameplay.</p>
+</li>
+<li>
+<p><strong>ZDoom/GZDoom</strong> превращают id Tech 1 почти в универсальный SDK.</p>
+</li>
+<li>
+<p><strong>Chocolate Doom</strong> сохраняет противоположную крайность: точную историческую DOOM 1.9 вплоть до багов.</p>
+</li>
+<li>
+<p><strong>No Rest for the Living</strong> показывает зрелый профессиональный DOOM II mapping без новых систем.</p>
+</li>
+<li>
+<p><strong>SIGIL/SIGIL II</strong> показывают позднего John Romero как автора, который снова работает через ограничения и плотность, а не feature breadth.</p>
+</li>
+<li>
+<p><strong>Legacy of Rust</strong> впервые за 30 лет официально расширяет classic DOOM новыми пушками и новыми типами врагов.</p>
+</li>
+<li>
+<p><strong>Nightdive/KEX</strong> в 2024 году фактически сшивает официальный продукт, preservation и community ecosystem в одну платформу.</p>
+</li>
+</ul>
+<p>Наша устойчивая оценочная формула:</p>
+<div class="highlight"><pre><span></span><code>DOOM 1993
+→ самая цельная исходная classic-кампания
+
+DOOM II
+→ лучший classic ruleset / combat toolkit
+
+Plutonia
+→ лучшее раннее официальное использование toolkit
+
+DOOM 64
+→ лучшее цельное classic DOOM-приключение
+
+No Rest for the Living
+→ один из лучших коротких официальных DOOM II map packs
+
+Legacy of Rust
+→ самая сильная официальная эволюция classic vocabulary,
+  но местами менее компактная
+</code></pre></div>
+<hr/>
+<h2 id="1-doom-id">1. До DOOM: как id пришла к формуле<a class="headerlink" href="#1-doom-id" title="Permanent link">¶</a></h2>
+<h3 id="11-id">1.1. Роли ранней id<a class="headerlink" href="#11-id" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>John Carmack
+→ engine / low-level / rendering / optimization
+
+John Romero
+→ tools / editors / gameplay / level design / production
+
+Tom Hall
+→ world / characters / fiction / humor
+
+Adrian Carmack
+→ art / gore / visual identity
+</code></pre></div>
+<p>Главная связка Carmack + Romero:</p>
+<div class="highlight"><pre><span></span><code>Carmack:
+«что компьютер теперь может?»
+
+Romero:
+«что игроку интересно делать внутри этого?»
+</code></pre></div>
+<p>Именно эта связка особенно эффективно работала в период Keen → Wolfenstein → DOOM.</p>
+<h3 id="12-hovertank-one">1.2. Hovertank One<a class="headerlink" href="#12-hovertank-one" title="Permanent link">¶</a></h3>
+<p>Ключевой шаг:
+- очень быстрый first-person;
+- плоские цвета;
+- упрощённая геометрия;
+- демонстрация того, что PC способен на быстрое first-person движение.</p>
+<h3 id="13-catacomb-3-d">1.3. Catacomb 3-D<a class="headerlink" href="#13-catacomb-3-d" title="Permanent link">¶</a></h3>
+<p>Следующий шаг:
+- texture-mapped стены;
+- видимая рука/оружие;
+- монстры;
+- first-person начинает ощущаться как место, а не только технодем.</p>
+<p>Линия:</p>
+<div class="highlight"><pre><span></span><code>Hovertank
+→ скорость
+
+Catacomb 3-D
+→ texture + embodiment
+
+Wolfenstein
+→ arcade FPS
+
+DOOM
+→ полноценное пространство как система
+</code></pre></div>
+<h3 id="14-wolfenstein-3d">1.4. Wolfenstein 3D<a class="headerlink" href="#14-wolfenstein-3d" title="Permanent link">¶</a></h3>
+<p>Ранние идеи stealth/body searching/body dragging были вырезаны, когда оказалось, что бегать и стрелять веселее.</p>
+<p>Ключевой принцип ранней id:</p>
+<blockquote>
+<p><strong>слушать игру; если механика тормозит fun — выкинуть её.</strong></p>
+</blockquote>
+<p>Пространство Wolfenstein ещё очень ограничено:
+- grid;
+- 90° стены;
+- одна высота;
+- без настоящей вертикальности.</p>
+<p>DOOM рождается как желание снять эти ограничения.</p>
+<hr/>
+<h2 id="2-doom-1993">2. DOOM (1993)<a class="headerlink" href="#2-doom-1993" title="Permanent link">¶</a></h2>
+<p>Дата релиза: <strong>10 декабря 1993</strong>.</p>
+<h3 id="21">2.1. Источники<a class="headerlink" href="#21" title="Permanent link">¶</a></h3>
+<p>Ключевые культурные источники:
+- <em>Aliens</em>;
+- <em>Evil Dead</em>;
+- heavy metal;
+- D&amp;D компании;
+- демоны как более выразительная тема, чем очередные солдаты.</p>
+<p>Кратко рассматривалась лицензия <em>Aliens</em>, но id отказалась от неё из-за внешних ограничений.</p>
+<p>Название <strong>DOOM</strong> Romero взял из сцены <em>The Color of Money</em> с репликой «What’s in the case?» — «Doom».</p>
+<h3 id="22-doom-bible-tom-hall">2.2. Doom Bible и Tom Hall<a class="headerlink" href="#22-doom-bible-tom-hall" title="Permanent link">¶</a></h3>
+<p>Hall написал <strong>Doom Bible</strong>.</p>
+<p>Его версия содержала:
+- именованных персонажей;
+- больше сюжета;
+- правдоподобную базу;
+- зоны;
+- adventure/RPG-системы;
+- идею места, а не просто уровня.</p>
+<p>Конфликт философий:</p>
+<div class="highlight"><pre><span></span><code>Hall:
+«я проектирую место»
+
+Romero:
+«я проектирую отличный уровень;
+если он похож на место — хорошо»
+
+Carmack:
+«технология и gameplay важнее сюжетной надстройки»
+</code></pre></div>
+<p>Hall был не «неправ». Его направление позднее подтвердят Half-Life, Deus Ex и DOOM 3.</p>
+<p>Проблема:
+- scope;
+- тип игры;
+- маленькая команда;
+- короткий production cycle.</p>
+<p>Hall ушёл летом 1993 года.</p>
+<h3 id="23-sandy-petersen">2.3. Sandy Petersen<a class="headerlink" href="#23-sandy-petersen" title="Permanent link">¶</a></h3>
+<p>После Hall приходит <strong>Sandy Petersen</strong>.</p>
+<p>Он быстро делает значительную часть Episodes 2 и 3.</p>
+<p>Отсюда заметный стилистический разрыв:</p>
+<div class="highlight"><pre><span></span><code>Episode 1
+→ Romero-school
+→ clean / legible / spatial flow
+
+Episode 2
+→ страннее
+
+Episode 3
+→ ещё абстрактнее / менее ровно
+</code></pre></div>
+<h3 id="24-doomed">2.4. DoomEd<a class="headerlink" href="#24-doomed" title="Permanent link">¶</a></h3>
+<p>Carmack построил engine.</p>
+<p>Romero написал <strong>DoomEd</strong> для NeXTSTEP.</p>
+<p>Критический вклад:
+engine сам по себе не производит хорошие уровни.</p>
+<p>Romero превращает:
+- vertices;
+- linedefs;
+- sectors;
+- heights;
+- textures;
+- Things;</p>
+<p>в рабочий production workflow.</p>
+<h3 id="25">2.5. Технология<a class="headerlink" href="#25" title="Permanent link">¶</a></h3>
+<p>DOOM всё ещё не true 3D в смысле Quake.</p>
+<p>Основная модель:
+- sector-based world;
+- произвольные углы стен;
+- разные высоты пола/потолка;
+- окна;
+- лестницы;
+- lifts;
+- освещение;
+- sprites;
+- BSP/preprocessing.</p>
+<p>Нет нормального произвольного room-over-room.</p>
+<h3 id="26-e1m1">2.6. E1M1<a class="headerlink" href="#26-e1m1" title="Permanent link">¶</a></h3>
+<p>Один из лучших tutorial без текста.</p>
+<p>Учит через архитектуру:
+- движение;
+- разные высоты;
+- двери;
+- окно;
+- видимые недоступные пространства;
+- секрет;
+- возвраты.</p>
+<p>Ключевой Romero-приём:</p>
+<div class="highlight"><pre><span></span><code>покажи область заранее
+↓
+не дай сразу попасть
+↓
+проведи другим путём
+↓
+верни туда позже
+</code></pre></div>
+<p>Игрок строит mental map.</p>
+<h3 id="27-movement">2.7. Movement<a class="headerlink" href="#27-movement" title="Permanent link">¶</a></h3>
+<p>Одна из причин бессмертия DOOM — мгновенное и очень быстрое управление.</p>
+<p>Наша формула:</p>
+<blockquote>
+<p><strong>Doomguy — вектор скорости с дробовиком.</strong></p>
+</blockquote>
+<p>Игрок управляет не реалистичным весом тела, а пространственным импульсом.</p>
+<h3 id="28-enemy-vocabulary">2.8. Enemy vocabulary<a class="headerlink" href="#28-enemy-vocabulary" title="Permanent link">¶</a></h3>
+<h4 id="zombie-shotgun-guy">Zombie / Shotgun Guy<a class="headerlink" href="#zombie-shotgun-guy" title="Permanent link">¶</a></h4>
+<p>Hitscan:
+- cover;
+- priority;
+- LOS awareness.</p>
+<h4 id="imp">Imp<a class="headerlink" href="#imp" title="Permanent link">¶</a></h4>
+<p>Projectile:
+- движение;
+- dodging.</p>
+<h4 id="demon">Demon<a class="headerlink" href="#demon" title="Permanent link">¶</a></h4>
+<p>Melee space denial.</p>
+<h4 id="cacodemon">Cacodemon<a class="headerlink" href="#cacodemon" title="Permanent link">¶</a></h4>
+<p>Flying pressure.</p>
+<h4 id="lost-soul">Lost Soul<a class="headerlink" href="#lost-soul" title="Permanent link">¶</a></h4>
+<p>Charge/disruption.</p>
+<h4 id="baron">Baron<a class="headerlink" href="#baron" title="Permanent link">¶</a></h4>
+<p>Tank / живая преграда.</p>
+<h3 id="29-infighting">2.9. Infighting<a class="headerlink" href="#29-infighting" title="Permanent link">¶</a></h3>
+<p>Враги способны задевать друг друга.</p>
+<p>Следствие:</p>
+<div class="highlight"><pre><span></span><code>enemy
+→ threat
+
+и одновременно
+
+enemy
+→ resource / weapon
+</code></pre></div>
+<p>Одна из причин, почему простой AI создаёт глубокий combat.</p>
+<h3 id="210">2.10. Оружие<a class="headerlink" href="#210" title="Permanent link">¶</a></h3>
+<h4 id="pistol">Pistol<a class="headerlink" href="#pistol" title="Permanent link">¶</a></h4>
+<p>Быстро становится почти ненужным.</p>
+<h4 id="shotgun">Shotgun<a class="headerlink" href="#shotgun" title="Permanent link">¶</a></h4>
+<p>Одна из лучших пушек FPS:
+- ясный диапазон;
+- точный ритм;
+- хорошая отдача;
+- полезен почти всегда.</p>
+<h4 id="chaingun">Chaingun<a class="headerlink" href="#chaingun" title="Permanent link">¶</a></h4>
+<p>Контроль, stunlock, hitscan.</p>
+<h4 id="rocket-launcher">Rocket Launcher<a class="headerlink" href="#rocket-launcher" title="Permanent link">¶</a></h4>
+<p>Высокий damage + positional self-risk.</p>
+<h4 id="plasma-rifle">Plasma Rifle<a class="headerlink" href="#plasma-rifle" title="Permanent link">¶</a></h4>
+<p>Высокий DPS.</p>
+<h4 id="bfg9000">BFG9000<a class="headerlink" href="#bfg9000" title="Permanent link">¶</a></h4>
+<p>Сложнее визуального впечатления из-за вторичных damage traces.</p>
+<h3 id="211-secrets">2.11. Secrets<a class="headerlink" href="#211-secrets" title="Permanent link">¶</a></h3>
+<p>Лучшие secrets интегрированы в геометрию:
+- видишь предмет/область;
+- понимаешь, что туда можно попасть;
+- ищешь пространственную связь.</p>
+<h3 id="212-automap">2.12. Automap<a class="headerlink" href="#212-automap" title="Permanent link">¶</a></h3>
+<p>Поддерживает:
+- исследование;
+- mental mapping;
+- понимание пространства.</p>
+<h3 id="213">2.13. Атмосфера<a class="headerlink" href="#213" title="Permanent link">¶</a></h3>
+<p>Миф:</p>
+<blockquote>
+<p>DOOM = бесконечный heavy metal power fantasy.</p>
+</blockquote>
+<p>На деле много:
+- тишины;
+- странных треков;
+- звуков монстров за стенами;
+- тёмных помещений;
+- ожидания угрозы.</p>
+<p>Bobby Prince сочетает metal-like MIDI и ambient.</p>
+<h3 id="214-bosses">2.14. Bosses<a class="headerlink" href="#214-bosses" title="Permanent link">¶</a></h3>
+<p>Bosses в целом слабее обычного encounter system.</p>
+<ul>
+<li>
+<p>Cyberdemon — иконичен, но механически прост;</p>
+</li>
+<li>
+<p>Spider Mastermind — слабый final exam.</p>
+</li>
+</ul>
+<p>Поздняя история серии постоянно подтверждает:</p>
+<blockquote>
+<p>high-tier monster лучше работает как часть обычного пространства, чем как отдельная gimmick-арена.</p>
+</blockquote>
+<h3 id="215-multiplayer">2.15. Multiplayer<a class="headerlink" href="#215-multiplayer" title="Permanent link">¶</a></h3>
+<p>DOOM популяризирует:
+- co-op;
+- deathmatch;
+- LAN play.</p>
+<p>Romero — главный evangelist deathmatch culture.</p>
+<h3 id="216-wad-architecture">2.16. WAD architecture<a class="headerlink" href="#216-wad-architecture" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>DOOM.EXE
+→ engine / logic
+
+DOOM.WAD
+→ maps / textures / sprites / sounds / music
+</code></pre></div>
+<p>Это подготавливает будущую modding culture.</p>
+<h3 id="217-shareware">2.17. Shareware<a class="headerlink" href="#217-shareware" title="Permanent link">¶</a></h3>
+<p>Episode 1 распространяется бесплатно.</p>
+<p>Эффект:
+- огромный охват;
+- люди сами копируют игру;
+- бесплатный episode = marketing;
+- Doom распространяется вирусно.</p>
+<h3 id="218">2.18. Итог<a class="headerlink" href="#218" title="Permanent link">¶</a></h3>
+<p>Сильнейшая черта:
+<strong>цельность.</strong></p>
+<div class="highlight"><pre><span></span><code>Episode 1
+→ почти идеальный
+
+Episode 2
+→ хороший, страннее
+
+Episode 3
+→ менее ровный
+</code></pre></div>
+<blockquote>
+<p><strong>DOOM 1993 создала грамматику современного FPS.</strong></p>
+</blockquote>
+<hr/>
+<h2 id="3-doom-ii-hell-on-earth-1994">3. DOOM II: Hell on Earth (1994)<a class="headerlink" href="#3-doom-ii-hell-on-earth-1994" title="Permanent link">¶</a></h2>
+<p>Дата релиза: <strong>30 сентября 1994</strong>.</p>
+<h3 id="31">3.1. Главное изменение<a class="headerlink" href="#31" title="Permanent link">¶</a></h3>
+<p>Не новая engine revolution, а:</p>
+<h2 id="combat-vocabulary">combat vocabulary.<a class="headerlink" href="#combat-vocabulary" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>DOOM
+→ grammar
+
+DOOM II
+→ vocabulary
+</code></pre></div>
+<h3 id="32-super-shotgun">3.2. Super Shotgun<a class="headerlink" href="#32-super-shotgun" title="Permanent link">¶</a></h3>
+<p>Заполняет нишу:</p>
+<div class="highlight"><pre><span></span><code>Shotgun
+→ мало burst
+
+Rocket Launcher
+→ много positional risk
+
+SSG
+→ сильный close-range burst
+  + reload rhythm
+</code></pre></div>
+<p>Практически идеальная новая пушка.</p>
+<h3 id="33">3.3. Новые враги<a class="headerlink" href="#33" title="Permanent link">¶</a></h3>
+<h4 id="chaingunner">Chaingunner<a class="headerlink" href="#chaingunner" title="Permanent link">¶</a></h4>
+<p>Hitscan DPS, priority, LOS.</p>
+<h4 id="hell-knight">Hell Knight<a class="headerlink" href="#hell-knight" title="Permanent link">¶</a></h4>
+<p>Baron-lite.</p>
+<h4 id="revenant">Revenant<a class="headerlink" href="#revenant" title="Permanent link">¶</a></h4>
+<p>Быстрый, melee + projectile + homing.
+Очень мобильное pressure.</p>
+<h4 id="mancubus">Mancubus<a class="headerlink" href="#mancubus" title="Permanent link">¶</a></h4>
+<p>Area denial через широкий projectile pattern.</p>
+<h4 id="arachnotron">Arachnotron<a class="headerlink" href="#arachnotron" title="Permanent link">¶</a></h4>
+<p>Continuous lane pressure.</p>
+<h4 id="pain-elemental">Pain Elemental<a class="headerlink" href="#pain-elemental" title="Permanent link">¶</a></h4>
+<p>Создаёт Lost Souls.
+Проблема растёт, если его игнорировать.</p>
+<h4 id="arch-vile">Arch-vile<a class="headerlink" href="#arch-vile" title="Permanent link">¶</a></h4>
+<p>Один из лучших FPS-врагов:
+- timed LOS attack;
+- высокий damage;
+- resurrection;
+- мгновенно меняет priority.</p>
+<p>Особенно важно:</p>
+<blockquote>
+<p>атакует уже выполненную игроком работу.</p>
+</blockquote>
+<h3 id="34">3.4. Кампания<a class="headerlink" href="#34" title="Permanent link">¶</a></h3>
+<p>32 карты подряд.</p>
+<p>Проблема:
+Doom II engine плохо изображает Earth/city realism.</p>
+<p>MAP13 Downtown — концептуально город, визуально коричневые коробки.</p>
+<p>Кампания значительно менее цельная, чем DOOM I.</p>
+<h3 id="35">3.5. Ключевые карты<a class="headerlink" href="#35" title="Permanent link">¶</a></h3>
+<h4 id="map07-dead-simple">MAP07 — Dead Simple<a class="headerlink" href="#map07-dead-simple" title="Permanent link">¶</a></h4>
+<p>Encounter-as-level.
+Special triggers Mancubi/Arachnotrons.</p>
+<h4 id="map08-tricks-and-traps">MAP08 — Tricks and Traps<a class="headerlink" href="#map08-tricks-and-traps" title="Permanent link">¶</a></h4>
+<p>Лаборатория механик и infighting.</p>
+<h4 id="map13-downtown">MAP13 — Downtown<a class="headerlink" href="#map13-downtown" title="Permanent link">¶</a></h4>
+<p>Неудачная попытка убедительного города.</p>
+<h4 id="map15-industrial-zone">MAP15 — Industrial Zone<a class="headerlink" href="#map15-industrial-zone" title="Permanent link">¶</a></h4>
+<p>Сильнее работает как большая нелинейная карта.</p>
+<h4 id="map23-barrels-o-fun">MAP23 — Barrels o’ Fun<a class="headerlink" href="#map23-barrels-o-fun" title="Permanent link">¶</a></h4>
+<p>Одна mechanic превращена в уровень.</p>
+<h4 id="map24-the-chasm">MAP24 — The Chasm<a class="headerlink" href="#map24-the-chasm" title="Permanent link">¶</a></h4>
+<p>Запоминающаяся идея, мучительный platforming.</p>
+<h4 id="map29-the-living-end">MAP29 — The Living End<a class="headerlink" href="#map29-the-living-end" title="Permanent link">¶</a></h4>
+<p>Сильная вертикальная spatial illusion Romero.</p>
+<h4 id="map30-icon-of-sin">MAP30 — Icon of Sin<a class="headerlink" href="#map30-icon-of-sin" title="Permanent link">¶</a></h4>
+<p>Иконично, но плохой final exam:
+gimmick вместо mastery.</p>
+<h3 id="36-doom-ii">3.6. DOOM II как платформа<a class="headerlink" href="#36-doom-ii" title="Permanent link">¶</a></h3>
+<p>Именно DOOM II становится главной базой WAD'ов:
+- полный classic arsenal;
+- SSG;
+- расширенный bestiary.</p>
+<p>Итог:</p>
+<div class="highlight"><pre><span></span><code>DOOM I
+→ лучшая классическая цельная кампания
+
+DOOM II
+→ лучший классический конструктор
+</code></pre></div>
+<hr/>
+<h2 id="4-ultimate-doom-thy-flesh-consumed">4. Ultimate Doom / Thy Flesh Consumed<a class="headerlink" href="#4-ultimate-doom-thy-flesh-consumed" title="Permanent link">¶</a></h2>
+<p>Ultimate Doom = retail DOOM + Episode 4.</p>
+<p>Romero предложил добавить E4 как value для переиздания.</p>
+<h3 id="41">4.1. Авторы<a class="headerlink" href="#41" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>E4M1 — American McGee
+E4M2 — John Romero
+E4M3 — Shawn Green
+E4M4 — American McGee
+E4M5 — Tim Willits
+E4M6 — John Romero
+E4M7 — John Anderson
+E4M8 — Shawn Green
+E4M9 — Tim Willits
+</code></pre></div>
+<h3 id="42">4.2. Философия<a class="headerlink" href="#42" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>E1–E3
+→ Doom формирует игрока
+
+E4
+→ предполагает, что игрок всё знает
+</code></pre></div>
+<p>Отсюда:
+- агрессивные старты;
+- tight resources;
+- сложнее routing;
+- грубее difficulty.</p>
+<h3 id="43-perfect-hatred">4.3. Perfect Hatred<a class="headerlink" href="#43-perfect-hatred" title="Permanent link">¶</a></h3>
+<p>E4M2, Romero.</p>
+<ul>
+<li>
+<p>компактная;</p>
+</li>
+<li>
+<p>высокая плотность;</p>
+</li>
+<li>
+<p>вертикальность;</p>
+</li>
+<li>
+<p>interconnected geometry;</p>
+</li>
+<li>
+<p>давление сразу.</p>
+</li>
+</ul>
+<h3 id="44">4.4. Ограничение<a class="headerlink" href="#44" title="Permanent link">¶</a></h3>
+<p>DOOM I ruleset:
+нет SSG и Doom II bestiary.</p>
+<p>Сложность иногда достигается scarcity и Barons, а не богатством enemy roles.</p>
+<hr/>
+<h2 id="5-master-levels-for-doom-ii">5. Master Levels for Doom II<a class="headerlink" href="#5-master-levels-for-doom-ii" title="Permanent link">¶</a></h2>
+<p>Дата: <strong>26 декабря 1995</strong>.</p>
+<h3 id="51">5.1. Контекст<a class="headerlink" href="#51" title="Permanent link">¶</a></h3>
+<p>К 1995 BBS/Internet/CompuServe завалены WAD'ами.</p>
+<p>Shovelware companies:
+- скачивают бесплатные WAD;
+- записывают на CD;
+- продают «900 LEVELS FOR DOOM».</p>
+<p>id отвечает:
+- специально заказанными профессиональными картами;
+- бонусным огромным архивом Maximum Doom.</p>
+<h3 id="52-shawn-green-scout">5.2. Shawn Green как scout<a class="headerlink" href="#52-shawn-green-scout" title="Permanent link">¶</a></h3>
+<p>Green просматривает примерно <strong>500 community maps</strong>.</p>
+<p>Модель:</p>
+<div class="highlight"><pre><span></span><code>fan mapper
+↓
+id замечает
+↓
+contract
+↓
+official Doom
+</code></pre></div>
+<h3 id="53">5.3. Авторы<a class="headerlink" href="#53" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Tim Willits;</p>
+</li>
+<li>
+<p>Christen Klie;</p>
+</li>
+<li>
+<p>John <code>Dr. Sleep</code> Anderson;</p>
+</li>
+<li>
+<p>Jim Flynn;</p>
+</li>
+<li>
+<p>Tom Mustaine;</p>
+</li>
+<li>
+<p>Sverre André <code>Cranium</code> Kvernmo.</p>
+</li>
+</ul>
+<h3 id="54-20-wad-21">5.4. 20 WAD, 21 карта<a class="headerlink" href="#54-20-wad-21" title="Permanent link">¶</a></h3>
+<p><code>TEETH.WAD</code>:
+- The Express Elevator to Hell;
+- secret <code>Bad Dream</code>.</p>
+<p>Итого 21 playable map.</p>
+<h3 id="55">5.5. Это не кампания<a class="headerlink" href="#55" title="Permanent link">¶</a></h3>
+<p>Карты создавались независимо:
+- разные authors;
+- map slots;
+- difficulty;
+- styles;
+- pistol-start balance.</p>
+<p>Современные stitched campaigns удобны, но не соответствуют исходной структуре.</p>
+<h3 id="56">5.6. Авторы и школы<a class="headerlink" href="#56" title="Permanent link">¶</a></h3>
+<h4 id="tim-willits">Tim Willits<a class="headerlink" href="#tim-willits" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>Attack;</p>
+</li>
+<li>
+<p>Canyon.</p>
+</li>
+</ul>
+<p>Исторически особенно важен как modder → id employee.</p>
+<h4 id="christen-klie">Christen Klie<a class="headerlink" href="#christen-klie" title="Permanent link">¶</a></h4>
+<p>6 компактных карт.
+Ближе к «ещё хорошие Doom II maps».</p>
+<h4 id="tom-mustaine">Tom Mustaine<a class="headerlink" href="#tom-mustaine" title="Permanent link">¶</a></h4>
+<ul>
+<li>Paradox.
+    Первая версия была отклонена как слишком близкая к MAP14 American McGee.</li>
+</ul>
+<h4 id="jim-flynn">Jim Flynn<a class="headerlink" href="#jim-flynn" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>Titan Manor;</p>
+</li>
+<li>
+<p>Trapped on Titan.</p>
+</li>
+</ul>
+<p>Puzzle/system-heavy.
+Позже важен для Boom.</p>
+<h4 id="john-anderson">John Anderson<a class="headerlink" href="#john-anderson" title="Permanent link">¶</a></h4>
+<p>5 карт своей Dante-inspired серии Inferno:
+- Virgil's Lead;
+- Minos' Judgement;
+- Nessus;
+- Geryon;
+- Vesperas.</p>
+<h4 id="sverre-kvernmo">Sverre Kvernmo<a class="headerlink" href="#sverre-kvernmo" title="Permanent link">¶</a></h4>
+<p>Сильнейший набор:
+- Bloodsea Keep;
+- The Express Elevator to Hell;
+- Bad Dream;
+- Mephisto's Maosoleum;
+- Black Tower.</p>
+<h3 id="57-black-tower">5.7. Black Tower<a class="headerlink" href="#57-black-tower" title="Permanent link">¶</a></h3>
+<p>Главная концептуальная карта набора.</p>
+<p>Огромная башня при отсутствии настоящего room-over-room.</p>
+<p>Используются:
+- lifts;
+- teleport tricks;
+- heights;
+- route changes;
+- visual relationships.</p>
+<p>Почти попытка построить Quake внутри Doom.</p>
+<h3 id="58-express-elevator-to-hell">5.8. Express Elevator to Hell<a class="headerlink" href="#58-express-elevator-to-hell" title="Permanent link">¶</a></h3>
+<p>Центральный elevator как progression gimmick:
+этаж → encounter → следующий этаж.</p>
+<p>Очень сильная идея уровня.</p>
+<h3 id="59-bad-dream">5.9. Bad Dream<a class="headerlink" href="#59-bad-dream" title="Permanent link">¶</a></h3>
+<p>Короткий Cyberdemon challenge-joke.
+Предвестник challenge/slaughter culture.</p>
+<h3 id="510-bloodsea-keep">5.10. Bloodsea Keep<a class="headerlink" href="#510-bloodsea-keep" title="Permanent link">¶</a></h3>
+<p>Крепость в море крови.
+Хорошая location fantasy.
+Community уже лучше учится заставлять секторный engine изображать место.</p>
+<h3 id="511-maximum-doom">5.11. Maximum Doom<a class="headerlink" href="#511-maximum-doom" title="Permanent link">¶</a></h3>
+<p>Примерно:
+- 1830 PWAD;
+- ~3487 levels.</p>
+<p>Не curated quality set, а snapshot Internet/BBS-культуры 1995:
+- хорошие карты;
+- плохие карты;
+- первые работы;
+- conversions;
+- дубли;
+- нелицензированные звуки.</p>
+<p>Исторически очень ценно.</p>
+<h3 id="512">5.12. Главное наследие<a class="headerlink" href="#512" title="Permanent link">¶</a></h3>
+<p>Master Levels важнее людьми, чем кампанией.</p>
+<div class="highlight"><pre><span></span><code>Tim Willits → id
+John Anderson → Blood / Unreal / Kingpin / Daikatana
+Sverre Kvernmo → Xatrix / Redneck Rampage / Ion Storm
+Tom Mustaine → Hipnotic / Ritual / SiN
+Christen Klie → LucasArts
+Jim Flynn → TeamTNT / Boom
+</code></pre></div>
+<hr/>
+<h2 id="6-final-doom">6. Final Doom<a class="headerlink" href="#6-final-doom" title="Permanent link">¶</a></h2>
+<p>Культурный переход:</p>
+<div class="highlight"><pre><span></span><code>Master Levels:
+id нанимает community
+
+Final Doom:
+community сама приносит целые campaigns
+</code></pre></div>
+<hr/>
+<h2 id="7-tnt-evilution">7. TNT: Evilution<a class="headerlink" href="#7-tnt-evilution" title="Permanent link">¶</a></h2>
+<p>TeamTNT готовит бесплатный 32-map megawad.</p>
+<p>Незадолго до релиза Romero связывается с Ty Halderman.</p>
+<p>id покупает проект.</p>
+<h3 id="_1">Сильные стороны<a class="headerlink" href="#_1" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>32 карты;</p>
+</li>
+<li>
+<p>новая музыка;</p>
+</li>
+<li>
+<p>новые textures;</p>
+</li>
+<li>
+<p>adventure feeling;</p>
+</li>
+<li>
+<p>большие пространства;</p>
+</li>
+<li>
+<p>попытки строить места.</p>
+</li>
+</ul>
+<h3 id="_2">Слабые<a class="headerlink" href="#_2" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>затянутость;</p>
+</li>
+<li>
+<p>switch hunting;</p>
+</li>
+<li>
+<p>низкая плотность отдельных больших карт.</p>
+</li>
+</ul>
+<p>TNT интереснее как adventure, чем как чистый combat package.</p>
+<hr/>
+<h2 id="8-the-plutonia-experiment">8. The Plutonia Experiment<a class="headerlink" href="#8-the-plutonia-experiment" title="Permanent link">¶</a></h2>
+<p>Авторы:
+<strong>Dario и Milo Casali</strong>.</p>
+<p>Около 16 карт каждый.</p>
+<p>Создавалась для опытных игроков.</p>
+<h3 id="81-combat-school">8.1. Combat school<a class="headerlink" href="#81-combat-school" title="Permanent link">¶</a></h3>
+<h4 id="arch-vile_1">Arch-vile<a class="headerlink" href="#arch-vile_1" title="Permanent link">¶</a></h4>
+<p>Priority + resurrection + LOS.</p>
+<h4 id="chaingunner_1">Chaingunner<a class="headerlink" href="#chaingunner_1" title="Permanent link">¶</a></h4>
+<p>Crossfire / мгновенная угроза.</p>
+<h4 id="revenant_1">Revenant<a class="headerlink" href="#revenant_1" title="Permanent link">¶</a></h4>
+<p>Мобильное pressure.</p>
+<h4 id="cyberdemon">Cyberdemon<a class="headerlink" href="#cyberdemon" title="Permanent link">¶</a></h4>
+<p>Space denial / infighting device.</p>
+<h3 id="82">8.2. Ключевые карты<a class="headerlink" href="#82" title="Permanent link">¶</a></h3>
+<h4 id="hunted">Hunted<a class="headerlink" href="#hunted" title="Permanent link">¶</a></h4>
+<p>Arch-vile maze.
+Почти survival-horror через обычные Doom rules.</p>
+<h4 id="go-2-it">Go 2 It<a class="headerlink" href="#go-2-it" title="Permanent link">¶</a></h4>
+<p>Secret slaughter-like challenge.</p>
+<h3 id="83">8.3. Недостаток<a class="headerlink" href="#83" title="Permanent link">¶</a></h3>
+<p>Gotcha traps и knowledge-check.</p>
+<h3 id="84">8.4. Итог<a class="headerlink" href="#84" title="Permanent link">¶</a></h3>
+<p>Plutonia показывает, что community уже понимает DOOM II combat глубже значительной части оригинальной кампании.</p>
+<hr/>
+<h2 id="9">9. Ранние консольные порты<a class="headerlink" href="#9" title="Permanent link">¶</a></h2>
+<p>Основная lineage:</p>
+<div class="highlight"><pre><span></span><code>PC DOOM
+↓
+Jaguar
+├─ 32X
+├─ 3DO
+├─ PlayStation
+└─ поздние console branches
+
+отдельно:
+SNES Reality Engine
+</code></pre></div>
+<hr/>
+<h2 id="10-atari-jaguar-doom">10. Atari Jaguar DOOM<a class="headerlink" href="#10-atari-jaguar-doom" title="Permanent link">¶</a></h2>
+<p>1994.</p>
+<p>Ключевой console port.</p>
+<p>Основную адаптацию engine делает Carmack.</p>
+<h3 id="_3">Значение<a class="headerlink" href="#_3" title="Permanent link">¶</a></h3>
+<p>Фундамент значительной части будущей console lineage.</p>
+<h3 id="_4">Компромиссы<a class="headerlink" href="#_4" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>24 карты;</p>
+</li>
+<li>
+<p>упрощённая geometry;</p>
+</li>
+<li>
+<p>cartridge limits;</p>
+</li>
+<li>
+<p>часть monsters отсутствует;</p>
+</li>
+<li>
+<p>нет gameplay music.</p>
+</li>
+</ul>
+<h3 id="_5">Плюсы<a class="headerlink" href="#_5" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>хороший performance для эпохи;</p>
+</li>
+<li>
+<p>core Doom сохраняется;</p>
+</li>
+<li>
+<p>JagLink multiplayer;</p>
+</li>
+<li>
+<p>keypad подходит direct weapon select.</p>
+</li>
+</ul>
+<p>Отсутствие музыки случайно усиливает тревожность.</p>
+<hr/>
+<h2 id="11-32x-doom">11. 32X DOOM<a class="headerlink" href="#11-32x-doom" title="Permanent link">¶</a></h2>
+<p>1994.</p>
+<p>Главная проблема:
+<strong>launch deadline</strong>.</p>
+<ul>
+<li>
+<p>17 карт;</p>
+</li>
+<li>
+<p>Inferno отсутствует;</p>
+</li>
+<li>
+<p>Jaguar-derived geometry;</p>
+</li>
+<li>
+<p>маленький viewport;</p>
+</li>
+<li>
+<p>rushed.</p>
+</li>
+</ul>
+<p>Музыка стала мемом из-за плохого звучания.</p>
+<div class="highlight"><pre><span></span><code>Jaguar
+→ серьёзная адаптация
+
+32X
+→ «нужна Doom к launch, быстро»
+</code></pre></div>
+<hr/>
+<h2 id="12-snes-doom">12. SNES DOOM<a class="headerlink" href="#12-snes-doom" title="Permanent link">¶</a></h2>
+<p>1995.</p>
+<p>Ключевой человек:
+<strong>Randy Linden</strong>.</p>
+<p>Фактически собственный:
+<strong>Reality Engine</strong>.</p>
+<p>Super FX 2.</p>
+<h3 id="_6">Компромиссы<a class="headerlink" href="#_6" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>очень низкое разрешение;</p>
+</li>
+<li>
+<p>~10 FPS;</p>
+</li>
+<li>
+<p>flat floors/ceilings;</p>
+</li>
+<li>
+<p>front-facing monster sprites;</p>
+</li>
+<li>
+<p>упрощённый AI;</p>
+</li>
+<li>
+<p>урезанная sound propagation;</p>
+</li>
+<li>
+<p>no save.</p>
+</li>
+</ul>
+<h3 id="_7">Парадокс<a class="headerlink" href="#_7" title="Permanent link">¶</a></h3>
+<p>Часть geometry местами ближе к PC, чем Jaguar lineage.</p>
+<h3 id="_8">Итог<a class="headerlink" href="#_8" title="Permanent link">¶</a></h3>
+<p>Как способ играть — плохо.
+Как инженерный подвиг — выдающеся.</p>
+<hr/>
+<h2 id="13-3do-doom">13. 3DO DOOM<a class="headerlink" href="#13-3do-doom" title="Permanent link">¶</a></h2>
+<p>Классический production disaster.</p>
+<p>Art Data обещала:
+- новые карты;
+- оружие;
+- врагов;
+- FMV;
+- enhanced Doom.</p>
+<p>Реального проекта почти не было.</p>
+<h3 id="rebecca-heineman">Rebecca Heineman<a class="headerlink" href="#rebecca-heineman" title="Permanent link">¶</a></h3>
+<p>Получает задачу очень поздно.
+Сначала получает retail Doom вместо source.
+Carmack присылает Jaguar source.</p>
+<p>До master — примерно 10 недель.</p>
+<h3 id="_9">Итог<a class="headerlink" href="#_9" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>tiny viewport;</p>
+</li>
+<li>
+<p>плохой framerate;</p>
+</li>
+<li>
+<p>мало optimization time;</p>
+</li>
+<li>
+<p>обещанный enhanced content отсутствует.</p>
+</li>
+</ul>
+<h3 id="_10">Плюс<a class="headerlink" href="#_10" title="Permanent link">¶</a></h3>
+<p>Очень хороший CD-recorded soundtrack.</p>
+<p>Главный вывод:
+не programmer problem, а management catastrophe.</p>
+<hr/>
+<h2 id="14-playstation-doom">14. PlayStation DOOM<a class="headerlink" href="#14-playstation-doom" title="Permanent link">¶</a></h2>
+<p>1995.</p>
+<p>Главная линия:</p>
+<div class="highlight"><pre><span></span><code>Jaguar
+↓
+Williams / Midway
+↓
+PS1 Doom
+↓
+colored lighting
++
+Aubrey Hodges
+↓
+horror interpretation
+↓
+DOOM 64
+</code></pre></div>
+<h3 id="141">14.1. Технология<a class="headerlink" href="#141" title="Permanent link">¶</a></h3>
+<p>Ключевой programmer:
+Aaron Seeler.</p>
+<p>Он работал рядом с Carmack и учился rendering.</p>
+<p>PS1 affine texture mapping плохо подходит большим Doom-стенам.</p>
+<p>Один из трюков:
+стены дробятся на узкие vertical strips, уменьшая warping.</p>
+<p>Renderer серьёзно переработан.</p>
+<h3 id="142-cd">14.2. Память и CD<a class="headerlink" href="#142-cd" title="Permanent link">¶</a></h3>
+<p>Большой CD ≠ большая runtime RAM.</p>
+<p>Level-specific assets загружаются отдельно.</p>
+<p>Отсутствие Arch-vile связано именно с дорогим runtime animation footprint.</p>
+<h3 id="143">14.3. Содержание<a class="headerlink" href="#143" title="Permanent link">¶</a></h3>
+<p><strong>59 карт</strong>.</p>
+<p>Смесь:
+- DOOM;
+- часть E4;
+- DOOM II;
+- Jaguar-derived maps;
+- PS1-exclusive maps.</p>
+<h3 id="144-doom-ii-vocabulary">14.4. Doom II vocabulary в старых картах<a class="headerlink" href="#144-doom-ii-vocabulary" title="Permanent link">¶</a></h3>
+<p>В старых Doom maps появляются:
+- SSG;
+- часть DOOM II monsters.</p>
+<p>Официальный remix старой campaign.</p>
+<h3 id="145-colored-lighting">14.5. Colored lighting<a class="headerlink" href="#145-colored-lighting" title="Permanent link">¶</a></h3>
+<p>Главная художественная победа.</p>
+<p>Старые пространства получают новый эмоциональный смысл через цвет и затемнение.</p>
+<h3 id="146-aubrey-hodges">14.6. Aubrey Hodges<a class="headerlink" href="#146-aubrey-hodges" title="Permanent link">¶</a></h3>
+<p>Вместо Bobby Prince — dark ambient.</p>
+<p>Используются:
+- pitch shifting;
+- drones;
+- metallic noises;
+- PlayStation reverb;
+- score, похожий на environmental sound.</p>
+<p>Игра становится заметно страшнее, не меняя core mechanics.</p>
+<h3 id="147">14.7. Особенные карты<a class="headerlink" href="#147" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Twilight Descends;</p>
+</li>
+<li>
+<p>Threshold of Pain;</p>
+</li>
+<li>
+<p>The Marshes;</p>
+</li>
+<li>
+<p>The Mansion;</p>
+</li>
+<li>
+<p>Redemption Denied;</p>
+</li>
+<li>
+<p>Club Doom.</p>
+</li>
+</ul>
+<h4 id="club-doom">Club Doom<a class="headerlink" href="#club-doom" title="Permanent link">¶</a></h4>
+<p>Super-secret nightclub:
+- bar;
+- dance floor;
+- colored lights;
+- techno.</p>
+<h3 id="148-nightmare-spectre">14.8. Nightmare Spectre<a class="headerlink" href="#148-nightmare-spectre" title="Permanent link">¶</a></h3>
+<p>Усиленная вариация Spectre.</p>
+<h3 id="149-redemption-denied">14.9. Redemption Denied<a class="headerlink" href="#149-redemption-denied" title="Permanent link">¶</a></h3>
+<p>Используется вместо Icon of Sin.</p>
+<p>Плюс:
+обычный combat вместо boss gimmick.</p>
+<h3 id="1410">14.10. Итог<a class="headerlink" href="#1410" title="Permanent link">¶</a></h3>
+<p>PS1 Doom доказывает:</p>
+<blockquote>
+<p>старые mechanics можно оставить, а lighting/audio/presentation способны превратить игру в другой эмоциональный опыт.</p>
+</blockquote>
+<p>Это непосредственная художественная предыстория DOOM 64.</p>
+<hr/>
+<h2 id="15-dreamcast-ps2-original-xbox">15. Dreamcast / PS2 / original Xbox<a class="headerlink" href="#15-dreamcast-ps2-original-xbox" title="Permanent link">¶</a></h2>
+<h3 id="dreamcast">Dreamcast<a class="headerlink" href="#dreamcast" title="Permanent link">¶</a></h3>
+<p>Официального classic Doom нет.</p>
+<p>Не техническая проблема:
+Dreamcast достаточно мощная и получила Quake III.</p>
+<p>Причина:
+Doom воспринималась как устаревший продукт, а не вечный ruleset.</p>
+<h3 id="ps2">PS2<a class="headerlink" href="#ps2" title="Permanent link">¶</a></h3>
+<p>Native classic Doom нет.</p>
+<p>Главная практическая причина:
+backward compatibility с PS1 Doom.</p>
+<p>Технически Doom Collection была абсолютно возможна.</p>
+<h3 id="original-xbox">Original Xbox<a class="headerlink" href="#original-xbox" title="Permanent link">¶</a></h3>
+<p>Classic Doom всё-таки получила:</p>
+<p>2005 Doom 3 Collector's Edition:
+- Ultimate Doom;
+- Doom II.</p>
+<p>Xbox Resurrection of Evil:
+- плюс Master Levels.</p>
+<p>Vicarious Visions port:
+- близок к PC;
+- split-screen co-op/deathmatch;
+- отдельные exclusive maps.</p>
+<p>Главный культурный вывод:
+в 1998–2005 индустрия временно считала classic Doom старой технологией, а не самостоятельным вечным жанровым объектом.</p>
+<hr/>
+<h2 id="16-doom-64">16. DOOM 64<a class="headerlink" href="#16-doom-64" title="Permanent link">¶</a></h2>
+<p>Дата: <strong>31 марта 1997</strong>.</p>
+<p>Главный тезис:</p>
+<h2 id="doom-64-doom">DOOM 64 — новая DOOM, а не порт.<a class="headerlink" href="#doom-64-doom" title="Permanent link">¶</a></h2>
+<p>Практически альтернативная DOOM III классической эпохи.</p>
+<h3 id="161">16.1. Происхождение<a class="headerlink" href="#161" title="Permanent link">¶</a></h3>
+<p>PS1 Doom служит R&amp;D/production school для N64.</p>
+<p>Williams/Midway получает creative freedom.</p>
+<p>Рабочее название:
+<strong>Project Absolution</strong>.</p>
+<p><code>Doom 3</code> id оставляла за собой, поэтому финальное название — Doom 64.</p>
+<h3 id="162">16.2. Команда<a class="headerlink" href="#162" title="Permanent link">¶</a></h3>
+<p>Ключевые:
+- Aaron Seeler — lead programmer;
+- Sukru Gilman — art/3D;
+- Laurent Bezault — animation;
+- Aubrey Hodges — music/sound;
+- Midway/Williams level designers.</p>
+<h3 id="163">16.3. Технология<a class="headerlink" href="#163" title="Permanent link">¶</a></h3>
+<p>Всё ещё sector-based, не Quake true 3D.</p>
+<p>Но сильно расширена:
+- macros;
+- chained triggers;
+- transforming levels;
+- развитое colored lighting.</p>
+<h3 id="164-art">16.4. Новый art<a class="headerlink" href="#164-art" title="Permanent link">¶</a></h3>
+<p>Полностью новая identity:
+- textures;
+- weapons;
+- monster sprites;
+- gothic/horror style.</p>
+<p>Монстров моделируют в 3D и рендерят в sprites.</p>
+<h3 id="165-doom-ii-monsters">16.5. Вырезанные DOOM II monsters<a class="headerlink" href="#165-doom-ii-monsters" title="Permanent link">¶</a></h3>
+<p>Нет:
+- Chaingunner;
+- Revenant;
+- Arch-vile;
+- Spider Mastermind.</p>
+<p>Это уменьшает combat vocabulary.</p>
+<h3 id="166">16.6. Новые существа<a class="headerlink" href="#166" title="Permanent link">¶</a></h3>
+<h4 id="nightmare-imp">Nightmare Imp<a class="headerlink" href="#nightmare-imp" title="Permanent link">¶</a></h4>
+<p>Усиленный Imp.</p>
+<h4 id="mother-demon">Mother Demon<a class="headerlink" href="#mother-demon" title="Permanent link">¶</a></h4>
+<p>Новый final boss.</p>
+<h3 id="167-unmaker">16.7. Unmaker<a class="headerlink" href="#167-unmaker" title="Permanent link">¶</a></h3>
+<p>Новая energy weapon.</p>
+<p>Усиливается через Demon Keys.</p>
+<h3 id="168-demon-keys">16.8. Demon Keys<a class="headerlink" href="#168-demon-keys" title="Permanent link">¶</a></h3>
+<p>Находятся в secret maps.</p>
+<p>Двойная награда:
+1. усиливают Unmaker;
+2. позволяют отключать monster portals на финальном MAP28.</p>
+<p>Очень сильная интеграция exploration и campaign progression.</p>
+<h3 id="169">16.9. Ключевые карты<a class="headerlink" href="#169" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Staging Area;</p>
+</li>
+<li>
+<p>The Terraformer;</p>
+</li>
+<li>
+<p>Even Simpler;</p>
+</li>
+<li>
+<p>Dark Citadel;</p>
+</li>
+<li>
+<p>Hectic;</p>
+</li>
+<li>
+<p>The Absolution.</p>
+</li>
+</ul>
+<p><code>The Terraformer</code> особенно хорошо показывает transforming geometry.</p>
+<h3 id="1610-adventure-structure">16.10. Adventure structure<a class="headerlink" href="#1610-adventure-structure" title="Permanent link">¶</a></h3>
+<p>Doom 64 сильнее Doom II ощущается как единое путешествие.</p>
+<p>Плюсы:
+- compact maps;
+- location identity;
+- atmosphere;
+- environmental puzzles.</p>
+<p>Минус:
+иногда слишком любит switch hunting.</p>
+<h3 id="1611-aubrey-hodges">16.11. Aubrey Hodges<a class="headerlink" href="#1611-aubrey-hodges" title="Permanent link">¶</a></h3>
+<p>PS1 dark ambient развивается дальше.</p>
+<p>Новая музыка уже пишется непосредственно под новые карты.</p>
+<p>Формула:</p>
+<div class="highlight"><pre><span></span><code>classic Doom combat
++
+gothic/horror atmosphere
+</code></pre></div>
+<h3 id="1612">16.12. Финал<a class="headerlink" href="#1612" title="Permanent link">¶</a></h3>
+<p>Doom Marine решает остаться в Hell, чтобы предотвращать новые вторжения.</p>
+<p>Очень удобный мост к будущей Slayer mythology.</p>
+<h3 id="1613-multiplayer">16.13. Multiplayer<a class="headerlink" href="#1613-multiplayer" title="Permanent link">¶</a></h3>
+<p>В original N64 release отсутствует.</p>
+<p>Для консоли с четырьмя controller ports — большая потерянная возможность.</p>
+<h3 id="1614">16.14. Итог<a class="headerlink" href="#1614" title="Permanent link">¶</a></h3>
+<p>По сочетанию:
+- classic gameplay;
+- цельная кампания;
+- atmosphere;
+- art direction;
+- adventure arc;
+- compactness;</p>
+<p><strong>DOOM 64 реально может считаться лучшей classic DOOM как цельная игра.</strong></p>
+<hr/>
+<h2 id="17-source-release-1997">17. Source release 1997<a class="headerlink" href="#17-source-release-1997" title="Permanent link">¶</a></h2>
+<p>Дата:
+<strong>23 декабря 1997</strong>.</p>
+<p>Carmack публикует source code DOOM.</p>
+<p>Важно:
+- это Linux lineage;
+- commercial IWAD data не публикуется;
+- часть DOS third-party code отсутствует;
+- первоначальная license ограничивала commercial use;
+- позднее код переведён под GPL.</p>
+<h3 id="171">17.1. Главный переход<a class="headerlink" href="#171" title="Permanent link">¶</a></h3>
+<p>До source release:</p>
+<div class="highlight"><pre><span></span><code>DOOM
+=
+игра, которую можно модифицировать
+</code></pre></div>
+<p>После:</p>
+<div class="highlight"><pre><span></span><code>DOOM
+=
+платформа, которую можно развивать
+</code></pre></div>
+<p>Carmack фактически приглашает community:
+- портировать;
+- делать Internet networking;
+- 3D acceleration;
+- slopes;
+- freelook;
+- transparency;
+- новые возможности.</p>
+<hr/>
+<h2 id="18-source-release-wad-dehacked">18. До source release: WAD + DeHackEd<a class="headerlink" href="#18-source-release-wad-dehacked" title="Permanent link">¶</a></h2>
+<p>Community уже активно моддила DOOM.</p>
+<p>PWAD позволяют менять:
+- maps;
+- sprites;
+- textures;
+- music;
+- sounds.</p>
+<p>DeHackEd позволяет патчить таблицы executable:
+- enemy stats;
+- weapon behavior;
+- states;
+- code pointers в ограниченном виде.</p>
+<p>До открытия исходников community может глубоко менять содержимое, но не fundamental engine.</p>
+<hr/>
+<h2 id="19-boom">19. Boom<a class="headerlink" href="#19-boom" title="Permanent link">¶</a></h2>
+<p>TeamTNT.</p>
+<p>Финальная Boom 2.02 — 1998.</p>
+<p>Философия:</p>
+<blockquote>
+<p>не превращать DOOM в другую игру; убрать искусственные engine limits и дать mapper больше слов.</p>
+</blockquote>
+<h3 id="191">19.1. Убираемые ограничения<a class="headerlink" href="#191" title="Permanent link">¶</a></h3>
+<p>Vanilla Doom имела статические потолки:
+- visplanes;
+- drawsegs;
+- moving floors/plats;
+- savegame size;
+- другие fixed arrays.</p>
+<p>Boom делает многие структуры значительно менее ограниченными.</p>
+<h3 id="192-mapping-vocabulary">19.2. Новый mapping vocabulary<a class="headerlink" href="#192-mapping-vocabulary" title="Permanent link">¶</a></h3>
+<p>Boom добавляет/стандартизирует:
+- generalized linedefs;
+- generalized sectors;
+- conveyors;
+- scrolling;
+- wind;
+- currents;
+- friction;
+- translucency;
+- silent teleport tricks;
+- fake/deep-water tricks;
+- дополнительные trigger combinations.</p>
+<h3 id="193">19.3. Главное наследие<a class="headerlink" href="#193" title="Permanent link">¶</a></h3>
+<p>Не <code>BOOM.EXE</code>, а стандарт:
+<strong>Boom-compatible map</strong>.</p>
+<p>Boom становится договором между mapper и port.</p>
+<hr/>
+<h2 id="20-mbf-marines-best-friend">20. MBF — Marine's Best Friend<a class="headerlink" href="#20-mbf-marines-best-friend" title="Permanent link">¶</a></h2>
+<p>Lee Killough.</p>
+<p>Продолжение Boom.</p>
+<p>Философский сдвиг:</p>
+<div class="highlight"><pre><span></span><code>Boom
+→ расширяет язык уровней
+
+MBF
+→ расширяет язык игровых объектов
+</code></pre></div>
+<h3 id="201-friendly-monsters">20.1. Friendly monsters<a class="headerlink" href="#201-friendly-monsters" title="Permanent link">¶</a></h3>
+<p>Новый friendly flag.</p>
+<p>Monster может:
+- защищать игрока;
+- атаковать других monsters.</p>
+<p>Showcase:
+<strong>helper dogs</strong>.</p>
+<h3 id="202-dehacked-code-pointers">20.2. Расширенный DeHackEd / code pointers<a class="headerlink" href="#202-dehacked-code-pointers" title="Permanent link">¶</a></h3>
+<p>MBF позволяет сильнее модифицировать gameplay:
+- spawn;
+- random jumps;
+- новые explosions;
+- sounds;
+- trigger-like действия.</p>
+<p>Это ранний фундамент будущего standardized gameplay modding.</p>
+<hr/>
+<h2 id="21-prboom-prboom-dsda-doom">21. PrBoom → PrBoom+ → DSDA-Doom<a class="headerlink" href="#21-prboom-prboom-dsda-doom" title="Permanent link">¶</a></h2>
+<p>Главная conservative-modern ветка.</p>
+<p>Цель:
+- современный port;
+- высокая compatibility;
+- demo preservation;
+- speedrunning.</p>
+<p>Пример complevel:</p>
+<div class="highlight"><pre><span></span><code>2
+→ Doom II 1.9
+
+9
+→ Boom 2.02
+
+11
+→ MBF
+
+21
+→ MBF21
+</code></pre></div>
+<p>DSDA-Doom:
+- наследник PrBoom+;
+- speedrunning/TAS;
+- debugging;
+- modern QoL;
+- MBF21;
+- высокая deterministic compatibility.</p>
+<p>Главная философия:</p>
+<blockquote>
+<p>современный комфорт без разрушения simulation assumptions WAD'а и demo culture.</p>
+</blockquote>
+<hr/>
+<h2 id="22-zdoom-gzdoom">22. ZDoom → GZDoom<a class="headerlink" href="#22-zdoom-gzdoom" title="Permanent link">¶</a></h2>
+<p>Противоположная философия.</p>
+<div class="highlight"><pre><span></span><code>Boom / DSDA:
+«что можно сделать внутри узнаваемой Doom?»
+
+ZDoom / GZDoom:
+«что вообще можно построить на Doom lineage?»
+</code></pre></div>
+<h3 id="221-zdoom">22.1. ZDoom<a class="headerlink" href="#221-zdoom" title="Permanent link">¶</a></h3>
+<p>Со временем:
+- freelook;
+- jump;
+- slopes;
+- ACS;
+- polyobjects;
+- расширенные line actions;
+- custom actors;
+- new weapons;
+- game classes.</p>
+<h3 id="222-decorate">22.2. DECORATE<a class="headerlink" href="#222-decorate" title="Permanent link">¶</a></h3>
+<p>Критический шаг.</p>
+<p>Новый enemy/weapon можно описывать как data-driven actor вместо правки C-кода executable.</p>
+<h3 id="223-zscript">22.3. ZScript<a class="headerlink" href="#223-zscript" title="Permanent link">¶</a></h3>
+<p>Следующий шаг:
+почти полноценный gameplay scripting language.</p>
+<h3 id="224-gzdoom">22.4. GZDoom<a class="headerlink" href="#224-gzdoom" title="Permanent link">¶</a></h3>
+<p>Добавляет/развивает:
+- hardware rendering;
+- OpenGL/Vulkan;
+- dynamic lights;
+- portals;
+- 3D floors;
+- models;
+- scripting;
+- total conversions.</p>
+<p>DOOM превращается в полноценную mod-development platform.</p>
+<h3 id="225">22.5. Актуальная сноска<a class="headerlink" href="#225" title="Permanent link">¶</a></h3>
+<p>К 2025–2026 в ZDoom ecosystem появилась новая ветка UZDoom после внутренних организационных изменений, при сохранении ориентации на совместимость с существующим контентом.</p>
+<hr/>
+<h2 id="23-udmf">23. UDMF<a class="headerlink" href="#23-udmf" title="Permanent link">¶</a></h2>
+<p>Universal Doom Map Format.</p>
+<p>Текстовый и расширяемый формат карт.</p>
+<p>Причина:
+старый binary Doom/Hexen format уже не способен нормально выражать количество свойств современных ports.</p>
+<p>UDMF позволяет:
+- задавать свойства явно;
+- использовать namespaces;
+- расширять формат без очередных binary hacks.</p>
+<hr/>
+<h2 id="24-doom-builder">24. Doom Builder<a class="headerlink" href="#24-doom-builder" title="Permanent link">¶</a></h2>
+<p>Эволюция:</p>
+<div class="highlight"><pre><span></span><code>Doom Builder
+↓
+Doom Builder 2
+↓
+GZDoom Builder
+↓
+Ultimate Doom Builder
+</code></pre></div>
+<p>Главный перелом:
+<strong>3D editing mode</strong>.</p>
+<p>Mapper может:
+- видеть карту визуально;
+- менять textures;
+- offsets;
+- heights;
+- lighting;
+- быстро запускать игру.</p>
+<p>Это драматически ускоряет iteration.</p>
+<p>Community повторяет главный урок Romero:</p>
+<blockquote>
+<p>хороший engine без хороших tools не создаёт хороший поток контента.</p>
+</blockquote>
+<hr/>
+<h2 id="25-chocolate-doom">25. Chocolate Doom<a class="headerlink" href="#25-chocolate-doom" title="Permanent link">¶</a></h2>
+<p>Противоположная философия modern source ports.</p>
+<p>Цель:
+<strong>воспроизвести DOS Doom 1.9 максимально точно, включая баги.</strong></p>
+<p>Поддерживает/воссоздаёт:
+- demo behavior;
+- save compatibility;
+- старые limits;
+- старые bugs;
+- historical feel.</p>
+<p>Из этого возникает отдельная дисциплина:
+<strong>vanilla-compatible mapping</strong>.</p>
+<p>Ограничения становятся сознательным художественным medium.</p>
+<hr/>
+<h2 id="26-compatibility-targets">26. Современные compatibility targets<a class="headerlink" href="#26-compatibility-targets" title="Permanent link">¶</a></h2>
+<p>Полезная карта:</p>
+<div class="highlight"><pre><span></span><code>Vanilla
+→ настоящий классический ruleset и limits
+
+Limit-removing
+→ classic gameplay без случайных технических потолков
+
+Boom
+→ расширенный mapping language
+
+MBF / MBF21
+→ mapping + gameplay programmability
+
+GZDoom / UDMF
+→ DOOM как general development platform
+</code></pre></div>
+<hr/>
+<h2 id="27-cacowards">27. Cacowards<a class="headerlink" href="#27-cacowards" title="Permanent link">¶</a></h2>
+<p>С 2004 Doomworld ежегодно награждает лучшие community releases.</p>
+<p>Значение:
+моддинг перестаёт выглядеть как остаточная hobby-сцена и становится собственной культурной институцией.</p>
+<p>Формируются:
+- авторские школы;
+- composers;
+- texture artists;
+- programmers;
+- speedrunning;
+- критика;
+- ежегодные большие релизы.</p>
+<p>Главный вывод:</p>
+<blockquote>
+<p>оригинальные карты id остаются исторически важнейшими, но за 30 лет community закономерно превзошла их в отдельных дисциплинах.</p>
+</blockquote>
+<hr/>
+<h2 id="28-memento-mori">28. Memento Mori<a class="headerlink" href="#28-memento-mori" title="Permanent link">¶</a></h2>
+<p>1995.</p>
+<p>Один из ранних больших 32-map community megawads.</p>
+<p>Значение:
+community доказывает, что способна организовать полноценный Doom II-scale production.</p>
+<p>Сильные стороны:
+- целый megawad;
+- новая музыка;
+- co-op orientation;
+- много авторов.</p>
+<p>Сегодня:
+- заметно состарился;
+- map language ещё близок к раннему Doom II;
+- качество сильно скачет.</p>
+<p>Больше исторически важен, чем обязателен для полного прохождения.</p>
+<hr/>
+<h2 id="29-hell-revealed">29. Hell Revealed<a class="headerlink" href="#29-hell-revealed" title="Permanent link">¶</a></h2>
+<p>1997.</p>
+<p>Авторы:
+Yonatan Donner и Haggay Niv.</p>
+<p>Главная идея:
+<strong>extreme difficulty как сама идентичность WAD</strong>.</p>
+<p>Очень важен для:
+- speedrunning;
+- slaughter lineage;
+- hardcore combat.</p>
+<p>Ранний slaughter ещё груб:
+иногда сложность = просто очень много monsters.</p>
+<p>Современные наследники делают ту же идею значительно чище.</p>
+<hr/>
+<h2 id="30-alien-vendetta">30. Alien Vendetta<a class="headerlink" href="#30-alien-vendetta" title="Permanent link">¶</a></h2>
+<p>2001/2002.</p>
+<p>Большой community blockbuster.</p>
+<p>Комбинация:
+- архитектурного масштаба;
+- atmosphere;
+- тяжёлого combat;
+- monumental location design.</p>
+<p>Ключевой пример:
+<strong>MAP20: Misri Halek</strong>.</p>
+<p>Сильная сторона:
+DOOM-карты начинают выглядеть как большие убедительные места.</p>
+<p>Минус:
+часть карт слишком длинная для игрока, ценящего компактность.</p>
+<hr/>
+<h2 id="31-scythe">31. Scythe<a class="headerlink" href="#31-scythe" title="Permanent link">¶</a></h2>
+<p>2003.</p>
+<p>Автор:
+Erik Alm.</p>
+<p>Главная философия:
+<strong>коротко, плотно, быстро.</strong></p>
+<p>32 карты, большинство очень компактные.</p>
+<p>Difficulty постепенно растёт:</p>
+<div class="highlight"><pre><span></span><code>early
+→ classic Doom
+
+middle
+→ harder Doom
+
+late
+→ почти slaughter
+</code></pre></div>
+<p>Сильная mastery arc.</p>
+<p>Для пользователя один из самых вероятных попаданий:
+- компактность;
+- высокая плотность;
+- нет филлера;
+- хороший темп;
+- быстрое обучение через игру.</p>
+<hr/>
+<h2 id="32-scythe-2">32. Scythe 2<a class="headerlink" href="#32-scythe-2" title="Permanent link">¶</a></h2>
+<p>2005 / завершён позднее.</p>
+<p>Erik Alm.</p>
+<p>Крупнее и красивее первого.</p>
+<p>Шесть тематических блоков.</p>
+<p>Добавляет DeHackEd monsters:
+- Evil Marine;
+- Afrit.</p>
+<p>Blueprint современного thematic megawad.</p>
+<p>Плюсы:
+- сильнее art direction;
+- richer progression;
+- больше современного mapping.</p>
+<p>Минус:
+уже заметно длиннее и менее компактно, чем Scythe 1.</p>
+<hr/>
+<h2 id="33-going-down">33. Going Down<a class="headerlink" href="#33-going-down" title="Permanent link">¶</a></h2>
+<p>2014.</p>
+<p>Автор:
+Cyriak / mouldy.</p>
+<p>Почти полностью auteur megawad.</p>
+<p>Концепция:</p>
+<div class="highlight"><pre><span></span><code>крыша UAC-небоскрёба
+↓
+лифт
+↓
+этажи
+↓
+подвал
+↓
+Hell
+</code></pre></div>
+<p>Карты маленькие, но очень плотные.</p>
+<p>Ключевая техника:
+повторное использование пространства.</p>
+<div class="highlight"><pre><span></span><code>комната очищена
+↓
+switch
+↓
+возвращаешься
+↓
+та же комната теперь другая проблема
+</code></pre></div>
+<p>Сильный авторский юмор и злость.</p>
+<p>Для пользователя — один из самых сильных кандидатов из community Doom.</p>
+<hr/>
+<h2 id="34-sunlust">34. Sunlust<a class="headerlink" href="#34-sunlust" title="Permanent link">¶</a></h2>
+<p>2015.</p>
+<p>Ribbiks + dannebubinga.</p>
+<p>Hardcore Boom-compatible megawad.</p>
+<p>Главная идея:
+<strong>combat puzzle как высшая математика DOOM.</strong></p>
+<p>Slaughter здесь не означает тупо monster count.</p>
+<p>Толпы выполняют пространственные роли:
+- Revenants = движущаяся стена;
+- Arch-viles = LOS/timer;
+- Cyberdemons = artillery/infighting;
+- Pain Elementals = растущая угроза пространства.</p>
+<p>Очень высокая mastery density.</p>
+<p>Минус:
+требует концентрации, повторных попыток и глубокого понимания BFG/combat.</p>
+<p>Не relaxation Doom, а экзамен.</p>
+<hr/>
+<h2 id="35-ancient-aliens">35. Ancient Aliens<a class="headerlink" href="#35-ancient-aliens" title="Permanent link">¶</a></h2>
+<p>2016.</p>
+<p>Ключевой автор:
+skillsaw.</p>
+<p>Главный вклад:
+<strong>DOOM как полноценный art-direction project.</strong></p>
+<p>Палитра:
+- purple;
+- cyan;
+- magenta;
+- gold;
+- teal.</p>
+<p>Смешение:
+- пришельцев;
+- Mesoamerican imagery;
+- conspiracy humor;
+- custom textures;
+- custom music.</p>
+<p>При этом gameplay остаётся быстрым и action-oriented.</p>
+<p>Сильнейшая сторона:
+<strong>identity</strong>.</p>
+<p>Один screenshot легко узнаётся.</p>
+<hr/>
+<h2 id="36-eviternity">36. Eviternity<a class="headerlink" href="#36-eviternity" title="Permanent link">¶</a></h2>
+<p>2018/2019.</p>
+<p>Lead:
+Dragonfly.</p>
+<p>Основа art:
+OTEX.</p>
+<p>Структура:
+несколько тематических chapters:
+- medieval;
+- techbase;
+- ice;
+- industrial/brutalist;
+- hell/alien;
+- heaven.</p>
+<p>Сильные стороны:
+- почти коммерческий production polish;
+- хороший flow;
+- сильные landmarks;
+- современный visual design;
+- постепенно вводимые новые monsters.</p>
+<p>Лучше воспринимать chapter-by-chapter, а не одним 32-map марафоном.</p>
+<hr/>
+<h2 id="37-myhousepk3">37. MyHouse.pk3<a class="headerlink" href="#37-myhousepk3" title="Permanent link">¶</a></h2>
+<p>2023.</p>
+<p>Автор:
+Veddge.</p>
+<p>GZDoom / UDMF / portals / scripting.</p>
+<p>Начинается как:</p>
+<blockquote>
+<p>«я сделал свой дом в Doom».</p>
+</blockquote>
+<p>Затем пространство начинает делать невозможное.</p>
+<p>Главная сила:
+<strong>знание Doom Engine используется против игрока.</strong></p>
+<p>Игрок замечает:
+- комнаты не совпадают;
+- физика пространства невозможна;
+- маршруты нарушают привычную геометрию;
+- одно и то же место меняется.</p>
+<p>Это уже:
+- meta-horror;
+- spatial mystery;
+- exploration;
+- несколько endings.</p>
+<p>Важно:
+<strong>проходить blind.</strong></p>
+<p>MyHouse — итоговая демонстрация того, как GZDoom technology может сама стать narrative/horror mechanic.</p>
+<hr/>
+<h2 id="38-brutal-doom">38. Brutal Doom<a class="headerlink" href="#38-brutal-doom" title="Permanent link">¶</a></h2>
+<p>Создатель:
+Sergeant_Mark_IV.</p>
+<p>Отдельная ветка.</p>
+<p>Не map pack, а remix core gameplay.</p>
+<p>Добавляет:
+- gore;
+- dismemberment;
+- fatalities;
+- headshots;
+- new fire modes;
+- enhanced reactions;
+- aggressive AI;
+- particles;
+- explosions.</p>
+<p>Главная сильная сторона:
+<strong>feedback</strong>.</p>
+<p>Главная оговорка:
+Brutal Doom меняет исходный balance.</p>
+<p>Поэтому не надо впервые оценивать через него:
+- Plutonia;
+- Sunlust;
+- Scythe;
+- другие тщательно сбалансированные WAD.</p>
+<p>Правильнее:</p>
+<blockquote>
+<p>авторский remix для повторного прохождения знакомого content.</p>
+</blockquote>
+<hr/>
+<h2 id="39-community-wad-recommendation-matrix">39. Community WAD recommendation matrix<a class="headerlink" href="#39-community-wad-recommendation-matrix" title="Permanent link">¶</a></h2>
+<p>Оценка именно под наши критерии: плотность, компактность, сильная идея, mastery, минимум филлера.</p>
+<table>
+<thead>
+<tr>
+<th>Проект</th>
+<th>Главный вклад</th>
+<th>Риск/минус</th>
+<th>Наш интерес</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Memento Mori</td>
+<td>ранний коллективный megawad</td>
+<td>сильно состарился</td>
+<td>5/10</td>
+</tr>
+<tr>
+<td>Hell Revealed</td>
+<td>hardcore/slaughter lineage</td>
+<td>грубый/grindy</td>
+<td>5/10</td>
+</tr>
+<tr>
+<td>Alien Vendetta</td>
+<td>epic architecture + combat</td>
+<td>длинные карты</td>
+<td>8/10</td>
+</tr>
+<tr>
+<td>Scythe</td>
+<td>compactness + difficulty curve</td>
+<td>визуально проще поздних</td>
+<td>10/10</td>
+</tr>
+<tr>
+<td>Scythe 2</td>
+<td>thematic modern megawad</td>
+<td>крупнее/длиннее</td>
+<td>8.5/10</td>
+</tr>
+<tr>
+<td>Going Down</td>
+<td>auteur + юмор + compact density</td>
+<td>намеренно злой</td>
+<td>10/10</td>
+</tr>
+<tr>
+<td>Sunlust</td>
+<td>combat puzzle / mastery</td>
+<td>очень требовательный</td>
+<td>7/10 как текущий выбор, 10/10 как экзамен</td>
+</tr>
+<tr>
+<td>Ancient Aliens</td>
+<td>мощный art direction</td>
+<td>большой объём</td>
+<td>9/10</td>
+</tr>
+<tr>
+<td>Eviternity</td>
+<td>почти commercial polish</td>
+<td>32-map scale</td>
+<td>9/10</td>
+</tr>
+<tr>
+<td>MyHouse</td>
+<td>meta-horror / impossible space</td>
+<td>не classic combat-first</td>
+<td>обязательно blind</td>
+</tr>
+<tr>
+<td>Brutal Doom</td>
+<td>gunfeel/gore remix</td>
+<td>ломает баланс WAD</td>
+<td>как remix, не baseline</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="40-community-content">40. Рекомендуемый маршрут по community content<a class="headerlink" href="#40-community-content" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>1. Scythe
+↓
+чистая компактная Doom
+
+2. Going Down
+↓
+авторская компактная Doom
+
+3. Ancient Aliens
+↓
+яркая визуальная identity
+
+4. Alien Vendetta
+↓
+monumental old-school megawad
+
+5. Scythe 2
+↓
+большая modern thematic campaign
+
+6. Eviternity
+↓
+professionalized community production
+
+7. MyHouse
+↓
+Doom перестаёт быть Doom в обычном смысле
+
+8. Sunlust
+↓
+combat mastery examination
+</code></pre></div>
+<p>Отдельно:
+<strong>Brutal Doom</strong> — remix знакомого content после прохождения в faithful ruleset.</p>
+<hr/>
+<h2 id="41-no-rest-for-the-living">41. No Rest for the Living<a class="headerlink" href="#41-no-rest-for-the-living" title="Permanent link">¶</a></h2>
+<p>2010.</p>
+<p>Nerve Software.</p>
+<p>Основные mapper:
+- Russell Meakim / TheCastle;
+- Richard Heath / Arya Iwakura.</p>
+<p>8 основных карт + 1 secret.</p>
+<h3 id="411">41.1. Философия<a class="headerlink" href="#411" title="Permanent link">¶</a></h3>
+<p>Никаких новых:
+- enemies;
+- guns;
+- mechanics.</p>
+<p>Только:
+<strong>DOOM II toolkit + 16 лет развития mapping culture.</strong></p>
+<p>Это почти демонстрация идеи:</p>
+<blockquote>
+<p>DOOM II не нуждалась в новых системах; ей нужны были более зрелые карты.</p>
+</blockquote>
+<h3 id="412-secrets">41.2. Secrets<a class="headerlink" href="#412-secrets" title="Permanent link">¶</a></h3>
+<p>Одна из сильнейших сторон.</p>
+<p>Secret часто:
+- большой optional route;
+- дополнительный encounter;
+- важное оружие;
+- armor/resources.</p>
+<p>Это не closet с четырьмя health bonus.</p>
+<p>Secrets = optional gameplay.</p>
+<h3 id="413-resource-economy">41.3. Resource economy<a class="headerlink" href="#413-resource-economy" title="Permanent link">¶</a></h3>
+<p>Backpack почти отсутствует.</p>
+<p>Это удерживает ammo pressure и не позволяет накопить огромный стратегический запас.</p>
+<p>Doom снова становится игрой про локальные ресурсы конкретной карты.</p>
+<h3 id="414">41.4. Ключевые карты<a class="headerlink" href="#414" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>The Earth Base;</p>
+</li>
+<li>
+<p>Canyon of the Dead;</p>
+</li>
+<li>
+<p>Hell Mountain;</p>
+</li>
+<li>
+<p>March of the Demons;</p>
+</li>
+<li>
+<p>Baron's Banquet;</p>
+</li>
+<li>
+<p>Tomb of Malevolence.</p>
+</li>
+</ul>
+<h4 id="the-earth-base">The Earth Base<a class="headerlink" href="#the-earth-base" title="Permanent link">¶</a></h4>
+<p>Уже первая карта показывает философию:
+можно быстро уйти, но exploration даёт SSG, armor, ресурсы и дополнительные fights.</p>
+<h4 id="canyon-of-the-dead">Canyon of the Dead<a class="headerlink" href="#canyon-of-the-dead" title="Permanent link">¶</a></h4>
+<p>Хороший пример того, насколько зрелее к 2010 году стал environmental mapping на том же engine.</p>
+<h4 id="march-of-the-demons">March of the Demons<a class="headerlink" href="#march-of-the-demons" title="Permanent link">¶</a></h4>
+<p>Secret map как escalating combat lab.
+Spider Mastermind работает лучше именно как часть encounter, а не отдельный boss.</p>
+<h4 id="tomb-of-malevolence">Tomb of Malevolence<a class="headerlink" href="#tomb-of-malevolence" title="Permanent link">¶</a></h4>
+<p>Финальный Cyberdemon-level:
+обычный DOOM combat вместо Icon-of-Sin gimmick.</p>
+<h3 id="415-difficulty">41.5. Difficulty<a class="headerlink" href="#415-difficulty" title="Permanent link">¶</a></h3>
+<p>Проект ориентировался на опытную аудиторию.</p>
+<p>UV — полноценная серьёзная classic Doom difficulty, но не постоянная Plutonia-style ненависть и не modern slaughter.</p>
+<h3 id="416-cacoward">41.6. Cacoward<a class="headerlink" href="#416-cacoward" title="Permanent link">¶</a></h3>
+<p>Особенно символично:
+официальный Doom add-on оценивается community как WAD и получает Cacoward.</p>
+<p>Цикл замыкается:</p>
+<div class="highlight"><pre><span></span><code>official Doom
+↓
+создаёт community
+
+community
+↓
+развивает Doom
+
+official add-on
+↓
+должен пройти экзамен community
+</code></pre></div>
+<h3 id="417">41.7. Итог<a class="headerlink" href="#417" title="Permanent link">¶</a></h3>
+<p>По среднему quality карты No Rest вполне может быть лучше оригинальной DOOM II campaign.</p>
+<p>Сильные стороны:
+- компактность;
+- mature enemy placement;
+- хорошие secrets;
+- полный Doom II toolkit;
+- почти нет слабого filler.</p>
+<p>Недостаток:
+меньше собственной world identity, чем у DOOM 64.</p>
+<hr/>
+<h2 id="42-sigil">42. SIGIL<a class="headerlink" href="#42-sigil" title="Permanent link">¶</a></h2>
+<p>2019.</p>
+<p>John Romero.</p>
+<p>Неофициальный Episode 5 после Thy Flesh Consumed.</p>
+<p>9 карт.</p>
+<p>DOOM I ruleset.</p>
+<h3 id="421-romero">42.1. История возвращения Romero<a class="headerlink" href="#421-romero" title="Permanent link">¶</a></h3>
+<p>После E1M8B <code>Tech Gone Bad</code> и E1M4B <code>Phobos Mission Control</code> стало понятно:
+Romero всё ещё умеет современно проектировать Doom.</p>
+<p>SIGIL превращает это в полноценный episode.</p>
+<h3 id="422">42.2. Ограничения<a class="headerlink" href="#422" title="Permanent link">¶</a></h3>
+<p>Нет:
+- SSG;
+- Arch-vile;
+- Revenant;
+- DOOM II bestiary.</p>
+<p>Следовательно challenge строится через:
+- geometry;
+- LOS;
+- resource scarcity;
+- traps;
+- darkness;
+- damage floors;
+- enemy placement.</p>
+<h3 id="423-baphomet-eyes">42.3. Baphomet eyes<a class="headerlink" href="#423-baphomet-eyes" title="Permanent link">¶</a></h3>
+<p>Повторяющийся visual/mechanical language.</p>
+<p>Глаз:</p>
+<blockquote>
+<p>shootable switch.</p>
+</blockquote>
+<p>Хорошая интеграция UI и main verb:
+если у игрока есть gun — активируй механизм выстрелом.</p>
+<h3 id="424">42.4. Атмосфера<a class="headerlink" href="#424" title="Permanent link">¶</a></h3>
+<p>Очень тёмный hellish episode:
+- красное;
+- чёрное;
+- lava;
+- silhouettes;
+- dangerous ledges.</p>
+<p>Тьма иногда делает encounter сильнее, а иногда ухудшает readability.</p>
+<h3 id="425-late-romero-mapping">42.5. Late-Romero mapping<a class="headerlink" href="#425-late-romero-mapping" title="Permanent link">¶</a></h3>
+<p>Сохраняет:
+- windows;
+- spatial anticipation;
+- loops;
+- reuse;
+- height relations.</p>
+<p>Добавляет:
+- modern community brutality;
+- tighter resources;
+- traps;
+- hostile starts.</p>
+<h3 id="426">42.6. Музыка<a class="headerlink" href="#426" title="Permanent link">¶</a></h3>
+<p>Две важные версии:
+- MIDI soundtrack James “Jimmy” Paddock;
+- Buckethead для платного/коллекционного варианта.</p>
+<p>MIDI ближе к «потерянному episode 90-х».
+Buckethead сильнее подчёркивает modern infernal identity.</p>
+<h3 id="427">42.7. Главный карьерный вывод<a class="headerlink" href="#427" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>Daikatana-era Romero:
+«что ещё добавить?»
+
+SIGIL-era Romero:
+«что ещё можно сделать
+с тем, что уже есть?»
+</code></pre></div>
+<p>Это важное дизайнерское взросление.</p>
+<h3 id="428">42.8. Итог<a class="headerlink" href="#428" title="Permanent link">¶</a></h3>
+<p>Сильные стороны:
+- auteur identity;
+- spatial design;
+- resource pressure;
+- compactness;
+- mastery.</p>
+<p>Слабости:
+- darkness;
+- gotcha;
+- Doom I roster;
+- отсутствие SSG особенно ощущается на Barons.</p>
+<hr/>
+<h2 id="43-sigil-ii">43. SIGIL II<a class="headerlink" href="#43-sigil-ii" title="Permanent link">¶</a></h2>
+<p>2023.</p>
+<p>Неофициальный Episode 6.</p>
+<p>Снова DOOM I ruleset.</p>
+<p>Но:
+- сложнее;
+- крупнее;
+- больше outdoor;
+- больше techbase/Hell hybrid;
+- лучше campaign pacing.</p>
+<h3 id="431-make-the-first-level-last">43.1. Make the First Level Last<a class="headerlink" href="#431-make-the-first-level-last" title="Permanent link">¶</a></h3>
+<p>Romero сначала сделал большую часть campaign, понял её design language и только потом сделал opener.</p>
+<p>Принцип:</p>
+<blockquote>
+<p>Level 1 должен знакомить с уже сформированной игрой, а не отражать раннее непонимание автора, каким будет проект.</p>
+</blockquote>
+<h3 id="432-difficulty">43.2. Difficulty<a class="headerlink" href="#432-difficulty" title="Permanent link">¶</a></h3>
+<p>UV сознательно значительно тяжелее SIGIL 1.</p>
+<p>Romero уже допускает save/load как часть UV experience.</p>
+<p>First-run fairness иногда жертвуется knowledge-check/gotcha.</p>
+<h3 id="433">43.3. Пространство<a class="headerlink" href="#433" title="Permanent link">¶</a></h3>
+<p>Больше:
+- outdoor;
+- long sightlines;
+- масштаб;
+- techbase/Hell collision;
+- transforming geometry.</p>
+<p>Visual variety заметно выше первой SIGIL.</p>
+<h3 id="434-campaign-identity">43.4. Campaign identity<a class="headerlink" href="#434-campaign-identity" title="Permanent link">¶</a></h3>
+<p>SIGIL 1:
+- более цельный infernal album.</p>
+<p>SIGIL II:
+- сильнее как собственно game/campaign;
+- лучше pacing;
+- больше variation.</p>
+<h3 id="435">43.5. Итог<a class="headerlink" href="#435" title="Permanent link">¶</a></h3>
+<p>SIGIL:</p>
+<blockquote>
+<p>доказала, что Romero не потерял craft.</p>
+</blockquote>
+<p>SIGIL II:</p>
+<blockquote>
+<p>показывает, что он ещё и продолжает развивать собственный поздний mapping style.</p>
+</blockquote>
+<hr/>
+<h2 id="44-one-humanity-hellion">44. One Humanity и HELLION<a class="headerlink" href="#44-one-humanity-hellion" title="Permanent link">¶</a></h2>
+<h3 id="441-one-humanity">44.1. One Humanity<a class="headerlink" href="#441-one-humanity" title="Permanent link">¶</a></h3>
+<p>2022.</p>
+<p>Первая новая DOOM II map Romero примерно за 28 лет.</p>
+<p>Также использовалась как благотворительный релиз для гуманитарной помощи Украине.</p>
+<h3 id="442-hellion">44.2. HELLION<a class="headerlink" href="#442-hellion" title="Permanent link">¶</a></h3>
+<p>Из One Humanity вырос современный большой DOOM II-проект Romero.</p>
+<p>На сентябрь 2026:
+<strong>ещё в разработке</strong>.</p>
+<p>Главный интерес:
+современный Romero впервые получает весь DOOM II vocabulary:</p>
+<ul>
+<li>
+<p>SSG;</p>
+</li>
+<li>
+<p>Revenant;</p>
+</li>
+<li>
+<p>Arch-vile;</p>
+</li>
+<li>
+<p>Chaingunner;</p>
+</li>
+<li>
+<p>Mancubus;</p>
+</li>
+<li>
+<p>Arachnotron;</p>
+</li>
+<li>
+<p>Pain Elemental;</p>
+</li>
+<li>
+<p>Hell Knight.</p>
+</li>
+</ul>
+<p>Это потенциально более интересный combat test позднего Romero, чем ещё один DOOM I episode.</p>
+<hr/>
+<h2 id="45-legacy-of-rust">45. Legacy of Rust<a class="headerlink" href="#45-legacy-of-rust" title="Permanent link">¶</a></h2>
+<p>2024.</p>
+<p>id Software + Nightdive + MachineGames + Doom-community.</p>
+<p>16 карт:
+- The Vulcan Abyss;
+- Counterfeit Eden.</p>
+<p>Главный исторический факт:</p>
+<blockquote>
+<p>впервые со времён DOOM II official classic Doom получает новые guns и новые monsters.</p>
+</blockquote>
+<h3 id="451-id-assets">45.1. Археология id assets<a class="headerlink" href="#451-id-assets" title="Permanent link">¶</a></h3>
+<p>Команда использует:
+- alpha/beta textures;
+- unused monster concepts;
+- промежуточные art assets;
+- forgotten development material.</p>
+<p>Но не реставрирует их буквально.</p>
+<p>Старое art-сырьё превращается в новые gameplay roles.</p>
+<h3 id="452-incinerator">45.2. Incinerator<a class="headerlink" href="#452-incinerator" title="Permanent link">¶</a></h3>
+<p>Заменяет Plasma Rifle.</p>
+<p>Огненные projectiles + persistent fire.</p>
+<p>Интерес:
+создаёт hazardous space, в том числе опасный самому игроку.</p>
+<p>В отличие от Plasma, требует думать:
+- куда стреляешь;
+- где останется огонь;
+- не понадобится ли самому пройти через эту область.</p>
+<h3 id="453-calamity-blade">45.3. Calamity Blade<a class="headerlink" href="#453-calamity-blade" title="Permanent link">¶</a></h3>
+<p>Заменяет BFG.</p>
+<p>Charge weapon.</p>
+<p>Выпускает широкую horizontal energy/fire wave.</p>
+<p>Лучше всего работает против больших построений monsters.</p>
+<p>BFG глубже как mastery weapon.
+Calamity Blade визуально и механически проще читать, но отлично соответствует scale поздних encounters Legacy of Rust.</p>
+<h3 id="454-fuel">45.4. Fuel<a class="headerlink" href="#454-fuel" title="Permanent link">¶</a></h3>
+<p>Общий ресурс нового high-tier arsenal.</p>
+<p>Создаёт выбор:
+- тратить на постепенный Incinerator damage;
+- сохранить для большого Calamity Blade shot.</p>
+<hr/>
+<h2 id="46-monsters-legacy-of-rust">46. Новые monsters Legacy of Rust<a class="headerlink" href="#46-monsters-legacy-of-rust" title="Permanent link">¶</a></h2>
+<h3 id="461-ghoul">46.1. Ghoul<a class="headerlink" href="#461-ghoul" title="Permanent link">¶</a></h3>
+<p>Мелкий flying projectile pressure.</p>
+<p>Роль:
+low-level aerial nuisance, отличающийся от Lost Soul charge и медленного Cacodemon.</p>
+<h3 id="462-banshee">46.2. Banshee<a class="headerlink" href="#462-banshee" title="Permanent link">¶</a></h3>
+<p>Kamikaze / walking explosive barrel.</p>
+<p>Враг одновременно:
+- угроза;
+- ресурс для chain reaction.</p>
+<p>Очень DOOM-like systemic design.</p>
+<h3 id="463-shocktrooper">46.3. Shocktrooper<a class="headerlink" href="#463-shocktrooper" title="Permanent link">¶</a></h3>
+<p>Быстрый human-sized plasma enemy.</p>
+<p>Новая priority target роль между привычными humanoid hitscan enemies и projectile monsters.</p>
+<h3 id="464-mindweaver">46.4. Mindweaver<a class="headerlink" href="#464-mindweaver" title="Permanent link">¶</a></h3>
+<p>Среднеразмерный sustained hitscan denial.</p>
+<p>Практически:</p>
+<blockquote>
+<p>usable Spider Mastermind role в обычном monster tier.</p>
+</blockquote>
+<p>Очень полезный designer tool.</p>
+<h3 id="465-vassago">46.5. Vassago<a class="headerlink" href="#465-vassago" title="Permanent link">¶</a></h3>
+<p>Persistent area denial.</p>
+<p>Projectile оставляет hazardous fire zone.</p>
+<p>Меняет вопрос:
+не только «куда летит projectile?», а «где через две секунды вообще можно будет стоять?»</p>
+<h3 id="466-tyrant">46.6. Tyrant<a class="headerlink" href="#466-tyrant" title="Permanent link">¶</a></h3>
+<p>Cyberdemon-lite:
+- triple rockets;
+- заметно меньше HP.</p>
+<p>Позволяет использовать Cyber-style pressure в обычных encounters без 4000-HP boss pacing.</p>
+<h3 id="467-roster">46.7. Главный плюс нового roster<a class="headerlink" href="#467-roster" title="Permanent link">¶</a></h3>
+<p>Большинство новых monsters не просто новые sprites.</p>
+<p>Они задают <strong>новый combat question</strong>.</p>
+<p>Это правильная DOOM II philosophy.</p>
+<hr/>
+<h2 id="47-legacy-of-rust">47. Карты Legacy of Rust<a class="headerlink" href="#47-legacy-of-rust" title="Permanent link">¶</a></h2>
+<h3 id="471-the-vulcan-abyss">47.1. The Vulcan Abyss<a class="headerlink" href="#471-the-vulcan-abyss" title="Permanent link">¶</a></h3>
+<p>Первая половина лучше знакомит с новым vocabulary.</p>
+<p>Больше:
+- industrial rust;
+- UAC/Hell;
+- alpha-Doom imagery;
+- относительно понятного introduction новых threats.</p>
+<h3 id="472-counterfeit-eden">47.2. Counterfeit Eden<a class="headerlink" href="#472-counterfeit-eden" title="Permanent link">¶</a></h3>
+<p>Сильнее ощущается как modern community Doom:
+- transforming arenas;
+- многофазные fights;
+- крупнее spaces;
+- сложнее routes;
+- выше monster counts.</p>
+<h3 id="473">47.3. Главный минус<a class="headerlink" href="#473" title="Permanent link">¶</a></h3>
+<p>Современные mapper'ы слишком хорошо умеют делать огромные сложные карты.</p>
+<p>Проблема не filler.</p>
+<p>Проблема:
+<strong>map overextension</strong>.</p>
+<p>Уровень может быть очень хорошим и всё равно длиться дольше, чем нужно его основной идее.</p>
+<p>По compactness:
+No Rest / Scythe / Going Down зачастую сильнее.</p>
+<hr/>
+<h2 id="48-id24">48. ID24<a class="headerlink" href="#48-id24" title="Permanent link">¶</a></h2>
+<p>Новый официальный classic feature standard, связанный с DOOM + DOOM II и Legacy of Rust.</p>
+<p>Историческая линия:</p>
+<div class="highlight"><pre><span></span><code>Boom
+↓
+MBF
+↓
+MBF21
+↓
+ID24
+</code></pre></div>
+<p>Главный культурный смысл:</p>
+<blockquote>
+<p>community standards, созданные после ухода id из classic Doom, возвращаются внутрь официальной Doom.</p>
+</blockquote>
+<p>Legacy of Rust — не только новая campaign, но и showcase новой official/community-compatible technological layer.</p>
+<hr/>
+<h2 id="49-classic">49. Сводная оценка официальных classic кампаний<a class="headerlink" href="#49-classic" title="Permanent link">¶</a></h2>
+<p>Не абсолютная «объективная таблица», а наши устойчивые выводы.</p>
+<h3 id="doom-1993">DOOM (1993)<a class="headerlink" href="#doom-1993" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- цельность;
+- E1;
+- фундаментальный design;
+- чистота.</p>
+<h3 id="doom-ii">DOOM II<a class="headerlink" href="#doom-ii" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- SSG;
+- bestiary;
+- modding platform.</p>
+<p>Слабее:
+- неровная campaign.</p>
+<h3 id="thy-flesh-consumed">Thy Flesh Consumed<a class="headerlink" href="#thy-flesh-consumed" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- compact veteran challenge.</p>
+<p>Слабее:
+- Doom I vocabulary.</p>
+<h3 id="master-levels">Master Levels<a class="headerlink" href="#master-levels" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- history;
+- mapper professionalization;
+- несколько отличных auteur maps.</p>
+<p>Слабее:
+- нет campaign cohesion.</p>
+<h3 id="tnt">TNT<a class="headerlink" href="#tnt" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- adventure;
+- atmosphere;
+- place feeling.</p>
+<p>Слабее:
+- bloat;
+- switch hunting.</p>
+<h3 id="plutonia">Plutonia<a class="headerlink" href="#plutonia" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- encounter design;
+- mastery;
+- использование Doom II monsters.</p>
+<p>Слабее:
+- gotcha.</p>
+<h3 id="doom-64">DOOM 64<a class="headerlink" href="#doom-64" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- цельность;
+- atmosphere;
+- art;
+- adventure arc;
+- meaningful secrets;
+- Unmaker progression.</p>
+<p>Слабее:
+- урезанный Doom II roster;
+- иногда switch hunting;
+- нет original multiplayer.</p>
+<h3 id="no-rest-for-the-living">No Rest for the Living<a class="headerlink" href="#no-rest-for-the-living" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- compactness;
+- mature mapping;
+- secrets;
+- resource economy.</p>
+<p>Слабее:
+- менее мощная самостоятельная world identity, чем у DOOM 64.</p>
+<h3 id="sigil">SIGIL<a class="headerlink" href="#sigil" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- auteur identity;
+- spatial design;
+- resource pressure.</p>
+<p>Слабее:
+- darkness/gotcha;
+- Doom I roster.</p>
+<h3 id="sigil-ii">SIGIL II<a class="headerlink" href="#sigil-ii" title="Permanent link">¶</a></h3>
+<p>Сильнее первой:
+- combat;
+- variety;
+- campaign pacing.</p>
+<p>Слабее:
+- first-run fairness;
+- всё ещё Doom I toolkit.</p>
+<h3 id="legacy-of-rust">Legacy of Rust<a class="headerlink" href="#legacy-of-rust" title="Permanent link">¶</a></h3>
+<p>Сильнейшее:
+- новые combat roles;
+- новые guns;
+- официальный modern vocabulary;
+- synthesis official/community.</p>
+<p>Слабее:
+- map overextension;
+- modern PWAD scale иногда конфликтует с compactness.</p>
+<hr/>
+<h2 id="50-doom">50. Мобильная ветка DOOM<a class="headerlink" href="#50-doom" title="Permanent link">¶</a></h2>
+<p>Эта ветка важна тем, что id несколько раз не пыталась тупо переносить обычный realtime FPS на неудобное устройство, а <strong>меняла жанр под сильные стороны платформы</strong>.</p>
+<p>Общая линия:</p>
+<div class="highlight"><pre><span></span><code>Pocket PC / Windows Mobile DOOM
+↓
+DOOM RPG
+↓
+id Mobile
+↓
+DOOM Resurrection
+↓
+DOOM Classic iPhone
+↓
+DOOM II RPG
+↓
+современные iOS/Android ports
+↓
+Mighty DOOM
+</code></pre></div>
+<hr/>
+<h2 id="51-pocket-pc-windows-mobile-doom">51. Pocket PC / Windows Mobile DOOM<a class="headerlink" href="#51-pocket-pc-windows-mobile-doom" title="Permanent link">¶</a></h2>
+<p>Ранний официальный перенос обычной classic Doom на карманные компьютеры.</p>
+<p>Важно как mobile port, но не как новая design idea.</p>
+<p>Формула:</p>
+<div class="highlight"><pre><span></span><code>DOOM
+↓
+маленький компьютер
+</code></pre></div>
+<hr/>
+<h2 id="52-doom-rpg">52. DOOM RPG<a class="headerlink" href="#52-doom-rpg" title="Permanent link">¶</a></h2>
+<p>2005.</p>
+<p>Fountainhead Entertainment + id.</p>
+<p>John Carmack:
+- producer;
+- programmer.</p>
+<p>Katherine Anna Kang:
+- producer / ключевой человек Fountainhead.</p>
+<h3 id="521">52.1. Происхождение идеи<a class="headerlink" href="#521" title="Permanent link">¶</a></h3>
+<p>Carmack увидел плохие Java-games на новом телефоне и начал разбираться, почему они плохие.</p>
+<p>Главное наблюдение:</p>
+<blockquote>
+<p>телефонная цифровая клавиатура плохо подходит realtime FPS.</p>
+</blockquote>
+<p>Вместо плохого FPS:</p>
+<h2 id="_11">меняем жанр.<a class="headerlink" href="#_11" title="Permanent link">¶</a></h2>
+<p>Формула Carmack:</p>
+<blockquote>
+<p><strong>Bard's Tale meets Doom.</strong></p>
+</blockquote>
+<h3 id="522-gameplay">52.2. Gameplay<a class="headerlink" href="#522-gameplay" title="Permanent link">¶</a></h3>
+<p>First-person grid-based turn-based dungeon crawler.</p>
+<p>Каждый:
+- шаг;
+- shot;
+- item use;</p>
+<p>тратит turn.</p>
+<p>Время не идёт, пока игрок думает.</p>
+<p>Это полностью меняет фундамент:</p>
+<div class="highlight"><pre><span></span><code>classic Doom:
+real-time spatial mastery
+
+DOOM RPG:
+turn economy + weapon/resource choice
+</code></pre></div>
+<h3 id="523-weapon-weaknesses">52.3. Weapon weaknesses<a class="headerlink" href="#523-weapon-weaknesses" title="Permanent link">¶</a></h3>
+<p>Enemy type влияет на оптимальное оружие.</p>
+<p>Возникает:
+- enemy recognition;
+- правильный weapon choice;
+- ammo economy.</p>
+<h3 id="524">52.4. Необычные предметы<a class="headerlink" href="#524" title="Permanent link">¶</a></h3>
+<h4 id="axe">Axe<a class="headerlink" href="#axe" title="Permanent link">¶</a></h4>
+<p>Используется не только в бою, но и для interaction с окружением.</p>
+<h4 id="fire-extinguisher">Fire Extinguisher<a class="headerlink" href="#fire-extinguisher" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>тушит пожары;</p>
+</li>
+<li>
+<p>работает как weapon против fire enemies.</p>
+</li>
+</ul>
+<p>Хороший пример:
+предмет существует в мире и одновременно имеет gameplay function.</p>
+<h4 id="dog-collars">Dog Collars<a class="headerlink" href="#dog-collars" title="Permanent link">¶</a></h4>
+<p>Позволяют подчинять собачьих существ и использовать их как companion/weapon-like resource.</p>
+<h3 id="525">52.5. Мир<a class="headerlink" href="#525" title="Permanent link">¶</a></h3>
+<p>Заметно больше Doom 3-style worldbuilding:
+- UAC base;
+- scientists;
+- Marines/civilians;
+- terminals;
+- emails;
+- security codes;
+- hub.</p>
+<h3 id="526-rpg">52.6. RPG<a class="headerlink" href="#526-rpg" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>XP;</p>
+</li>
+<li>
+<p>level ups;</p>
+</li>
+<li>
+<p>health/armor/stat growth;</p>
+</li>
+<li>
+<p>credits;</p>
+</li>
+<li>
+<p>upgrades.</p>
+</li>
+</ul>
+<p>Не глубокая build-RPG, но progression постоянно награждает игрока.</p>
+<h3 id="527-humor">52.7. Humor<a class="headerlink" href="#527-humor" title="Permanent link">¶</a></h3>
+<p>Тон заметно легче DOOM 3.</p>
+<p>Есть самоирония над:
+- keycards;
+- terminals;
+- UAC;
+- компьютерной бюрократией.</p>
+<h3 id="528">52.8. Слабости<a class="headerlink" href="#528" title="Permanent link">¶</a></h3>
+<p>Главная потеря:</p>
+<h2 id="realtime-doom-movement">нет realtime Doom movement.<a class="headerlink" href="#realtime-doom-movement" title="Permanent link">¶</a></h2>
+<p>Нет:
+- circle-strafe;
+- projectile dancing;
+- realtime space control.</p>
+<p>Также возможен RPG sponge effect:
+оружие не всегда ощущается настолько мощным, как в classic Doom.</p>
+<h3 id="529">52.9. Итог<a class="headerlink" href="#529" title="Permanent link">¶</a></h3>
+<p>Как classic Doom combat — не замена.</p>
+<p>Как mobile adaptation — очень умная игра.</p>
+<p>Ключевой принцип:</p>
+<blockquote>
+<p><strong>не заставлять телефон плохо притворяться PC; изменить игру под устройство.</strong></p>
+</blockquote>
+<hr/>
+<h2 id="53-id-mobile">53. id Mobile<a class="headerlink" href="#53-id-mobile" title="Permanent link">¶</a></h2>
+<p>Успех Doom RPG / Orcs &amp; Elves приводит к развитию мобильного подразделения id/Fountainhead.</p>
+<p>Это отдельная маленькая лаборатория:
+- feature phones;
+- iPhone;
+- альтернативные жанровые адаптации известных id IP.</p>
+<hr/>
+<h2 id="54-doom-ii-rpg">54. DOOM II RPG<a class="headerlink" href="#54-doom-ii-rpg" title="Permanent link">¶</a></h2>
+<p>2009/2010.</p>
+<p>Богаче первой по системам.</p>
+<p>Добавляет:
+- 3 playable characters;
+- больше stats;
+- loot;
+- hacking;
+- vending economy;
+- mini-games;
+- Sentry Bots;
+- enemy variants;
+- bosses;
+- больше adventure-layer.</p>
+<h3 id="541">54.1. Три персонажа<a class="headerlink" href="#541" title="Permanent link">¶</a></h3>
+<p>Character select влияет на starting characteristics и местами dialogue.</p>
+<p>Для DOOM это необычно:
+официальный character-selection слой.</p>
+<h3 id="542-hacking-systemic-interaction">54.2. Hacking и systemic interaction<a class="headerlink" href="#542-hacking-systemic-interaction" title="Permanent link">¶</a></h3>
+<p>Можно:
+- взламывать security;
+- получать restricted access;
+- снижать цены;
+- использовать Sentry Bots.</p>
+<p>Появляется лёгкий «mobile immersive-sim-like» слой.</p>
+<h3 id="543-holy-water-pistol">54.3. Holy Water Pistol<a class="headerlink" href="#543-holy-water-pistol" title="Permanent link">¶</a></h3>
+<p>Одна из самых запоминающихся идей.</p>
+<p>Святая вода:
+- пугает demons;
+- может лечить;
+- пополняется из водных источников/пластин plumbing.</p>
+<p>Очень странно, но имеет сильную identity.</p>
+<h3 id="544-soul-cube">54.4. Soul Cube<a class="headerlink" href="#544-soul-cube" title="Permanent link">¶</a></h3>
+<p>Возвращает Doom 3 material в совершенно другую mobile RPG continuity.</p>
+<h3 id="545">54.5. Итог<a class="headerlink" href="#545" title="Permanent link">¶</a></h3>
+<p>Первая Doom RPG:
+- чище концептуально;
+- исторически важнее.</p>
+<p>DOOM II RPG:
+- богаче;
+- разнообразнее;
+- сильнее как полноценная игра;
+- но ближе к systems-bloat.</p>
+<hr/>
+<h2 id="55-doom-resurrection">55. DOOM Resurrection<a class="headerlink" href="#55-doom-resurrection" title="Permanent link">¶</a></h2>
+<p>2009, iPhone.</p>
+<p>Escalation Studios.</p>
+<p>Ключевые:
+- Tom Mustaine — game/design direction;
+- John Carmack — technical director;
+- Katherine Anna Kang — production/design.</p>
+<p>Использует Doom 3 assets.</p>
+<h3 id="551">55.1. Жанр<a class="headerlink" href="#551" title="Permanent link">¶</a></h3>
+<p>Rail shooter.</p>
+<p>Формула:</p>
+<div class="highlight"><pre><span></span><code>Doom 3
++
+House of the Dead
++
+iPhone accelerometer
+</code></pre></div>
+<h3 id="552-rail-shooter">55.2. Почему rail shooter<a class="headerlink" href="#552-rail-shooter" title="Permanent link">¶</a></h3>
+<p>Обычный touchscreen aiming:
+- палец закрывает врага;
+- gunfeel ухудшается;
+- свободное FPS movement неудобно.</p>
+<p>Решение:
+- движение по маршруту scripted;
+- aim через accelerometer;
+- fire/reload/dodge/cover остаются у игрока.</p>
+<p>Опять platform-first design.</p>
+<h3 id="553">55.3. Итог<a class="headerlink" href="#553" title="Permanent link">¶</a></h3>
+<p>Как mobile arcade shooter — умно.</p>
+<p>Как DOOM — слабее RPG-ветки, потому что игрок теряет ownership пространства.</p>
+<hr/>
+<h2 id="56-doom-classic-iphone">56. DOOM Classic iPhone<a class="headerlink" href="#56-doom-classic-iphone" title="Permanent link">¶</a></h2>
+<p>2009.</p>
+<p>Carmack активно участвует в попытке перенести настоящую classic Doom на touchscreen.</p>
+<p>Важна как демонстрация предела virtual controls.</p>
+<p>Технически:
+- полноценная classic campaign;
+- mobile UI;
+- saves;
+- multiplayer experiments/options.</p>
+<p>Но для mastery:
+physical controller / keyboard+mouse значительно лучше.</p>
+<hr/>
+<h2 id="57-iosandroid-ports-2019">57. Современные iOS/Android ports 2019<a class="headerlink" href="#57-iosandroid-ports-2019" title="Permanent link">¶</a></h2>
+<p>Bethesda выпускает DOOM и DOOM II на modern mobile.</p>
+<p>Это уже preservation lineage, а не id Mobile experimentation.</p>
+<p>Стартовая версия была частью Unity rerelease family.</p>
+<p>Позднее:
+- controller support;
+- многочисленные patches;
+- better performance;
+- add-ons.</p>
+<hr/>
+<h2 id="58-mighty-doom">58. Mighty DOOM<a class="headerlink" href="#58-mighty-doom" title="Permanent link">¶</a></h2>
+<p>Soft launch 2021, global release 2023.</p>
+<p>Alpha Dog Games.</p>
+<p>Top-down roguelite / Archero-like.</p>
+<h3 id="581">58.1. Управление<a class="headerlink" href="#581" title="Permanent link">¶</a></h3>
+<p>One-finger movement.
+Стрельба во многом автоматическая.</p>
+<p>Это опять правильное наблюдение:
+не надо насиловать обычный twin-stick/FPS input на телефоне.</p>
+<h3 id="582-meta-progression">58.2. Meta progression<a class="headerlink" href="#582-meta-progression" title="Permanent link">¶</a></h3>
+<p>Вокруг arcade kernel:
+- gear;
+- rarity;
+- currencies;
+- permanent upgrades;
+- grind;
+- F2P economy.</p>
+<h3 id="583-classic-doom-philosophy">58.3. Главный конфликт с classic Doom philosophy<a class="headerlink" href="#583-classic-doom-philosophy" title="Permanent link">¶</a></h3>
+<p>Classic Doom mastery:</p>
+<div class="highlight"><pre><span></span><code>не мог
+↓
+научился
+↓
+может
+</code></pre></div>
+<p>Mighty Doom:</p>
+<div class="highlight"><pre><span></span><code>не мог
+↓
+пофармил
+↓
+стал сильнее численно
+</code></pre></div>
+<p>Это размывает чистую player mastery.</p>
+<h3 id="584">58.4. Судьба<a class="headerlink" href="#584" title="Permanent link">¶</a></h3>
+<p>Серверы отключены в августе 2024.</p>
+<p>Игра фактически перестала существовать официально.</p>
+<p>Хорошая иллюстрация проблемы always-online preservation.</p>
+<hr/>
+<h2 id="59-doom-rpg-preservation">59. Doom RPG preservation<a class="headerlink" href="#59-doom-rpg-preservation" title="Permanent link">¶</a></h2>
+<p>Community reverse-engineering спасла обе RPG-игры.</p>
+<p>Существуют:
+- DoomRPG-RE;
+- DoomIIRPG-RE;
+- отдельные попытки GZDoom recreation/remake.</p>
+<p>Это ещё одна демонстрация общей закономерности DOOM:
+community часто сохраняет то, что коммерческая инфраструктура уже бросила.</p>
+<hr/>
+<h2 id="60-unity-doomdoom-ii-2019">60. Unity-переиздание DOOM/DOOM II 2019<a class="headerlink" href="#60-unity-doomdoom-ii-2019" title="Permanent link">¶</a></h2>
+<p>Важно:
+DOOM не переписали как обычную Unity-game.</p>
+<p>Classic Doom core жил внутри modern Unity wrapper.</p>
+<p>Unity использовалась для:
+- platform abstraction;
+- UI;
+- input;
+- platform SDK;
+- modern packaging.</p>
+<p>Грубо:</p>
+<div class="highlight"><pre><span></span><code>DOOM core
+↓
+Unity shell
+↓
+PS4 / Xbox / Switch / iOS / Android / PC
+</code></pre></div>
+<hr/>
+<h2 id="61-unity-launch-problems">61. Unity launch problems<a class="headerlink" href="#61-unity-launch-problems" title="Permanent link">¶</a></h2>
+<p>Стартовая версия имела:
+- Bethesda.net login requirement;
+- неправильный aspect/scaling;
+- lighting differences;
+- audio/music issues;
+- 35 FPS presentation на 60 Hz;
+- неприятный judder.</p>
+<h3 id="611-35-fps-60-hz">61.1. 35 FPS / 60 Hz<a class="headerlink" href="#611-35-fps-60-hz" title="Permanent link">¶</a></h3>
+<p>Оригинальная Doom logic:
+<strong>35 tics/sec</strong>.</p>
+<p>На старом ~70 Hz output:</p>
+<div class="highlight"><pre><span></span><code>70 / 35
+=
+ровно 2 refresh на game frame
+</code></pre></div>
+<p>На 60 Hz:</p>
+<div class="highlight"><pre><span></span><code>60 / 35
+=
+нецелое число
+</code></pre></div>
+<p>Получается uneven frame persistence → judder.</p>
+<p>Правильное решение:
+оставить simulation 35 Hz, а renderer интерполировать до modern refresh.</p>
+<p>Позднее Unity-port именно к этому приходит.</p>
+<h3 id="612-bethesdanet-scandal">61.2. Bethesda.net scandal<a class="headerlink" href="#612-bethesdanet-scandal" title="Permanent link">¶</a></h3>
+<p>Запуск DOOM 1993 внезапно требовал account login.</p>
+<p>После негативной реакции Bethesda быстро переводит его в optional.</p>
+<p>Символически особенно нелепо для игры с открытым с 1997 года source.</p>
+<h3 id="613-aspect-scaling">61.3. Aspect / scaling<a class="headerlink" href="#613-aspect-scaling" title="Permanent link">¶</a></h3>
+<p>Стартовая presentation не давала ни корректного исторического 4:3, ни хорошего современного widescreen.</p>
+<p>Это было одной из самых заметных проблем launch build.</p>
+<h3 id="614-lightingaudio">61.4. Lighting/audio<a class="headerlink" href="#614-lightingaudio" title="Permanent link">¶</a></h3>
+<p>Часть lighting была слишком яркой/неточной.</p>
+<p>Музыка и звуки тоже имели speed/quality differences.</p>
+<p>Для Doom это важно:
+lighting и sound — часть level readability/atmosphere, а не просто косметика.</p>
+<hr/>
+<h2 id="62-updates-unity-port-2020">62. Большие updates Unity-port 2020<a class="headerlink" href="#62-updates-unity-port-2020" title="Permanent link">¶</a></h2>
+<p>Nerve серьёзно дорабатывает релиз.</p>
+<p>Добавляются:
+- 60 FPS;
+- quicksave;
+- quickload;
+- level select;
+- quick weapon selection;
+- brightness;
+- aspect options;
+- настоящий widescreen;
+- high-refresh;
+- add-ons.</p>
+<p>В итоге launch-disaster превращается в очень хороший официальный console/mobile Doom.</p>
+<hr/>
+<h2 id="63-unity-official-add-ons">63. Unity Official Add-ons<a class="headerlink" href="#63-unity-official-add-ons" title="Permanent link">¶</a></h2>
+<p>Самое важное наследие Unity release.</p>
+<p>В меню появляется curated library community content.</p>
+<p>Примерная идея:</p>
+<div class="highlight"><pre><span></span><code>Main Menu
+↓
+Add-ons
+↓
+community WAD
+↓
+Play
+</code></pre></div>
+<p>На консолях это огромный культурный сдвиг.</p>
+<p>Раньше community Doom практически требовала PC/source-port literacy.</p>
+<p>Теперь:
+Switch/PS4/Xbox player может одним меню открыть curated WAD.</p>
+<h3 id="631-dehacked-support">63.1. DeHackEd support<a class="headerlink" href="#631-dehacked-support" title="Permanent link">¶</a></h3>
+<p>Позднее поддержка расширяется.</p>
+<p>Это позволяет официально распространять более сложные conversions вроде REKKR.</p>
+<h3 id="632">63.2. Главный культурный эффект<a class="headerlink" href="#632" title="Permanent link">¶</a></h3>
+<p>Bethesda начинает официально относиться к community как к части истории Doom, а не внешнему мод-сценарию.</p>
+<hr/>
+<h2 id="64-unity-port">64. Unity-port — итоговая оценка<a class="headerlink" href="#64-unity-port" title="Permanent link">¶</a></h2>
+<h3 id="launch-2019">Launch 2019<a class="headerlink" href="#launch-2019" title="Permanent link">¶</a></h3>
+<p>Плохой:
+- account bullshit;
+- judder;
+- presentation/audio errors.</p>
+<h3 id="patches">После patches<a class="headerlink" href="#patches" title="Permanent link">¶</a></h3>
+<p>Хороший:
+- 60 FPS;
+- proper widescreen;
+- modern controls;
+- add-ons;
+- couch play.</p>
+<h3 id="pc">На PC<a class="headerlink" href="#pc" title="Permanent link">¶</a></h3>
+<p>Специализированные ports всё равно лучше:
+- Chocolate — historical;
+- DSDA — compatibility/speedrun;
+- GZDoom — advanced mods.</p>
+<h3 id="switch">На консоли/Switch<a class="headerlink" href="#switch" title="Permanent link">¶</a></h3>
+<p>Очень удобный official default.</p>
+<hr/>
+<h2 id="65-nightdive-doom-64-2020">65. Nightdive и DOOM 64 (2020)<a class="headerlink" href="#65-nightdive-doom-64-2020" title="Permanent link">¶</a></h2>
+<p>Ключевой человек:
+<strong>Samuel “Kaiser” Villarreal</strong>.</p>
+<p>История:</p>
+<div class="highlight"><pre><span></span><code>fan Doom 64
+↓
+reverse engineering
+↓
+Doom 64: Absolution
+↓
+Doom 64 EX
+↓
+KEX
+↓
+Nightdive
+↓
+official Doom 64 remaster
+</code></pre></div>
+<p>Идеальный пример:
+community expert возвращается внутрь официального IP.</p>
+<hr/>
+<h2 id="66-kex-philosophy">66. KEX philosophy<a class="headerlink" href="#66-kex-philosophy" title="Permanent link">¶</a></h2>
+<p>KEX — modern low-level platform/framework layer.</p>
+<p>Идея:
+- сохранить original game logic;
+- заменить platform-specific renderer/input/audio/filesystem parts;
+- дать modern platform support.</p>
+<p>Это особенно подходит preservation/remaster.</p>
+<p>В отличие от тяжёлого general-purpose engine, KEX не требует перестраивать старую игру вокруг новой architecture.</p>
+<hr/>
+<h2 id="67-doom-64-2020">67. Что меняет Doom 64 2020<a class="headerlink" href="#67-doom-64-2020" title="Permanent link">¶</a></h2>
+<p>Добавляет:
+- modern platforms;
+- widescreen;
+- 60 FPS;
+- normal saves;
+- modern input;
+- modern graphics APIs.</p>
+<p>Не добавляет:
+- jump;
+- gameplay-breaking modern abilities;
+- remake art.</p>
+<p>Правильный remaster principle:</p>
+<blockquote>
+<p>отличать ограничение старой платформы от намеренной части game design.</p>
+</blockquote>
+<p>Passwords — ограничение.
+No-jump — фундамент карт.</p>
+<hr/>
+<h2 id="68-the-lost-levels">68. The Lost Levels<a class="headerlink" href="#68-the-lost-levels" title="Permanent link">¶</a></h2>
+<p>6 новых maps:
+- Plant Ops;
+- Evil Sacrifice;
+- Cold Grounds;
+- Wretched Vats;
+- Thy Glory;
+- Final Judgement.</p>
+<p>Продолжают историю после оригинального финала.</p>
+<p>Ещё сильнее закрепляют Doomguy как воина вечной войны с Hell.</p>
+<hr/>
+<h2 id="69-doom-64-2020">69. Doom 64 2020 — итог<a class="headerlink" href="#69-doom-64-2020" title="Permanent link">¶</a></h2>
+<p>Один из самых правильных Nightdive remasters:</p>
+<ul>
+<li>
+<p>высокая fidelity;</p>
+</li>
+<li>
+<p>modern QoL;</p>
+</li>
+<li>
+<p>no gameplay vandalism;</p>
+</li>
+<li>
+<p>new content;</p>
+</li>
+<li>
+<p>сохранение art direction.</p>
+</li>
+</ul>
+<p>Главный культурный эффект:
+массовая аудитория наконец узнаёт, что Doom 64 была не «портом Doom на N64», а полноценной третьей classic Doom.</p>
+<hr/>
+<h2 id="70-doom-doom-ii-kex-2024">70. DOOM + DOOM II — KEX (2024)<a class="headerlink" href="#70-doom-doom-ii-kex-2024" title="Permanent link">¶</a></h2>
+<p>Дата:
+<strong>8 августа 2024</strong>.</p>
+<p>Nightdive + id/Bethesda.</p>
+<p>Это уже не просто remaster.</p>
+<p>Это:</p>
+<h2 id="classic-doom">официальный современный дом classic Doom.<a class="headerlink" href="#classic-doom" title="Permanent link">¶</a></h2>
+<hr/>
+<h2 id="71-doom-doom-ii">71. Встроенный контент DOOM + DOOM II<a class="headerlink" href="#71-doom-doom-ii" title="Permanent link">¶</a></h2>
+<ul>
+<li>
+<p>DOOM;</p>
+</li>
+<li>
+<p>DOOM II;</p>
+</li>
+<li>
+<p>Thy Flesh Consumed;</p>
+</li>
+<li>
+<p>Master Levels;</p>
+</li>
+<li>
+<p>TNT;</p>
+</li>
+<li>
+<p>Plutonia;</p>
+</li>
+<li>
+<p>No Rest for the Living;</p>
+</li>
+<li>
+<p>SIGIL;</p>
+</li>
+<li>
+<p>Legacy of Rust;</p>
+</li>
+<li>
+<p>новый deathmatch content.</p>
+</li>
+</ul>
+<p>DOOM 64 остаётся отдельной игрой, что логично.</p>
+<hr/>
+<h2 id="72-kex-">72. Технология KEX-релиза<a class="headerlink" href="#72-kex-" title="Permanent link">¶</a></h2>
+<p>Nightdive получает существующую modern rerelease lineage, включая Unity-derived код, и серьёзно перерабатывает её.</p>
+<p>Основные направления:
+- cleanup;
+- modern renderer;
+- increased limits;
+- modern platform layer;
+- support community-derived standards.</p>
+<p>Поддерживаемая линия:
+- Boom;
+- MBF;
+- MBF21;
+- ID24.</p>
+<hr/>
+<h2 id="73-multiplayer">73. Multiplayer<a class="headerlink" href="#73-multiplayer" title="Permanent link">¶</a></h2>
+<p>Наконец полноценная modern official Doom:
+- online;
+- cross-platform;
+- co-op;
+- deathmatch;
+- split-screen.</p>
+<p>Очень логичный финал для игры, популяризировавшей deathmatch.</p>
+<hr/>
+<h2 id="74-performance">74. Performance<a class="headerlink" href="#74-performance" title="Permanent link">¶</a></h2>
+<ul>
+<li>
+<p>60 FPS baseline;</p>
+</li>
+<li>
+<p>до 4K/120 на modern systems;</p>
+</li>
+<li>
+<p>modern controller;</p>
+</li>
+<li>
+<p>keyboard/mouse.</p>
+</li>
+</ul>
+<p>Fundamental simulation остаётся Doom-like; высокая presentation frequency не должна менять game speed.</p>
+<hr/>
+<h2 id="75-mod-browser">75. Mod browser<a class="headerlink" href="#75-mod-browser" title="Permanent link">¶</a></h2>
+<p>Следующая ступень после Unity Add-ons.</p>
+<p>Теперь существуют:
+- curated Featured Mods;
+- community publication/browsing;
+- гораздо более открытая official mod ecosystem.</p>
+<p>Практически:</p>
+<h2 id="doom-workshop">официальный Doom Workshop.<a class="headerlink" href="#doom-workshop" title="Permanent link">¶</a></h2>
+<p>Идея, которая технически могла быть реализована ещё в эпоху original Xbox, но культурно появилась значительно позже.</p>
+<hr/>
+<h2 id="76">76. Музыка<a class="headerlink" href="#76" title="Permanent link">¶</a></h2>
+<p>В KEX package можно выбирать:
+- original MIDI;
+- modern Andrew Hulshult interpretations.</p>
+<p>Хорошая remaster philosophy:
+не заменять старое, а добавлять опцию.</p>
+<hr/>
+<h2 id="77-preservation">77. Preservation<a class="headerlink" href="#77-preservation" title="Permanent link">¶</a></h2>
+<p>Новая версия не уничтожает старые.</p>
+<p>На PC можно сохранять доступ к:
+- historical/DOS versions;
+- previous Unity rerelease;
+- KEX release.</p>
+<p>Это хороший preservation pattern.</p>
+<hr/>
+<h2 id="78-nightdive">78. Nightdive — главный исторический вывод<a class="headerlink" href="#78-nightdive" title="Permanent link">¶</a></h2>
+<p>Цепочка:</p>
+<div class="highlight"><pre><span></span><code>1997
+Carmack открывает source
+↓
+community reverse engineering / ports
+↓
+Kaiser изучает Doom 64
+↓
+Doom 64 EX
+↓
+KEX
+↓
+Nightdive
+↓
+официальный Doom 64
+↓
+официальные DOOM + DOOM II
+↓
+official engine поддерживает community standards
+и community mods
+</code></pre></div>
+<p>Главный смысл:</p>
+<blockquote>
+<p>id отдала technology людям; люди десятилетиями её сохраняли и развивали; затем лучшие community experts вернули official Doom владельцу IP в более здоровом состоянии.</p>
+</blockquote>
+<hr/>
+<h2 id="79-classic-doom">79. Главные дизайнерские принципы всей classic DOOM<a class="headerlink" href="#79-classic-doom" title="Permanent link">¶</a></h2>
+<h3 id="791">79.1. Простые правила могут создать огромную глубину<a class="headerlink" href="#791" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>movement
++
+несколько отличных guns
++
+role-based enemies
++
+space
++
+resource economy
+=
+очень глубокая игра
+</code></pre></div>
+<p>Не требуется десяток мета-систем.</p>
+<h3 id="792-space">79.2. Space — главный ресурс<a class="headerlink" href="#792-space" title="Permanent link">¶</a></h3>
+<p>Игрок управляет:
+- дистанцией;
+- LOS;
+- маршрутами;
+- crowd shape;
+- safe space.</p>
+<h3 id="793-enemy-role-ai">79.3. Enemy role важнее сложного AI<a class="headerlink" href="#793-enemy-role-ai" title="Permanent link">¶</a></h3>
+<p>Doom monsters просты по отдельности.</p>
+<p>Глубина возникает из того, что каждый задаёт разные spatial constraints.</p>
+<h3 id="794-enemy-threat-system-component">79.4. Лучший enemy — threat и system component одновременно<a class="headerlink" href="#794-enemy-threat-system-component" title="Permanent link">¶</a></h3>
+<p>Примеры:
+- infighting;
+- Cyberdemon как artillery;
+- Banshee как walking barrel;
+- Pain Elemental как растущая проблема;
+- Arch-vile как resurrection/priority;
+- Vassago как area denial.</p>
+<h3 id="795-optional-gameplay">79.5. Хороший секрет — optional gameplay<a class="headerlink" href="#795-optional-gameplay" title="Permanent link">¶</a></h3>
+<p>Лучшие примеры:
+- Demon Keys в DOOM 64;
+- No Rest;
+- лучшие Romero maps.</p>
+<p>Не просто:</p>
+<blockquote>
+<p>нажал стену → 4 health bonus.</p>
+</blockquote>
+<h3 id="796-mastery">79.6. Mastery принадлежит игроку<a class="headerlink" href="#796-mastery" title="Permanent link">¶</a></h3>
+<p>Classic DOOM почти не имеет character progression.</p>
+<div class="highlight"><pre><span></span><code>раньше не умел
+↓
+научился
+↓
+теперь могу
+</code></pre></div>
+<p>Это одна из чистейших форм mastery.</p>
+<h3 id="797-reuse-bloat">79.7. Reuse пространства лучше bloat<a class="headerlink" href="#797-reuse-bloat" title="Permanent link">¶</a></h3>
+<p>Хорошая схема:</p>
+<div class="highlight"><pre><span></span><code>пространство A
+↓
+событие
+↓
+возврат
+↓
+A теперь другая задача
+</code></pre></div>
+<p>Romero, Going Down и modern mapping показывают это особенно хорошо.</p>
+<h3 id="798">79.8. Больше контента ≠ лучше<a class="headerlink" href="#798" title="Permanent link">¶</a></h3>
+<p>DOOM II, TNT, Alien Vendetta, Legacy of Rust местами показывают:
+можно делать хороший контент и всё равно слишком долго не заканчивать карту.</p>
+<p>Для наших критериев особенно сильны:
+- Scythe;
+- Going Down;
+- No Rest;
+- лучшие компактные Romero maps.</p>
+<h3 id="799-atmosphere-core">79.9. Atmosphere можно менять, не ломая core<a class="headerlink" href="#799-atmosphere-core" title="Permanent link">¶</a></h3>
+<p>PS1 Doom и DOOM 64:</p>
+<div class="highlight"><pre><span></span><code>тот же быстрый movement
++
+тот же shotgun
++
+другой light/audio direction
+=
+совсем другое эмоциональное чтение
+</code></pre></div>
+<p>Хоррор не требует автоматически замедлять Doom.</p>
+<h3 id="7910-tooling">79.10. Tooling критично<a class="headerlink" href="#7910-tooling" title="Permanent link">¶</a></h3>
+<p>Romero DoomEd → Doom Builder → Ultimate Doom Builder.</p>
+<p>Чем быстрее loop:</p>
+<div class="highlight"><pre><span></span><code>построил
+↓
+запустил
+↓
+проверил
+↓
+передвинул
+</code></pre></div>
+<p>тем выше потенциальное качество mapping.</p>
+<hr/>
+<h2 id="80-classic-doom">80. Исторические фазы classic DOOM<a class="headerlink" href="#80-classic-doom" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>1993–1994
+id формирует язык
+↓
+DOOM / DOOM II
+
+1994–1996
+community учится писать на языке
+↓
+WADs / Master Levels / Final Doom
+
+1997+
+community получает engine
+↓
+source release
+
+1998–2000-е
+community формализует dialects
+↓
+Boom / MBF / ZDoom / PrBoom
+
+2000-е–2010-е
+Doom становится независимой художественной сценой
+↓
+Cacowards / megawads / GZDoom
+
+2010+
+официальная Doom снова начинает взаимодействовать с community
+↓
+No Rest / Unity Add-ons / SIGIL
+
+2024+
+официальная и community classic Doom почти срастаются
+↓
+Legacy of Rust / KEX / ID24 / mod browser
+</code></pre></div>
+<hr/>
+<h2 id="81">81. Главный итог<a class="headerlink" href="#81" title="Permanent link">¶</a></h2>
+<p>DOOM пережила эпоху не потому, что:
+- была первой;
+- у неё хороший pixel art;
+- существует nostalgia.</p>
+<p>Она пережила её потому, что фундамент оказался чрезвычайно чистым:</p>
+<div class="highlight"><pre><span></span><code>movement
++
+weapon rhythm
++
+enemy roles
++
+space
++
+resources
+</code></pre></div>
+<p>Этот фундамент можно:
+- сохранять почти идеально;
+- расширять;
+- превращать в horror;
+- превращать в slaughter;
+- превращать в puzzle;
+- превращать в meta-fiction;
+- переносить на телефон;
+- использовать через 30 лет с новыми monsters.</p>
+<p>Самый точный общий вывод:</p>
+<blockquote>
+<p><strong>DOOM — не только игра 1993 года. Это живой игровой формат.</strong></p>
+</blockquote>
+<p>История DOOM после source release уже намного длиннее периода, когда original id сама активно производила classic Doom.</p>
+<hr/>
+<h2 id="82_1">82. Что вынесено в отдельный будущий файл<a class="headerlink" href="#82_1" title="Permanent link">¶</a></h2>
+<p>Следующий большой блок истории:</p>
+<div class="highlight"><pre><span></span><code>DOOM 3
+↓
+Resurrection of Evil
+↓
+BFG Edition / Lost Mission
+↓
+RAGE / late Carmack-era id
+↓
+отменённый DOOM 4 / Call of Doom
+↓
+DOOM (2016)
+↓
+DOOM Eternal
+↓
+The Ancient Gods
+↓
+DOOM: The Dark Ages
+</code></pre></div>
+<p>Эту ветку лучше хранить отдельно как историю второй и современной эпохи DOOM, чтобы не смешивать classic id Tech 1 lineage с совершенно другой технологической и дизайнерской системой.</p>
+</article>
+</div>
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+</div>
+<button class="md-top md-icon" data-md-component="top" hidden="" type="button">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  К началу
+</button>
+</main>
+<footer class="md-footer">
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}, "version": null}</script>
+<script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+</body>
+</html>

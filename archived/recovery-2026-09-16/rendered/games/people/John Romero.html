@@ -1,0 +1,3044 @@
+<!DOCTYPE html>
+<html class="no-js" lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<link href="../../assets/images/favicon.png" rel="icon"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.7.7" name="generator"/>
+<title>John Romero - База данных</title>
+<link href="../../assets/stylesheets/main.ec1eaa64.min.css" rel="stylesheet"/>
+<link href="../../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+<script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+</head>
+<body data-md-color-accent="indigo" data-md-color-primary="indigo" data-md-color-scheme="default" dir="ltr">
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#john-romero">
+          Перейти к содержанию
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header md-header--shadow" data-md-component="header">
+<nav aria-label="Верхний колонтитул" class="md-header__inner md-grid">
+<a aria-label="База данных" class="md-header__button md-logo" data-md-component="logo" href="../.." title="База данных">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            База данных
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              John Romero
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Тёмная тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: light)" data-md-color-primary="indigo" data-md-color-scheme="default" id="__palette_0" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Тёмная тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+<input aria-label="Светлая тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-primary="indigo" data-md-color-scheme="slate" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_0" hidden="" title="Светлая тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+</form>
+<script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Поиск" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Поиск" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</label>
+<nav aria-label="Поиск" class="md-search__options">
+<button aria-label="Очистить" class="md-search__icon md-icon" tabindex="-1" title="Очистить" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+</nav>
+<div class="md-search__suggest" data-md-component="search-suggest"></div>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="" tabindex="0">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Инициализация поиска
+          </div>
+<ol class="md-search-result__list" role="presentation"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Навигация" class="md-nav md-nav--primary" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="База данных" class="md-nav__button md-logo" data-md-component="logo" href="../.." title="База данных">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+    База данных
+  </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" id="__nav_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Игры
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_1_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Игры
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="index.html">
+<span class="md-ellipsis">
+    
+  
+    Люди
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../devs/index.html">
+<span class="md-ellipsis">
+    
+  
+    Разработчики
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../series/index.html">
+<span class="md-ellipsis">
+    
+  
+    Серии
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../technology/index.html">
+<span class="md-ellipsis">
+    
+  
+    Технологии
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../personal/index.html">
+<span class="md-ellipsis">
+    
+  
+    Личное
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Содержание" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#0-john-romero">
+<span class="md-ellipsis">
+      
+        0. John Romero в одном абзаце
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#1">
+<span class="md-ellipsis">
+      
+        1. Краткая карточка
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#2">
+<span class="md-ellipsis">
+      
+        2. Карьерная хронология — быстрый индекс
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#3">
+<span class="md-ellipsis">
+      
+        3. Карьерная карта — крупные эпохи
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#4-id">
+<span class="md-ellipsis">
+      
+        4. Главный тезис и путь до id
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#5-commander-keen-id-software">
+<span class="md-ellipsis">
+      
+        5. Commander Keen и рождение id Software
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#6-wolfenstein-3d-fps-production">
+<span class="md-ellipsis">
+      
+        6. Wolfenstein 3D и формирование FPS-production
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#7-doom-doom-ii-id">
+<span class="md-ellipsis">
+      
+        7. DOOM, DOOM II и внешняя экосистема id
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#8-quake-id">
+<span class="md-ellipsis">
+      
+        8. Quake и конец первой id
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#9-ion-storm-daikatana-deus-ex">
+<span class="md-ellipsis">
+      
+        9. Ion Storm, Daikatana и Deus Ex
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#10-ion-storm-monkeystone-midway">
+<span class="md-ellipsis">
+      
+        10. После Ion Storm: Monkeystone и Midway
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#11-mmo-gazillion-social-era">
+<span class="md-ellipsis">
+      
+        11. MMO, Gazillion и social-era
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#12-romero-games-fps">
+<span class="md-ellipsis">
+      
+        12. Romero Games и возвращение к классическому FPS
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#13">
+<span class="md-ellipsis">
+      
+        13. Ретроспектива: отношения, роли, сильные и слабые стороны
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#14-romero">
+<span class="md-ellipsis">
+      
+        14. Итоговая модель Romero
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#15">
+<span class="md-ellipsis">
+      
+        15. Навигационные выводы — быстрые связи между эпохами
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<h1 id="john-romero">John Romero<a class="headerlink" href="#john-romero" title="Permanent link">¶</a></h1>
+<h3 id="john-romero_1">John Romero — история карьеры, игр и дизайнерской ДНК<a class="headerlink" href="#john-romero_1" title="Permanent link">¶</a></h3>
+<blockquote>
+<p><strong>Назначение файла:</strong> долговременная база знаний по John Romero.  </p>
+<p>Структура приведена к формату базы Arkane: крупные эпохи — отдельные главы, исходные 157 пунктов — вложенные разделы, а короткие акцентные заголовки — локальные подзаголовки.</p>
+<p><strong>Исходное название:</strong> John Romero — полный профиль.
+Ниже свёл в один нормализованный профиль. Его уже можно сохранять как базовый markdown-документ по Romero.</p>
+</blockquote>
+<h3 id="_1">Как читать эту базу<a class="headerlink" href="#_1" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p><strong>Исходный текст сохранён полностью:</strong> содержательные строки из загруженного файла не удалялись; изменена только Markdown-иерархия заголовков и порядок крупных блоков.</p>
+</li>
+<li>
+<p><strong>Крупные главы</strong> группируют материал по эпохам и компаниям, чтобы карьерная причинно-следственная линия читалась как история, а не как 157 равноправных заметок.</p>
+</li>
+<li>
+<p><strong>Оригинальная нумерация 1–157 сохранена</strong> внутри глав — по ней легко сопоставить новую базу с исходником.</p>
+</li>
+<li>
+<p><strong>Быстрый индекс</strong> ниже — новая навигационная надстройка; он не заменяет подробный исходный текст.</p>
+</li>
+</ul>
+<hr/>
+<h2 id="0-john-romero">0. John Romero в одном абзаце<a class="headerlink" href="#0-john-romero" title="Permanent link">¶</a></h2>
+<p>John Romero — один из основателей id Software и один из ключевых людей раннего PC-FPS. Его сильнейшая зона — не graphics architecture уровня John Carmack, а превращение технологии в игру: production tools, редакторы, level design, movement, flow, encounter rhythm, deathmatch и быстрый playtest-loop. В ранней id эта связка дала Commander Keen, Wolfenstein 3D, DOOM и Quake; в Ion Storm абсолютная дизайнерская свобода обнажила слабые стороны Romero в scope и large-team production на Daikatana, но одновременно именно он создал условия, в которых Warren Spector смог сделать Deus Ex. Поздняя карьера прошла через mobile, MMO и social games, а с SIGIL и SIGIL II Romero вернулся к исходной силе — плотному дизайну уровней внутри ограниченного ruleset. На 2026 год Romero Games продолжает работу над современным FPS после rescope, а сам Romero параллельно делает DOOM II-проект HELLION.</p>
+<hr/>
+<h2 id="1">1. Краткая карточка<a class="headerlink" href="#1" title="Permanent link">¶</a></h2>
+<p><strong>Полное имя:</strong> John Romero  </p>
+<p><strong>Основная роль в истории игр:</strong> программист, tools programmer, level designer, game designer, project lead, producer, сооснователь id Software и Ion Storm  </p>
+<p><strong>Главные проекты:</strong> Commander Keen, Wolfenstein 3D, DOOM, DOOM II, Quake, Daikatana, SIGIL, SIGIL II  </p>
+<p><strong>Главная специализация:</strong> превращение технической возможности в непосредственно интересный игровой процесс и пространство  </p>
+<p><strong>Ключевая дизайнерская область:</strong> level design, FPS movement, flow, exploration, deathmatch  </p>
+<p><strong>Ключевая инженерная область:</strong> игровые редакторы и production tools  </p>
+<p><strong>Ключевой исторический партнёр:</strong> John Carmack  </p>
+<p><strong>Другой важнейший партнёр:</strong> Tom Hall  </p>
+<p><strong>Текущая студия:</strong> Romero Games  </p>
+<p><strong>Текущее направление на 2026 год:</strong> новый современный FPS + классический Doom II-проект HELLION  </p>
+<p><strong>Поздняя авторская линия:</strong> SIGIL → SIGIL II → HELLION → заявленный в перспективе новый Quake episode</p>
+<hr/>
+<hr/>
+<h2 id="2">2. Карьерная хронология — быстрый индекс<a class="headerlink" href="#2" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Период</th>
+<th>Проект / этап</th>
+<th>Роль Romero</th>
+<th>Статус</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1967</td>
+<td>Рождение John Romero</td>
+<td>—</td>
+<td>биографическая точка</td>
+</tr>
+<tr>
+<td>1987</td>
+<td>Origin Systems</td>
+<td>программирование / портирование</td>
+<td>работа в индустрии</td>
+</tr>
+<tr>
+<td>1988</td>
+<td>Dangerous Dave</td>
+<td>автор / программист / tools</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>1989</td>
+<td>Softdisk</td>
+<td>программист</td>
+<td>работа</td>
+</tr>
+<tr>
+<td>1990</td>
+<td>Gamer's Edge</td>
+<td>организация игрового подразделения</td>
+<td>создано</td>
+</tr>
+<tr>
+<td>начало 1991</td>
+<td>id Software</td>
+<td>сооснователь</td>
+<td>основана</td>
+</tr>
+<tr>
+<td>ранние 1990-е</td>
+<td>Commander Keen</td>
+<td>programming / tools / levels / production</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>ранние 1990-е</td>
+<td>Hovertank One / Catacomb 3-D</td>
+<td>production / programming</td>
+<td>выпущены</td>
+</tr>
+<tr>
+<td>1990-е</td>
+<td>Wolfenstein 3D / Spear of Destiny</td>
+<td>tools / levels / production</td>
+<td>выпущены</td>
+</tr>
+<tr>
+<td>1990-е</td>
+<td>DOOM / DOOM II</td>
+<td>tools / level design / production / multiplayer</td>
+<td>выпущены</td>
+</tr>
+<tr>
+<td>1990-е</td>
+<td>Heretic / Hexen / Final Doom ecosystem</td>
+<td>executive production / external development / community</td>
+<td>выпущены</td>
+</tr>
+<tr>
+<td>1996</td>
+<td>Quake / уход из id</td>
+<td>QuakeEd / levels / design</td>
+<td>Quake выпущен; Romero уходит</td>
+</tr>
+<tr>
+<td>1996–2001</td>
+<td>Ion Storm</td>
+<td>сооснователь / studio leadership</td>
+<td>Dallas закрыт в 2001</td>
+</tr>
+<tr>
+<td>2000</td>
+<td>Daikatana</td>
+<td>project lead / design</td>
+<td>выпущена</td>
+</tr>
+<tr>
+<td>после 2001</td>
+<td>Monkeystone Games</td>
+<td>сооснователь / programmer</td>
+<td>маленькие и mobile-проекты</td>
+</tr>
+<tr>
+<td>2003</td>
+<td>Midway</td>
+<td>разработка / leadership</td>
+<td>Gauntlet: Seven Sorrows — ушёл до релиза</td>
+</tr>
+<tr>
+<td>конец 2000-х</td>
+<td>Slipgate Ironworks / Gazillion / MMO</td>
+<td>founder / MMO direction</td>
+<td>несколько проектов не вышли</td>
+</tr>
+<tr>
+<td>2010</td>
+<td>Ravenwood Fair</td>
+<td>перепроектирование / creative development</td>
+<td>крупный social-hit</td>
+</tr>
+<tr>
+<td>2015</td>
+<td>Romero Games</td>
+<td>сооснователь / game director</td>
+<td>основана в Galway</td>
+</tr>
+<tr>
+<td>2016</td>
+<td>E1M8B / E1M4B</td>
+<td>возвращение к DOOM mapping</td>
+<td>выпущены</td>
+</tr>
+<tr>
+<td>2019</td>
+<td>SIGIL</td>
+<td>level designer / project lead</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2022</td>
+<td>One Humanity</td>
+<td>DOOM II map</td>
+<td>выпущена</td>
+</tr>
+<tr>
+<td>2023</td>
+<td>SIGIL II</td>
+<td>level designer / project lead</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2025–2026</td>
+<td>Новый FPS Romero Games</td>
+<td>game director</td>
+<td>funding loss → rescope → разработка продолжается</td>
+</tr>
+<tr>
+<td>2026</td>
+<td>HELLION</td>
+<td>DOOM II project</td>
+<td>в разработке</td>
+</tr>
+<tr>
+<td>перспектива</td>
+<td>Новый Quake episode</td>
+<td>заявленный проект</td>
+<td>не основной текущий релиз</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="3">3. Карьерная карта — крупные эпохи<a class="headerlink" href="#3" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>Apple II / Origin
+↓
+Softdisk / Gamer's Edge
+↓
+Commander Keen → id Software
+↓
+Wolfenstein 3D
+↓
+DOOM / DOOM II
+↓
+Quake
+↓
+Ion Storm → Daikatana / создание условий для Deus Ex
+↓
+Monkeystone / Midway
+↓
+MMO / Gazillion / social games
+↓
+Romero Games
+↓
+SIGIL → SIGIL II → HELLION / новый FPS
+</code></pre></div>
+<hr/>
+<h2 id="4-id">4. Главный тезис и путь до id<a class="headerlink" href="#4-id" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>От Apple II и Origin до Softdisk, Gamer's Edge и встречи с Carmack.</p>
+</blockquote>
+<h3 id="1-romero">1. Главный тезис о Romero<a class="headerlink" href="#1-romero" title="Permanent link">¶</a></h3>
+<p>Неправильное упрощение:</p>
+<div class="highlight"><pre><span></span><code>John Carmack
+→ гений
+→ написал движки
+
+John Romero
+→ чувак с длинными волосами
+→ сделал несколько карт
+→ зазвездился
+→ сделал Daikatana
+</code></pre></div>
+<p>Это сильно искажает историю.</p>
+<p>Гораздо точнее:</p>
+<h4 id="john-romero-id-software">John Romero был вторым двигателем ранней id Software.<a class="headerlink" href="#john-romero-id-software" title="Permanent link">¶</a></h4>
+<p>Carmack обычно отвечал на вопрос:</p>
+<blockquote>
+<p>Что компьютер технически способен сделать?</p>
+</blockquote>
+<p>Romero:</p>
+<blockquote>
+<p>Что игроку будет интересно делать внутри этой технологии?</p>
+</blockquote>
+<p>Его реальная область значительно шире level design:</p>
+<div class="highlight"><pre><span></span><code>programming
++
+tools
++
+editors
++
+level design
++
+gameplay
++
+production
++
+multiplayer
++
+external development
++
+community
+</code></pre></div>
+<p>Ключевая формула ранней id:</p>
+<div class="highlight"><pre><span></span><code>Carmack
+↓
+расширяет пространство технически возможного
+
+Romero
+↓
+моментально превращает новую возможность
+в playable game
+
+Hall
+↓
+добавляет мир / персонажей / fiction
+
+Adrian Carmack
+↓
+создаёт визуальную идентичность
+</code></pre></div>
+<p>Когда эта система работала синхронно, появились:</p>
+<div class="highlight"><pre><span></span><code>Commander Keen
+Wolfenstein 3D
+DOOM
+</code></pre></div>
+<p>На Quake синхронизация ломается.</p>
+<hr/>
+<h3 id="2-romero-id">2. Romero до id<a class="headerlink" href="#2-romero-id" title="Permanent link">¶</a></h3>
+<p>Romero родился в 1967 году.</p>
+<p>Игры начал программировать ещё подростком.</p>
+<p>Основная ранняя платформа:</p>
+<h4 id="apple-ii">Apple II.<a class="headerlink" href="#apple-ii" title="Permanent link">¶</a></h4>
+<p>Он самостоятельно изучал:</p>
+<div class="highlight"><pre><span></span><code>BASIC
+↓
+6502 assembly
+</code></pre></div>
+<p>Ассемблер был нужен потому, что быстрые arcade-style игры требовали производительности, которой BASIC не давал.</p>
+<p>До полноценной работы в индустрии Romero уже написал множество небольших игр.</p>
+<p>Одной из ранних опубликованных работ была:</p>
+<h4 id="scout-search">Scout Search.<a class="headerlink" href="#scout-search" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="3-origin-systems">3. Origin Systems<a class="headerlink" href="#3-origin-systems" title="Permanent link">¶</a></h3>
+<p>В 1987 году Romero попадает в:</p>
+<h4 id="origin-systems">Origin Systems.<a class="headerlink" href="#origin-systems" title="Permanent link">¶</a></h4>
+<p>Работает над портированием и игровым программированием.</p>
+<p>Один из проектов:</p>
+<div class="highlight"><pre><span></span><code>2400 A.D.
+Apple II
+→ Commodore 64 port
+</code></pre></div>
+<p>Также оказывается рядом с проектами и людьми будущей Looking Glass-школы.</p>
+<p>Здесь важна историческая развилка:</p>
+<p>Paul Neurath предлагал Romero присоединиться к его будущему направлению, которое позже превратится в Blue Sky / Looking Glass.</p>
+<p>То есть Romero потенциально мог оказаться в линии:</p>
+<div class="highlight"><pre><span></span><code>Ultima Underworld
+System Shock
+Thief
+</code></pre></div>
+<p>Но пошёл другим путём.</p>
+<p>Позже две школы всё равно косвенно сойдутся через Ion Storm и Deus Ex.</p>
+<hr/>
+<h3 id="4-ideas-from-the-deep">4. Ideas from the Deep и ранние собственные проекты<a class="headerlink" href="#4-ideas-from-the-deep" title="Permanent link">¶</a></h3>
+<p>Romero постоянно хотел не только портировать чужие игры, но и делать собственные.</p>
+<p>До id участвовал в маленьких командах и собственных инициативах.</p>
+<p>Название:</p>
+<h4 id="ideas-from-the-deep">Ideas from the Deep<a class="headerlink" href="#ideas-from-the-deep" title="Permanent link">¶</a></h4>
+<p>позже станет одним из источников имени <code>id</code>.</p>
+<hr/>
+<h3 id="5-dangerous-dave">5. Dangerous Dave<a class="headerlink" href="#5-dangerous-dave" title="Permanent link">¶</a></h3>
+<p>В 1988 году Romero делает:</p>
+<h4 id="dangerous-dave">Dangerous Dave.<a class="headerlink" href="#dangerous-dave" title="Permanent link">¶</a></h4>
+<p>Это ещё не id Software.</p>
+<p>Но проект критически важен для его будущей инженерной философии.</p>
+<p>Ему нужны уровни.</p>
+<p>Вместо ручного кодирования каждой карты Romero начинает делать редактор.</p>
+<p>Из этой линии вырастет:</p>
+<h4 id="ted-tile-editor">TEd — Tile Editor.<a class="headerlink" href="#ted-tile-editor" title="Permanent link">¶</a></h4>
+<p>Разные поколения TEd позже использовались примерно в десятках выпущенных игр.</p>
+<p>Главный принцип Romero формируется очень рано:</p>
+<div class="highlight"><pre><span></span><code>обычный программист
+делает уровень
+
+tools programmer
+делает систему,
+которая позволяет быстро сделать
+100 уровней
+</code></pre></div>
+<p>Это будет одним из его главных скрытых вкладов в id.</p>
+<hr/>
+<h3 id="6-softdisk">6. Softdisk<a class="headerlink" href="#6-softdisk" title="Permanent link">¶</a></h3>
+<p>В 1989 году Romero приходит в:</p>
+<h4 id="softdisk">Softdisk<a class="headerlink" href="#softdisk" title="Permanent link">¶</a></h4>
+<p>в Шривпорте.</p>
+<p>Softdisk выпускает software-журналы на дискетах.</p>
+<p>Производственный ритм:</p>
+<div class="highlight"><pre><span></span><code>несколько недель
+↓
+нужен новый софт / новая игра
+</code></pre></div>
+<p>Это становится отличной школой быстрого production.</p>
+<hr/>
+<h3 id="7-gamers-edge">7. Gamer’s Edge<a class="headerlink" href="#7-gamers-edge" title="Permanent link">¶</a></h3>
+<p>В 1990 году Romero организует внутри Softdisk игровое подразделение:</p>
+<h4 id="gamers-edge">Gamer's Edge.<a class="headerlink" href="#gamers-edge" title="Permanent link">¶</a></h4>
+<p>Именно здесь начинает собираться будущая id Software.</p>
+<hr/>
+<h3 id="8-romero-john-carmack">8. Romero и John Carmack<a class="headerlink" href="#8-romero-john-carmack" title="Permanent link">¶</a></h3>
+<p>Carmack первоначально оказывается рядом с Softdisk как молодой программист.</p>
+<p>Romero видит его код и понимает:</p>
+<h4 id="_2">этого человека необходимо взять в игровую команду.<a class="headerlink" href="#_2" title="Permanent link">¶</a></h4>
+<p>То есть историческая схема:</p>
+<div class="highlight"><pre><span></span><code>Carmack создал id
+↓
+Romero потом присоединился
+</code></pre></div>
+<p>неправильна.</p>
+<p>Гораздо ближе к реальности:</p>
+<div class="highlight"><pre><span></span><code>Romero уже работает в Softdisk
+↓
+создаёт Gamer's Edge
+↓
+помогает привлечь Carmack
+↓
+привлекает Adrian Carmack
+↓
+Tom Hall начинает работать с ними
+↓
+формируется ядро будущей id
+</code></pre></div>
+<p>Romero не «попал в id».</p>
+<h4 id="romero">Romero — один из её основателей.<a class="headerlink" href="#romero" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="9">9. Раннее разделение ролей<a class="headerlink" href="#9" title="Permanent link">¶</a></h3>
+<p>Уже внутри Softdisk возникает приблизительно такая специализация.</p>
+<h4 id="john-carmack">John Carmack<a class="headerlink" href="#john-carmack" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>engine architecture
+graphics
+optimization
+low-level technology
+</code></pre></div>
+<h4 id="john-romero_2">John Romero<a class="headerlink" href="#john-romero_2" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>game programming
+tools
+editors
+levels
+production
+</code></pre></div>
+<h4 id="tom-hall">Tom Hall<a class="headerlink" href="#tom-hall" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>characters
+fiction
+game design
+world
+юмор
+</code></pre></div>
+<h4 id="adrian-carmack">Adrian Carmack<a class="headerlink" href="#adrian-carmack" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>art
+visual identity
+</code></pre></div>
+<p>Это разделение было одной из причин необычайной эффективности ранней команды.</p>
+<hr/>
+<h3 id="10-catacomb-slordax-gamers-edge">10. Catacomb / Slordax / ранний Gamer’s Edge<a class="headerlink" href="#10-catacomb-slordax-gamers-edge" title="Permanent link">¶</a></h3>
+<p>Romero участвует в быстром производстве небольших Softdisk-игр.</p>
+<p>Этот период важен меньше отдельными названиями, чем культурой:</p>
+<div class="highlight"><pre><span></span><code>идея
+↓
+код
+↓
+editor
+↓
+content
+↓
+ship
+↓
+следующая игра
+</code></pre></div>
+<p>Romero становится специалистом именно по сокращению расстояния между технологией и готовой игрой.</p>
+<hr/>
+<h3 id="11-smooth-scrolling-dangerous-dave-in-copyright-infringement">11. Smooth scrolling и Dangerous Dave in Copyright Infringement<a class="headerlink" href="#11-smooth-scrolling-dangerous-dave-in-copyright-infringement" title="Permanent link">¶</a></h3>
+<p>Carmack решает одну из больших PC-проблем:</p>
+<h4 id="side-scrolling">плавный side-scrolling.<a class="headerlink" href="#side-scrolling" title="Permanent link">¶</a></h4>
+<p>PC того времени значительно хуже специализированных консолей умел прокручивать большие 2D-сцены.</p>
+<p>Carmack создаёт adaptive tile refresh.</p>
+<p>Tom Hall и Carmack ночью делают техническую демонстрацию:</p>
+<h4 id="dangerous-dave-in-copyright-infringement">Dangerous Dave in Copyright Infringement.<a class="headerlink" href="#dangerous-dave-in-copyright-infringement" title="Permanent link">¶</a></h4>
+<p>Берут первый уровень Super Mario Bros. 3.</p>
+<p>Вместо Mario используют Dangerous Dave.</p>
+<p>Утром показывают Romero.</p>
+<hr/>
+<h3 id="12-romero">12. Важная функция Romero: перевод технологии в продукт<a class="headerlink" href="#12-romero" title="Permanent link">¶</a></h3>
+<p>Carmack видит:</p>
+<blockquote>
+<p>новый алгоритм обновления экрана.</p>
+</blockquote>
+<p>Romero видит:</p>
+<div class="highlight"><pre><span></span><code>PC теперь может делать
+консольный платформер
+
+↓
+
+это новая категория продукта
+
+↓
+
+это можно продать
+</code></pre></div>
+<p>Он часто выполняет именно эту роль:</p>
+<h4 id="technological-breakthrough-game-concept">переводчик между technological breakthrough и game concept.<a class="headerlink" href="#technological-breakthrough-game-concept" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="13-nintendo-pc-mario">13. Nintendo и PC Mario<a class="headerlink" href="#13-nintendo-pc-mario" title="Permanent link">¶</a></h3>
+<p>Будущая id делает более полноценную PC-демонстрацию Super Mario Bros. 3.</p>
+<p>Nintendo впечатляется технологически, но отказывается выпускать Mario на PC.</p>
+<p>У команды остаётся:</p>
+<div class="highlight"><pre><span></span><code>готовая технология
++
+нет IP
+</code></pre></div>
+<hr/>
+<h3 id="14-scott-miller-apogee">14. Scott Miller и Apogee<a class="headerlink" href="#14-scott-miller-apogee" title="Permanent link">¶</a></h3>
+<p>Примерно в этот же период Romero получает странные фанатские письма.</p>
+<p>Несколько разных людей.</p>
+<p>Но один и тот же обратный адрес.</p>
+<p>Оказывается:</p>
+<h4 id="scott-miller">Scott Miller<a class="headerlink" href="#scott-miller" title="Permanent link">¶</a></h4>
+<p>из Apogee Software.</p>
+<p>Он специально изображал разных поклонников, чтобы привлечь внимание Romero.</p>
+<p>Miller предлагает shareware-модель:</p>
+<div class="highlight"><pre><span></span><code>Episode 1
+→ бесплатно
+
+понравилось?
+↓
+покупай Episode 2 + 3
+</code></pre></div>
+<p>И готов финансировать новую игру.</p>
+<hr/>
+<hr/>
+<h2 id="5-commander-keen-id-software">5. Commander Keen и рождение id Software<a class="headerlink" href="#5-commander-keen-id-software" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>Shareware, production tools, Commander Keen и переход к first-person.</p>
+</blockquote>
+<h3 id="15-commander-keen">15. Commander Keen<a class="headerlink" href="#15-commander-keen" title="Permanent link">¶</a></h3>
+<p>Tom Hall придумывает:</p>
+<h4 id="billy-blaze-commander-keen">Billy Blaze / Commander Keen.<a class="headerlink" href="#billy-blaze-commander-keen" title="Permanent link">¶</a></h4>
+<p>Carmack даёт smooth-scrolling technology.</p>
+<p>Romero занимается:</p>
+<div class="highlight"><pre><span></span><code>programming
+tools
+level design
+production
+</code></pre></div>
+<p>Получается:</p>
+<h4 id="commander-keen-invasion-of-the-vorticons">Commander Keen: Invasion of the Vorticons.<a class="headerlink" href="#commander-keen-invasion-of-the-vorticons" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="16-romero-commander-keen">16. Вклад Romero в Commander Keen<a class="headerlink" href="#16-romero-commander-keen" title="Permanent link">¶</a></h3>
+<p>Он не просто рисует уровни.</p>
+<p>Его contribution:</p>
+<div class="highlight"><pre><span></span><code>software engineering
++
+TEd / production tools
++
+level design
++
+shipping pipeline
+</code></pre></div>
+<p>Commander Keen доказывает:</p>
+<blockquote>
+<p>команда может существовать независимо от Softdisk.</p>
+</blockquote>
+<p>Shareware начинает приносить реальные деньги.</p>
+<hr/>
+<h3 id="17-id-software">17. Основание id Software<a class="headerlink" href="#17-id-software" title="Permanent link">¶</a></h3>
+<p>В начале 1991 года:</p>
+<div class="highlight"><pre><span></span><code>John Carmack
+John Romero
+Tom Hall
+Adrian Carmack
+</code></pre></div>
+<p>создают:</p>
+<h4 id="id-software">id Software.<a class="headerlink" href="#id-software" title="Permanent link">¶</a></h4>
+<p>Romero — один из четырёх основателей.</p>
+<hr/>
+<h3 id="18-softdisk-">18. Softdisk-контракт после ухода<a class="headerlink" href="#18-softdisk-" title="Permanent link">¶</a></h3>
+<p>Поскольку Keen создавалась сотрудниками Softdisk и с использованием оборудования Softdisk, стороны договариваются:</p>
+<blockquote>
+<p>id уходит, но ещё некоторое время делает игры для Softdisk.</p>
+</blockquote>
+<p>Это превращает Softdisk-контракт в R&amp;D-лабораторию будущей id.</p>
+<p>Romero участвует в производстве и инструментарии игр этого периода.</p>
+<hr/>
+<h3 id="19-shadow-knights">19. Shadow Knights<a class="headerlink" href="#19-shadow-knights" title="Permanent link">¶</a></h3>
+<p>Ранний side-scrolling action.</p>
+<p>Romero участвует в tools/programming pipeline.</p>
+<p>Исторически важнее как:</p>
+<blockquote>
+<p>часть rapid-production периода,</p>
+</blockquote>
+<p>чем как отдельная вершина.</p>
+<hr/>
+<h3 id="20-dangerous-dave-in-the-haunted-mansion">20. Dangerous Dave in the Haunted Mansion<a class="headerlink" href="#20-dangerous-dave-in-the-haunted-mansion" title="Permanent link">¶</a></h3>
+<p>Продолжение персонажа Romero.</p>
+<p>Теперь:</p>
+<div class="highlight"><pre><span></span><code>хоррор
++
+дробовик
++
+кровь
++
+монстры
+</code></pre></div>
+<p>Именно здесь появляется ранняя смесь:</p>
+<div class="highlight"><pre><span></span><code>Adrian Carmack gore
++
+Romero gameplay
++
+shotgun
+</code></pre></div>
+<p>которая позднее станет очень знакомой.</p>
+<hr/>
+<h3 id="21-rescue-rover-12">21. Rescue Rover 1–2<a class="headerlink" href="#21-rescue-rover-12" title="Permanent link">¶</a></h3>
+<p>Puzzle games.</p>
+<p>Показывают, что ранняя id ещё не является FPS-студией.</p>
+<p>Romero участвует в programming/tools.</p>
+<p>Студия экспериментирует с разными жанрами.</p>
+<hr/>
+<h3 id="22-keen-dreams">22. Keen Dreams<a class="headerlink" href="#22-keen-dreams" title="Permanent link">¶</a></h3>
+<p>Промежуточная Keen для Softdisk.</p>
+<p>Одновременно служит технологической лабораторией будущих Commander Keen 4–6.</p>
+<p>Romero продолжает поддерживать tools / production.</p>
+<hr/>
+<h3 id="23-hovertank-one">23. Hovertank One<a class="headerlink" href="#23-hovertank-one" title="Permanent link">¶</a></h3>
+<p>Carmack начинает экспериментировать с быстрым first-person renderer.</p>
+<p>Romero участвует в превращении prototype в game.</p>
+<p>Главная линия:</p>
+<div class="highlight"><pre><span></span><code>Hovertank
+↓
+Catacomb 3-D
+↓
+Wolfenstein 3D
+</code></pre></div>
+<hr/>
+<h3 id="24-catacomb-3-d">24. Catacomb 3-D<a class="headerlink" href="#24-catacomb-3-d" title="Permanent link">¶</a></h3>
+<p>Texture-mapped first-person world.</p>
+<p>Видимая рука.</p>
+<p>Монстры.</p>
+<p>Secrets.</p>
+<p>Romero участвует в программировании и производстве.</p>
+<p>Это один из ключевых моментов:</p>
+<h4 id="id-first-person-keen">id понимает, что first-person — перспективнее, чем продолжение Keen.<a class="headerlink" href="#id-first-person-keen" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="25-keen-7">25. Отказ от Keen 7<a class="headerlink" href="#25-keen-7" title="Permanent link">¶</a></h3>
+<p>Commander Keen приносит деньги.</p>
+<p>Команда начинает делать Keen 7.</p>
+<p>Но Romero и Adrian Carmack не хотят бесконечно продолжать платформеры.</p>
+<p>После Catacomb 3-D first-person направление выглядит намного более интересным.</p>
+<p>Это сознательный выбор:</p>
+<div class="highlight"><pre><span></span><code>безопасная успешная серия
+Keen
+
+vs
+
+сырой новый first-person genre
+</code></pre></div>
+<p>Romero помогает толкнуть компанию в сторону второго.</p>
+<hr/>
+<h3 id="26-commander-keen-46">26. Commander Keen 4–6<a class="headerlink" href="#26-commander-keen-46" title="Permanent link">¶</a></h3>
+<p>До полного перехода id выпускает зрелые части серии.</p>
+<p>Romero:</p>
+<div class="highlight"><pre><span></span><code>software engineering
++
+level design
+</code></pre></div>
+<p>Goodbye Galaxy показывает уже профессиональный production pipeline id.</p>
+<hr/>
+<hr/>
+<h2 id="6-wolfenstein-3d-fps-production">6. Wolfenstein 3D и формирование FPS-production<a class="headerlink" href="#6-wolfenstein-3d-fps-production" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>TEd5, радикальное упрощение дизайна и быстрый выпуск уровней.</p>
+</blockquote>
+<h3 id="27-wolfenstein-3d">27. Wolfenstein 3D<a class="headerlink" href="#27-wolfenstein-3d" title="Permanent link">¶</a></h3>
+<p>Здесь Romero становится одним из абсолютно ключевых людей компании.</p>
+<p>Условная структура:</p>
+<div class="highlight"><pre><span></span><code>Carmack
+→ renderer/runtime
+
+Romero
+→ tools + gameplay + production
+
+Hall
+→ design / fiction / levels
+
+Adrian
+→ art
+</code></pre></div>
+<hr/>
+<h3 id="28-ted5-wolfenstein-tools">28. TEd5 и Wolfenstein tools<a class="headerlink" href="#28-ted5-wolfenstein-tools" title="Permanent link">¶</a></h3>
+<p>Romero адаптирует TEd под новую grid-based first-person игру.</p>
+<p>Также занимается asset / sound / production utilities.</p>
+<p>Ключевой вклад:</p>
+<h4 id="_3">построить среду, в которой дизайнеры могут быстро производить карты.<a class="headerlink" href="#_3" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="29-listen-to-the-game">29. «Listen to the game»<a class="headerlink" href="#29-listen-to-the-game" title="Permanent link">¶</a></h3>
+<p>Ранний Wolfenstein пытался переносить больше механик старого Castle Wolfenstein:</p>
+<div class="highlight"><pre><span></span><code>stealth
+обыск тел
+перетаскивание тел
+контейнеры
+</code></pre></div>
+<p>Но playtesting показывает:</p>
+<h4 id="_4">бегать и стрелять веселее.<a class="headerlink" href="#_4" title="Permanent link">¶</a></h4>
+<p>Romero поддерживает философию:</p>
+<blockquote>
+<p>если mechanic мешает fun — вырезать.</p>
+</blockquote>
+<p>Wolfenstein превращается:</p>
+<div class="highlight"><pre><span></span><code>stealth remake
+↓
+run-and-gun FPS
+</code></pre></div>
+<p>Это один из важнейших ранних дизайнерских принципов id.</p>
+<hr/>
+<h3 id="30-romero-production-wolfenstein">30. Romero как production-человек Wolfenstein<a class="headerlink" href="#30-romero-production-wolfenstein" title="Permanent link">¶</a></h3>
+<p>Он не просто занимается design.</p>
+<p>Также:</p>
+<div class="highlight"><pre><span></span><code>tools
+master build
+level workflow
+release preparation
+</code></pre></div>
+<p>Ранняя id настолько маленькая, что основатели буквально лично довозят игру от prototype до master disk.</p>
+<hr/>
+<h3 id="31-spear-of-destiny">31. Spear of Destiny<a class="headerlink" href="#31-spear-of-destiny" title="Permanent link">¶</a></h3>
+<p>Быстрое retail-продолжение Wolfenstein.</p>
+<p>Romero активно участвует в level design.</p>
+<p>Проект показывает его способность быстро производить большое количество FPS-пространств на готовой технологии.</p>
+<hr/>
+<hr/>
+<h2 id="7-doom-doom-ii-id">7. DOOM, DOOM II и внешняя экосистема id<a class="headerlink" href="#7-doom-doom-ii-id" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>DoomEd, язык FPS-пространства, deathmatch, Raven и community-to-commercial pipeline.</p>
+</blockquote>
+<h3 id="32-doom-romero">32. DOOM — три главных вклада Romero<a class="headerlink" href="#32-doom-romero" title="Permanent link">¶</a></h3>
+<p>В DOOM его contribution удобно делить так:</p>
+<div class="highlight"><pre><span></span><code>1. tools
+
+2. language of level design
+
+3. game / production direction
+</code></pre></div>
+<hr/>
+<h3 id="33-doomed">33. DoomEd<a class="headerlink" href="#33-doomed" title="Permanent link">¶</a></h3>
+<p>Новая секторная технология требует совершенно нового редактора.</p>
+<p>Romero пишет:</p>
+<h4 id="doomed">DoomEd<a class="headerlink" href="#doomed" title="Permanent link">¶</a></h4>
+<p>для NeXTSTEP.</p>
+<p>Carmack определяет технические структуры мира.</p>
+<p>Romero строит editor workflow:</p>
+<div class="highlight"><pre><span></span><code>vertices
+linedefs
+sectors
+textures
+heights
+things
+</code></pre></div>
+<p>Это огромный вклад.</p>
+<p>Carmack сделал:</p>
+<h4 id="doom-engine">Doom Engine.<a class="headerlink" href="#doom-engine" title="Permanent link">¶</a></h4>
+<p>Romero сделал:</p>
+<h4 id="doom">способ производить Doom.<a class="headerlink" href="#doom" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="34-doom-level-design">34. Изобретение языка Doom-level design<a class="headerlink" href="#34-doom-level-design" title="Permanent link">¶</a></h3>
+<p>Wolfenstein:</p>
+<div class="highlight"><pre><span></span><code>90°
+grid
+одна высота
+</code></pre></div>
+<p>DOOM:</p>
+<div class="highlight"><pre><span></span><code>произвольные углы
+высоты
+лифты
+окна
+свет
+дальние виды
+</code></pre></div>
+<p>Но наличие technology не означает автоматически хороший level design.</p>
+<p>Romero сознательно вырабатывает новый язык пространства.</p>
+<p>Одно из его правил:</p>
+<blockquote>
+<p>если часть уровня можно было нормально сделать в Wolfenstein, значит Doom map недостаточно использует новый engine.</p>
+</blockquote>
+<hr/>
+<h3 id="35-spatial-anticipation">35. Spatial anticipation<a class="headerlink" href="#35-spatial-anticipation" title="Permanent link">¶</a></h3>
+<p>Один из главных Romero-приёмов:</p>
+<div class="highlight"><pre><span></span><code>покажи игроку место
+
+↓
+
+не дай туда попасть
+
+↓
+
+проведи другим маршрутом
+
+↓
+
+верни туда позже
+</code></pre></div>
+<p>Игрок строит mental map.</p>
+<p>Уровень становится:</p>
+<h4 id="_5">системой отношений между пространствами.<a class="headerlink" href="#_5" title="Permanent link">¶</a></h4>
+<p>Это один из фундаментальных принципов FPS level design.</p>
+<hr/>
+<h3 id="36-romero-doom">36. Карты Romero в оригинальной DOOM<a class="headerlink" href="#36-romero-doom" title="Permanent link">¶</a></h3>
+<p>Особенно важна его роль в:</p>
+<h4 id="knee-deep-in-the-dead">Knee-Deep in the Dead.<a class="headerlink" href="#knee-deep-in-the-dead" title="Permanent link">¶</a></h4>
+<p>Ключевые карты Romero:</p>
+<div class="highlight"><pre><span></span><code>E1M1
+E1M2
+E1M3
+E1M5
+E1M6
+E1M7
+E1M9
+</code></pre></div>
+<p>Именно Episode 1 остаётся самым чистым и читаемым пространственным блоком оригинальной Doom.</p>
+<hr/>
+<h3 id="37-e1m1">37. E1M1<a class="headerlink" href="#37-e1m1" title="Permanent link">¶</a></h3>
+<p>Практически манифест Romero.</p>
+<p>Маленькая карта.</p>
+<p>Но обучает:</p>
+<div class="highlight"><pre><span></span><code>пространству
+высоте
+окнам
+секретам
+исследованию
+возвратам
+</code></pre></div>
+<p>без текста.</p>
+<p>Не tutorial box.</p>
+<h4 id="_6">Архитектура обучает игрока.<a class="headerlink" href="#_6" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="38-deathmatch">38. Deathmatch<a class="headerlink" href="#38-deathmatch" title="Permanent link">¶</a></h3>
+<p>Romero становится главным внутренним evangelist competitive multiplayer.</p>
+<p>Термин:</p>
+<h4 id="deathmatch">deathmatch<a class="headerlink" href="#deathmatch" title="Permanent link">¶</a></h4>
+<p>прочно входит в игровую культуру именно через Doom.</p>
+<p>Romero очень рано понимает, что multiplayer — не дополнительный режим, а отдельное будущее FPS.</p>
+<hr/>
+<h3 id="39-multiplayer-tools">39. Multiplayer tools<a class="headerlink" href="#39-multiplayer-tools" title="Permanent link">¶</a></h3>
+<p>Romero также пишет/участвует в большом количестве tooling вокруг Doom:</p>
+<div class="highlight"><pre><span></span><code>DM utilities
+SETUP
+installers
+DWANGO-related tooling
+asset utilities
+</code></pre></div>
+<p>Это ещё раз показывает:</p>
+<h4 id="romero-level-designer">Romero ≠ только level designer.<a class="headerlink" href="#romero-level-designer" title="Permanent link">¶</a></h4>
+<p>Он full-stack game developer ранней PC-эпохи.</p>
+<hr/>
+<h3 id="40-tom-hall-doom">40. Отношения с Tom Hall на Doom<a class="headerlink" href="#40-tom-hall-doom" title="Permanent link">¶</a></h3>
+<p>Hall пишет:</p>
+<h4 id="doom-bible">Doom Bible.<a class="headerlink" href="#doom-bible" title="Permanent link">¶</a></h4>
+<p>Хочет:</p>
+<div class="highlight"><pre><span></span><code>персонажей
+сюжет
+реалистичную базу
+приключение
+</code></pre></div>
+<p>Carmack видит scope.</p>
+<p>Romero постепенно тоже уходит от Hall.</p>
+<p>Его приоритет:</p>
+<h4 id="_7">хороший уровень важнее правдоподобного помещения.<a class="headerlink" href="#_7" title="Permanent link">¶</a></h4>
+<p>Формула:</p>
+<div class="highlight"><pre><span></span><code>Hall:
+«Я проектирую место».
+
+Romero:
+«Я проектирую охуенный уровень.
+Если он после этого похож на место — отлично».
+
+Carmack:
+«Я проектирую технологию,
+которая позволяет ему работать».
+</code></pre></div>
+<p>Hall увольняют во время разработки Doom.</p>
+<hr/>
+<h3 id="41-doom-ii">41. DOOM II<a class="headerlink" href="#41-doom-ii" title="Permanent link">¶</a></h3>
+<p>Romero уже не доминирует над всей кампанией.</p>
+<p>Карты делают:</p>
+<div class="highlight"><pre><span></span><code>Romero
+Sandy Petersen
+American McGee
+</code></pre></div>
+<p>Основные Doom II maps Romero:</p>
+<div class="highlight"><pre><span></span><code>MAP11 — 'O' of Destruction!
+MAP15 — Industrial Zone
+MAP17 — Tenements
+MAP20 — Gotcha!
+MAP26 — The Abandoned Mines
+MAP29 — The Living End
+</code></pre></div>
+<hr/>
+<h3 id="42-gotcha">42. Gotcha!<a class="headerlink" href="#42-gotcha" title="Permanent link">¶</a></h3>
+<p>MAP20 показывает характерный системный подход Romero.</p>
+<p>Можно столкнуть:</p>
+<div class="highlight"><pre><span></span><code>Cyberdemon
+vs
+Spider Mastermind
+</code></pre></div>
+<p>Infighting становится осознанным encounter mechanic.</p>
+<p>Не новая система.</p>
+<p>А использование существующего поведения.</p>
+<hr/>
+<h3 id="43-the-living-end">43. The Living End<a class="headerlink" href="#43-the-living-end" title="Permanent link">¶</a></h3>
+<p>MAP29 активно использует:</p>
+<div class="highlight"><pre><span></span><code>высоты
+дальние пространства
+связи областей
+вертикальные иллюзии
+</code></pre></div>
+<p>В ней уже видно желание Romero получить настоящий Quake-like 3D.</p>
+<hr/>
+<h3 id="44-public-persona">44. Public persona<a class="headerlink" href="#44-public-persona" title="Permanent link">¶</a></h3>
+<p>После успеха Doom Romero становится главным публичным лицом id.</p>
+<p>Длинные волосы.</p>
+<p>Ferrari.</p>
+<p>Deathmatch.</p>
+<p>Интервью.</p>
+<p>Тусовка с community.</p>
+<p>Он намного социальнее Carmack.</p>
+<p>И внешний образ постепенно превращается:</p>
+<div class="highlight"><pre><span></span><code>Romero
+≈
+id Software rock star
+</code></pre></div>
+<p>Это позже сыграет против него во время Daikatana.</p>
+<hr/>
+<h3 id="45-heretic">45. Heretic<a class="headerlink" href="#45-heretic" title="Permanent link">¶</a></h3>
+<p>Heretic делает Raven Software.</p>
+<p>id предоставляет technology.</p>
+<p>Romero:</p>
+<h4 id="executive-producer">Executive Producer.<a class="headerlink" href="#executive-producer" title="Permanent link">¶</a></h4>
+<p>Также активно помогает Raven:</p>
+<div class="highlight"><pre><span></span><code>tools
+NeXT workflow
+technology transfer
+production connection
+</code></pre></div>
+<p>Он становится мостом между id и внешней студией.</p>
+<hr/>
+<h3 id="46-ultimate-doom">46. Ultimate Doom<a class="headerlink" href="#46-ultimate-doom" title="Permanent link">¶</a></h3>
+<p>Оригинальной Doom нужен retail release.</p>
+<p>Romero предлагает:</p>
+<blockquote>
+<p>раз всё равно переиздаём игру, добавим новый Episode 4.</p>
+</blockquote>
+<p>Так появляется:</p>
+<h4 id="thy-flesh-consumed">Thy Flesh Consumed.<a class="headerlink" href="#thy-flesh-consumed" title="Permanent link">¶</a></h4>
+<p>Romero сам делает:</p>
+<div class="highlight"><pre><span></span><code>E4M2 — Perfect Hatred
+E4M6 — Against Thee Wickedly
+</code></pre></div>
+<p>И курирует других авторов.</p>
+<hr/>
+<h3 id="47-perfect-hatred">47. Perfect Hatred<a class="headerlink" href="#47-perfect-hatred" title="Permanent link">¶</a></h3>
+<p>Очень компактный, плотный и злой уровень.</p>
+<p>Показывает развитие Romero после E1:</p>
+<div class="highlight"><pre><span></span><code>меньше обучения
++
+больше давления
++
+больше вертикальных отношений
+</code></pre></div>
+<hr/>
+<h3 id="48-hexen">48. Hexen<a class="headerlink" href="#48-hexen" title="Permanent link">¶</a></h3>
+<p>Снова Raven.</p>
+<p>Romero:</p>
+<h4 id="executive-producer_1">Executive Producer.<a class="headerlink" href="#executive-producer_1" title="Permanent link">¶</a></h4>
+<p>Продолжает external-development роль.</p>
+<hr/>
+<h3 id="49-master-levels">49. Master Levels<a class="headerlink" href="#49-master-levels" title="Permanent link">¶</a></h3>
+<p>Важно:</p>
+<h4 id="romero_1">не приписывать Romero весь проект.<a class="headerlink" href="#romero_1" title="Permanent link">¶</a></h4>
+<p>Master Levels в основном координировал Shawn Green.</p>
+<p>Romero важен скорее как часть общей id/community culture.</p>
+<hr/>
+<h3 id="50-final-doom">50. Final Doom<a class="headerlink" href="#50-final-doom" title="Permanent link">¶</a></h3>
+<p>Здесь Romero снова непосредственно важен.</p>
+<p>TeamTNT собирается бесплатно выпустить:</p>
+<h4 id="tnt-evilution">TNT: Evilution.<a class="headerlink" href="#tnt-evilution" title="Permanent link">¶</a></h4>
+<p>Незадолго до release Romero связывается с Ty Halderman.</p>
+<p>Предложение:</p>
+<blockquote>
+<p>не выкладывайте.</p>
+<p>id хочет сделать это официальной Doom.</p>
+</blockquote>
+<p>Это превращает community megawad в коммерческий официальный релиз.</p>
+<hr/>
+<h3 id="51-plutonia">51. Plutonia<a class="headerlink" href="#51-plutonia" title="Permanent link">¶</a></h3>
+<p>Dario и Milo Casali впечатляют id картами.</p>
+<p>Из этого вырастает:</p>
+<h4 id="the-plutonia-experiment">The Plutonia Experiment.<a class="headerlink" href="#the-plutonia-experiment" title="Permanent link">¶</a></h4>
+<p>Romero участвует в превращении community Doom в официальный продукт.</p>
+<p>Это важнейшая часть его отношения к моддерам:</p>
+<h4 id="community">community — не враг разработчика, а источник новых профессионалов и контента.<a class="headerlink" href="#community" title="Permanent link">¶</a></h4>
+<hr/>
+<hr/>
+<h2 id="8-quake-id">8. Quake и конец первой id<a class="headerlink" href="#8-quake-id" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>True 3D, QuakeEd, конфликт design vs technology и уход Romero.</p>
+</blockquote>
+<h3 id="52-quake">52. Quake — первоначальная концепция<a class="headerlink" href="#52-quake" title="Permanent link">¶</a></h3>
+<p>Первоначальный Quake был гораздо ближе к:</p>
+<div class="highlight"><pre><span></span><code>dark fantasy
++
+action/RPG
++
+melee
++
+magic
++
+big interconnected world
+</code></pre></div>
+<p>Romero хотел сделать не:</p>
+<blockquote>
+<p>Doom with polygons,</p>
+</blockquote>
+<p>а следующую дизайнерскую революцию.</p>
+<hr/>
+<h3 id="53-quakeed">53. QuakeEd<a class="headerlink" href="#53-quakeed" title="Permanent link">¶</a></h3>
+<p>Как и раньше:</p>
+<p>Carmack создаёт новый true-3D foundation.</p>
+<p>Romero создаёт:</p>
+<h4 id="quakeed">QuakeEd.<a class="headerlink" href="#quakeed" title="Permanent link">¶</a></h4>
+<p>Но теперь процесс значительно тяжелее.</p>
+<p>Carmack постоянно меняет internal world representation.</p>
+<p>Romero переделывает editor.</p>
+<p>Карты ломаются.</p>
+<p>Технология меняется.</p>
+<p>Это впервые разрушает привычную быструю связку двух Джонов.</p>
+<hr/>
+<h3 id="54-quake">54. Главное производственное противоречие Quake<a class="headerlink" href="#54-quake" title="Permanent link">¶</a></h3>
+<p>Romero:</p>
+<blockquote>
+<p>невозможно окончательно придумать игру, пока неизвестно, что engine способен делать.</p>
+</blockquote>
+<p>Carmack:</p>
+<blockquote>
+<p>technology уже сама по себе революционна; нужно перестать изобретать ещё и новый жанр и ship.</p>
+</blockquote>
+<p>Оба правы.</p>
+<p>Но у id почти нет management layer, способного примирить эти позиции.</p>
+<hr/>
+<h3 id="55-quake">55. Финальный Quake<a class="headerlink" href="#55-quake" title="Permanent link">¶</a></h3>
+<p>В конце 1995 года большая fantasy/RPG-концепция режется.</p>
+<p>Quake превращается в более традиционный FPS:</p>
+<div class="highlight"><pre><span></span><code>guns
++
+monsters
++
+keys
++
+levels
+</code></pre></div>
+<p>с остатками fantasy / gothic / Lovecraft ideas.</p>
+<p>Romero воспринимает это как частичное поражение исходного vision.</p>
+<hr/>
+<h3 id="56-romero-quake">56. Карты Romero в Quake<a class="headerlink" href="#56-romero-quake" title="Permanent link">¶</a></h3>
+<p>Среди его основных карт:</p>
+<div class="highlight"><pre><span></span><code>START — Welcome to Quake
+
+E1M1 — Slipgate Complex
+
+E2M1 — The Installation
+E2M2 — Ogre Citadel
+E2M3 — Crypt of Decay
+E2M4 — The Ebon Fortress
+E2M5 — The Wizard's Manse
+E2M6 — The Dismal Oubliette
+
+E3M1 — Termination Central
+
+END — Shub-Niggurath's Pit
+
+DM3 — The Abandoned Base
+</code></pre></div>
+<p>Практически весь Episode 2:</p>
+<h4 id="romero_2">Romero.<a class="headerlink" href="#romero_2" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="57-quake-e1m1">57. Quake E1M1<a class="headerlink" href="#57-quake-e1m1" title="Permanent link">¶</a></h3>
+<p>Снова introductory manifesto.</p>
+<p>Показывает то, чего Doom не могла:</p>
+<div class="highlight"><pre><span></span><code>настоящие мосты
+пандусы
+воду
+вертикальные связи
+room-over-room
+прыжок
+3D space
+</code></pre></div>
+<p>Romero снова обучает движку через сам уровень.</p>
+<hr/>
+<h3 id="58-quake-episode-2">58. Quake Episode 2<a class="headerlink" href="#58-quake-episode-2" title="Permanent link">¶</a></h3>
+<p>Здесь он получает настоящую вертикальность, которой постоянно пытался добиться в Doom.</p>
+<p>Мосты.</p>
+<p>Вода.</p>
+<p>Возвраты на другой высоте.</p>
+<p>Башни.</p>
+<p>Подземелья.</p>
+<p>Настоящие этажи.</p>
+<p>Это очень чистое развитие его пространственной школы.</p>
+<hr/>
+<h3 id="59-dm3-the-abandoned-base">59. DM3 — The Abandoned Base<a class="headerlink" href="#59-dm3-the-abandoned-base" title="Permanent link">¶</a></h3>
+<p>Одна из самых знаменитых deathmatch-карт Quake.</p>
+<p>Romero здесь соединяет:</p>
+<div class="highlight"><pre><span></span><code>competitive multiplayer
++
+map control
++
+verticality
++
+resource placement
+</code></pre></div>
+<p>Очень важный проект для ранней Quake multiplayer culture.</p>
+<hr/>
+<h3 id="60-id">60. Уход из id<a class="headerlink" href="#60-id" title="Permanent link">¶</a></h3>
+<p>К моменту завершения Quake отношения Romero и Carmack сильно разрушены.</p>
+<p>Причины:</p>
+<div class="highlight"><pre><span></span><code>длительный production
+разные представления о направлении
+разные рабочие стили
+публичная активность Romero
+огромная внешняя загрузка
+Carmack недоволен его production output
+Romero недоволен технологическим диктатом
+</code></pre></div>
+<p>При этом миф:</p>
+<blockquote>
+<p>Romero перестал работать и только ездил на Ferrari</p>
+</blockquote>
+<p>слишком тупой.</p>
+<p>В этот период он всё ещё:</p>
+<div class="highlight"><pre><span></span><code>делает QuakeEd
+делает Quake maps
+курирует проекты Raven
+участвует в Final Doom
+работает с community
+проходит crunch
+</code></pre></div>
+<p>Проблема глубже:</p>
+<h4 id="id">его роль перестала совпадать со структурой новой id.<a class="headerlink" href="#id" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="61-id">61. Конец первой id<a class="headerlink" href="#61-id" title="Permanent link">¶</a></h3>
+<p>Romero уходит после Quake в 1996 году.</p>
+<p>С этого момента можно условно разделить:</p>
+<div class="highlight"><pre><span></span><code>первая id:
+Keen
+Wolfenstein
+Doom
+Quake
+
+вторая id:
+Quake II
+Quake III
+Doom 3
+</code></pre></div>
+<p>После Romero компания всё больше становится:</p>
+<h4 id="carmack-technology-company">Carmack technology company.<a class="headerlink" href="#carmack-technology-company" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="62-carmackromero">62. Основной вывод о тандеме Carmack/Romero<a class="headerlink" href="#62-carmackromero" title="Permanent link">¶</a></h3>
+<p>Он работает потому, что два человека не конкурируют за одну функцию.</p>
+<div class="highlight"><pre><span></span><code>Carmack:
+what is possible?
+
+Romero:
+what is fun?
+</code></pre></div>
+<p>В Keen/Wolf/Doom technology появлялась достаточно быстро, чтобы feedback loop оставался коротким.</p>
+<p>На Quake technology требует слишком долгого R&amp;D.</p>
+<p>И старый workflow ломается.</p>
+<hr/>
+<hr/>
+<h2 id="9-ion-storm-daikatana-deus-ex">9. Ion Storm, Daikatana и Deus Ex<a class="headerlink" href="#9-ion-storm-daikatana-deus-ex" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>Design Is Law, производственный кризис Daikatana и создание условий для Ion Storm Austin.</p>
+</blockquote>
+<h3 id="63-ion-storm">63. Ion Storm — происхождение<a class="headerlink" href="#63-ion-storm" title="Permanent link">¶</a></h3>
+<p>Ещё до релиза Quake Romero понимает, что хочет уйти.</p>
+<p>Связывается с Tom Hall.</p>
+<p>Идея:</p>
+<h4 id="game-designer-technology">сделать студию, где game designer имеет власть над technology.<a class="headerlink" href="#game-designer-technology" title="Permanent link">¶</a></h4>
+<p>Философия:</p>
+<h4 id="design-is-law">DESIGN IS LAW.<a class="headerlink" href="#design-is-law" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="64-ion-storm">64. Основатели Ion Storm<a class="headerlink" href="#64-ion-storm" title="Permanent link">¶</a></h3>
+<p>Основная Dallas-группа:</p>
+<div class="highlight"><pre><span></span><code>John Romero
+Tom Hall
+Todd Porter
+Jerry O'Flaherty
+</code></pre></div>
+<p>Позже важнейшей фигурой становится Warren Spector.</p>
+<hr/>
+<h3 id="65-ion-storm">65. Идеология Ion Storm<a class="headerlink" href="#65-ion-storm" title="Permanent link">¶</a></h3>
+<p>Ответ на опыт id:</p>
+<div class="highlight"><pre><span></span><code>id:
+technology
+↓
+game
+
+Ion Storm:
+design
+↓
+technology
+</code></pre></div>
+<p>Romero и Hall хотят освободить дизайнеров от необходимости ждать очередной technology platform Carmack.</p>
+<hr/>
+<h3 id="66-ion-storm">66. Главная историческая ирония Ion Storm<a class="headerlink" href="#66-ion-storm" title="Permanent link">¶</a></h3>
+<p>Почти каждый большой проект компании всё равно сталкивается с technology problem:</p>
+<div class="highlight"><pre><span></span><code>Daikatana
+→ Quake → Quake II transition
+
+Anachronox
+→ JRPG на Quake II Engine
+
+Deus Ex
+→ Unreal нужно ломать под immersive sim
+
+Invisible War
+→ Xbox memory + новая technology
+
+Thief 3
+→ Xbox + renderer
+</code></pre></div>
+<p>Итог:</p>
+<h4 id="design-technology-law">ни Design, ни Technology не могут быть Law в одиночку.<a class="headerlink" href="#design-technology-law" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="67-daikatana">67. Daikatana — первоначальная идея<a class="headerlink" href="#67-daikatana" title="Permanent link">¶</a></h3>
+<p>Romero хочет большой time-travel FPS:</p>
+<div class="highlight"><pre><span></span><code>4 эпохи
+24 уровня
+много оружия
+много врагов
+RPG progression
+прокачка меча
+2 постоянных AI-companions
+story
+deathmatch
+co-op
+</code></pre></div>
+<p>Главный объект:</p>
+<h4 id="daikatana">Daikatana — меч, способный менять историю.<a class="headerlink" href="#daikatana" title="Permanent link">¶</a></h4>
+<p>Главный герой:</p>
+<h4 id="hiro-miyamoto">Hiro Miyamoto.<a class="headerlink" href="#hiro-miyamoto" title="Permanent link">¶</a></h4>
+<p>Спутники:</p>
+<div class="highlight"><pre><span></span><code>Mikiko Ebihara
+Superfly Johnson
+</code></pre></div>
+<hr/>
+<h3 id="68-daikatana-scope">68. Главная ошибка Daikatana: scope<a class="headerlink" href="#68-daikatana-scope" title="Permanent link">¶</a></h3>
+<p>Romero рассчитывает закончить игру примерно за полгода.</p>
+<p>При этом:</p>
+<ul>
+<li>
+<p>новая компания;</p>
+</li>
+<li>
+<p>новая команда;</p>
+</li>
+<li>
+<p>много сотрудников без опыта shipping AAA;</p>
+</li>
+<li>
+<p>гигантский feature list.</p>
+</li>
+</ul>
+<p>Позднее он сам признаёт:</p>
+<h4 id="_8">оценка была идиотской.<a class="headerlink" href="#_8" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="69-quake-quake-ii">69. Quake → Quake II<a class="headerlink" href="#69-quake-quake-ii" title="Permanent link">¶</a></h3>
+<p>Daikatana первоначально строится на Quake Engine.</p>
+<p>После демонстрации Quake II Romero и Hall понимают:</p>
+<blockquote>
+<p>наша игра будет выглядеть старой ещё до релиза.</p>
+</blockquote>
+<p>Проект переводят на:</p>
+<h4 id="quake-ii-engine">Quake II Engine.<a class="headerlink" href="#quake-ii-engine" title="Permanent link">¶</a></h4>
+<p>Это становится центральной production-катастрофой.</p>
+<p>Переезд и интеграция занимают примерно полтора года.</p>
+<hr/>
+<h3 id="70-daikatana">70. Ирония Daikatana<a class="headerlink" href="#70-daikatana" title="Permanent link">¶</a></h3>
+<p>Romero ушёл из id, потому что не хотел:</p>
+<h4 id="technology-dictates-game">technology dictates game.<a class="headerlink" href="#technology-dictates-game" title="Permanent link">¶</a></h4>
+<p>Первая собственная большая игра ломается именно потому, что:</p>
+<h4 id="technology-carmack-engine">он меняет technology ради нового Carmack engine.<a class="headerlink" href="#technology-carmack-engine" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="71">71. Команда и управление<a class="headerlink" href="#71" title="Permanent link">¶</a></h3>
+<p>Romero сознательно нанимает талантливых FPS-моддеров.</p>
+<p>Проблема:</p>
+<div class="highlight"><pre><span></span><code>great mapper
+≠
+experienced commercial-team developer
+</code></pre></div>
+<p>Старая культура id:</p>
+<div class="highlight"><pre><span></span><code>маленькая команда
++
+каждый знает почти весь проект
++
+самоуправление
+</code></pre></div>
+<p>не масштабируется на:</p>
+<div class="highlight"><pre><span></span><code>20–30 человек
++
+несколько лет
++
+publisher
++
+dependency management
+</code></pre></div>
+<hr/>
+<h3 id="72-lead-programmers">72. Пять lead programmers<a class="headerlink" href="#72-lead-programmers" title="Permanent link">¶</a></h3>
+<p>Через Daikatana проходят примерно пять lead programmers.</p>
+<p>Это показывает серьёзную нестабильность production.</p>
+<p>Каждый новый lead должен разбираться с предыдущей архитектурой.</p>
+<hr/>
+<h3 id="73-famous-advertisement">73. Famous advertisement<a class="headerlink" href="#73-famous-advertisement" title="Permanent link">¶</a></h3>
+<p>Маркетинг:</p>
+<blockquote>
+<p>JOHN ROMERO'S ABOUT TO MAKE YOU HIS BITCH.</p>
+</blockquote>
+<p>Romero рекламу действительно одобрил.</p>
+<p>Позже сожалел.</p>
+<p>Проблема:</p>
+<div class="highlight"><pre><span></span><code>если игра выходит быстро и великая
+→ дерзкая реклама
+
+если игра переносится годами
+→ каждый перенос превращается
+в публичное унижение
+</code></pre></div>
+<p>PR начинает работать против проекта.</p>
+<hr/>
+<h3 id="74-half-life">74. Half-Life<a class="headerlink" href="#74-half-life" title="Permanent link">¶</a></h3>
+<p>Пока Daikatana переносится на Quake II:</p>
+<h4 id="valve-half-life">Valve выпускает Half-Life.<a class="headerlink" href="#valve-half-life" title="Permanent link">¶</a></h4>
+<p>И реализует многие обещанные narrative-FPS идеи раньше:</p>
+<div class="highlight"><pre><span></span><code>story
+NPC
+AI
+scripted events
+adventure
+</code></pre></div>
+<p>Причём намного цельнее.</p>
+<p>Это резко ухудшает положение Daikatana.</p>
+<hr/>
+<h3 id="75-companion-ai">75. Companion AI<a class="headerlink" href="#75-companion-ai" title="Permanent link">¶</a></h3>
+<p>Главная feature становится одним из главных провалов.</p>
+<p>Mikiko и Superfly могут:</p>
+<div class="highlight"><pre><span></span><code>застрять
+упасть
+лезть под огонь
+умереть
+не подобрать аптечку
+стрелять не туда
+</code></pre></div>
+<p>Если companion погибает:</p>
+<h4 id="game-over">game over.<a class="headerlink" href="#game-over" title="Permanent link">¶</a></h4>
+<p>Это превращает быстрый FPS Romero в:</p>
+<h4 id="escort-quest">escort quest длиной почти всю игру.<a class="headerlink" href="#escort-quest" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="76-save-gems">76. Save Gems<a class="headerlink" href="#76-save-gems" title="Permanent link">¶</a></h3>
+<p>Daikatana ограничивает возможность сохранения специальными:</p>
+<h4 id="save-gems">Save Gems.<a class="headerlink" href="#save-gems" title="Permanent link">¶</a></h4>
+<p>Идея:</p>
+<blockquote>
+<p>ограниченные saves создают tension.</p>
+</blockquote>
+<p>Проблема:</p>
+<blockquote>
+<p>игрок может потерять прогресс из-за тупости companion AI.</p>
+</blockquote>
+<p>Получается не напряжение, а раздражение.</p>
+<hr/>
+<h3 id="77-rpg-progression">77. RPG progression<a class="headerlink" href="#77-rpg-progression" title="Permanent link">¶</a></h3>
+<p>Hiro получает параметры вроде:</p>
+<div class="highlight"><pre><span></span><code>Power
+Attack
+Speed
+Acro
+Vitality
+</code></pre></div>
+<p>Daikatana-меч тоже развивается.</p>
+<p>Система приятная, но не превращает игру в полноценный systemic FPS/RPG уровня Deus Ex.</p>
+<p>Это скорее дополнительный progression layer.</p>
+<hr/>
+<h3 id="78">78. Четыре эпохи<a class="headerlink" href="#78" title="Permanent link">¶</a></h3>
+<p>Главное достоинство:</p>
+<h4 id="variety">variety.<a class="headerlink" href="#variety" title="Permanent link">¶</a></h4>
+<p>Каждая эпоха меняет:</p>
+<div class="highlight"><pre><span></span><code>environment
+enemies
+weapons
+aesthetic
+</code></pre></div>
+<p>Но цена:</p>
+<h4 id="gameplay-vocabulary-mastery-">оружие и gameplay vocabulary не успевают получить долгую mastery-дугу.<a class="headerlink" href="#gameplay-vocabulary-mastery-" title="Permanent link">¶</a></h4>
+<p>Только освоил arsenal —</p>
+<p>игра переходит в другую эпоху.</p>
+<hr/>
+<h3 id="79-daikatana-episode-1">79. Daikatana Episode 1<a class="headerlink" href="#79-daikatana-episode-1" title="Permanent link">¶</a></h3>
+<p>Самый слабый кусок.</p>
+<p>Будущий Japan/cyberpunk premise начинается:</p>
+<div class="highlight"><pre><span></span><code>болота
+яд
+комары
+лягушки
+мелкие враги
+</code></pre></div>
+<p>Очень плохая readability и first impression.</p>
+<p>Особенно странно для автора E1M1.</p>
+<hr/>
+<h3 id="80-episode-2-ancient-greece">80. Episode 2 — Ancient Greece<a class="headerlink" href="#80-episode-2-ancient-greece" title="Permanent link">¶</a></h3>
+<p>Значительно лучше.</p>
+<p>Хорошая визуальная читаемость.</p>
+<p>Интереснее оружие.</p>
+<p>Fantasy-adventure естественнее подходит игровому стилю.</p>
+<hr/>
+<h3 id="81-episode-3-norway">81. Episode 3 — Norway<a class="headerlink" href="#81-episode-3-norway" title="Permanent link">¶</a></h3>
+<p>Один из наиболее удачных блоков.</p>
+<p>Dark fantasy хорошо ложится на Quake-like FPS.</p>
+<p>Местами напоминает остатки того fantasy Quake, который Romero первоначально хотел сделать.</p>
+<hr/>
+<h3 id="82-episode-4-2030">82. Episode 4 — 2030<a class="headerlink" href="#82-episode-4-2030" title="Permanent link">¶</a></h3>
+<p>Near-future / military sci-fi.</p>
+<p>Нормальный FPS.</p>
+<p>Но к 2000 году это уже очень конкурентная зона жанра.</p>
+<hr/>
+<h3 id="83-deathmatch-co-op">83. Deathmatch и co-op<a class="headerlink" href="#83-deathmatch-co-op" title="Permanent link">¶</a></h3>
+<p>Multiplayer — одна из более удачных частей Daikatana.</p>
+<p>Romero всю карьеру хорошо понимал deathmatch.</p>
+<p>Есть:</p>
+<div class="highlight"><pre><span></span><code>deathmatch
+team modes
+CTF
+Deathtag
+co-op
+</code></pre></div>
+<p>Co-op особенно полезен:</p>
+<h4 id="ai-">живые люди заменяют тупых AI-компаньонов.<a class="headerlink" href="#ai-" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="84-daikatana">84. Daikatana — наш итоговый диагноз<a class="headerlink" href="#84-daikatana" title="Permanent link">¶</a></h3>
+<p>Не «худшая игра мира».</p>
+<p>Скорее:</p>
+<h4 id="fps">очень амбициозный, неровный, переоценённый и технологически опоздавший FPS.<a class="headerlink" href="#fps" title="Permanent link">¶</a></h4>
+<p>Её сильные стороны:</p>
+<div class="highlight"><pre><span></span><code>быстрое движение
+много оружия
+variety
+авторская идея
+deathmatch
+co-op
+разные эпохи
+</code></pre></div>
+<p>Слабые:</p>
+<div class="highlight"><pre><span></span><code>companions
+scope
+feature creep
+нераскрытые системы
+неровные карты
+save gems
+длинный production
+technology lag
+</code></pre></div>
+<hr/>
+<h3 id="85-daikatana-romero">85. Daikatana и взросление Romero<a class="headerlink" href="#85-daikatana-romero" title="Permanent link">¶</a></h3>
+<p>Старая id умела:</p>
+<div class="highlight"><pre><span></span><code>плохая mechanic
+↓
+вырезать
+</code></pre></div>
+<p>Ion Storm часто:</p>
+<div class="highlight"><pre><span></span><code>плохая mechanic
+↓
+но это обещанная feature
+↓
+оставить
+</code></pre></div>
+<p>Daikatana показывает опасность абсолютной авторской свободы без сильного внутреннего редактора.</p>
+<hr/>
+<h3 id="86-romero-warren-spector">86. Romero и Warren Spector<a class="headerlink" href="#86-romero-warren-spector" title="Permanent link">¶</a></h3>
+<p>Одна из важнейших, но часто забываемых заслуг Romero в Ion Storm:</p>
+<h4 id="warren-spector">он приводит Warren Spector.<a class="headerlink" href="#warren-spector" title="Permanent link">¶</a></h4>
+<p>Spector почти собирался делать RPG-проект в другой системе.</p>
+<p>Romero убеждает его не подписывать контракт и предлагает:</p>
+<div class="highlight"><pre><span></span><code>свою команду
+свои деньги
+свой Austin office
+полную creative freedom
+</code></pre></div>
+<hr/>
+<h3 id="87-ion-storm-austin">87. Ion Storm Austin<a class="headerlink" href="#87-ion-storm-austin" title="Permanent link">¶</a></h3>
+<p>Romero позволяет Spector не переезжать в Dallas.</p>
+<p>Создаётся отдельный офис в Austin.</p>
+<p>Он культурно почти другая компания:</p>
+<div class="highlight"><pre><span></span><code>Dallas
+→ громкие extroverts / rockstar energy
+
+Austin
+→ Looking Glass / systems / immersive sim
+</code></pre></div>
+<hr/>
+<h3 id="88-deus-ex-romero">88. Deus Ex и заслуга Romero<a class="headerlink" href="#88-deus-ex-romero" title="Permanent link">¶</a></h3>
+<p>Deus Ex — не дизайн Romero.</p>
+<p>Но без его решения:</p>
+<div class="highlight"><pre><span></span><code>найти Spector
+↓
+дать studio
+↓
+дать деньги
+↓
+не вмешиваться
+↓
+защищать от Dallas management
+</code></pre></div>
+<p>игра могла вообще не появиться в известной форме.</p>
+<p>Romero несколько раз защищал проект Austin от попыток вмешательства/закрытия со стороны Dallas-management.</p>
+<p>Поэтому:</p>
+<h4 id="daikatana_1">Daikatana — его большой творческий провал.<a class="headerlink" href="#daikatana_1" title="Permanent link">¶</a></h4>
+<p>Но:</p>
+<h4 id="deus-ex">создание условий для Deus Ex — одна из его больших управленческих заслуг.<a class="headerlink" href="#deus-ex" title="Permanent link">¶</a></h4>
+<p>Обе вещи одновременно истинны.</p>
+<hr/>
+<h3 id="89-anachronox">89. Anachronox<a class="headerlink" href="#89-anachronox" title="Permanent link">¶</a></h3>
+<p>Это проект Tom Hall.</p>
+<p>Не Romero.</p>
+<p>Но Romero — co-founder Ion Storm и человек, создавший компанию, в которой Hall получил возможность реализовать свою большую авторскую RPG.</p>
+<hr/>
+<h3 id="90-ion-storm-dallas">90. Закрытие Ion Storm Dallas<a class="headerlink" href="#90-ion-storm-dallas" title="Permanent link">¶</a></h3>
+<p>После Daikatana и Anachronox Dallas office закрывается в 2001 году.</p>
+<p>Romero и Hall уходят.</p>
+<p>Austin продолжает существовать отдельно до 2005 года.</p>
+<hr/>
+<hr/>
+<h2 id="10-ion-storm-monkeystone-midway">10. После Ion Storm: Monkeystone и Midway<a class="headerlink" href="#10-ion-storm-monkeystone-midway" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>Возврат к маленьким командам, mobile и конфликт вокруг Gauntlet: Seven Sorrows.</p>
+</blockquote>
+<h3 id="91-ion-storm-monkeystone-games">91. После Ion Storm — Monkeystone Games<a class="headerlink" href="#91-ion-storm-monkeystone-games" title="Permanent link">¶</a></h3>
+<p>Romero и Tom Hall снова объединяются.</p>
+<p>Создают:</p>
+<h4 id="monkeystone-games">Monkeystone Games.<a class="headerlink" href="#monkeystone-games" title="Permanent link">¶</a></h4>
+<p>Идея почти терапевтическая после Ion Storm:</p>
+<div class="highlight"><pre><span></span><code>маленькая команда
++
+маленькие игры
++
+Romero снова пишет код
+</code></pre></div>
+<hr/>
+<h3 id="92-hyperspace-delivery-boy">92. Hyperspace Delivery Boy!<a class="headerlink" href="#92-hyperspace-delivery-boy" title="Permanent link">¶</a></h3>
+<p>Tom Hall:</p>
+<blockquote>
+<p>design.</p>
+</blockquote>
+<p>Romero:</p>
+<blockquote>
+<p>programming.</p>
+</blockquote>
+<p>Top-down puzzle/adventure.</p>
+<p>Почти возвращение к ранней структуре их сотрудничества.</p>
+<hr/>
+<h3 id="93-mobile-">93. Mobile-направление<a class="headerlink" href="#93-mobile-" title="Permanent link">¶</a></h3>
+<p>Monkeystone рано идёт в:</p>
+<div class="highlight"><pre><span></span><code>Pocket PC
+Java
+BREW
+N-Gage
+</code></pre></div>
+<p>Romero снова исследует новую платформу, а не пытается немедленно делать Daikatana 2.</p>
+<hr/>
+<h3 id="94-red-faction-n-gage">94. Red Faction N-Gage<a class="headerlink" href="#94-red-faction-n-gage" title="Permanent link">¶</a></h3>
+<p>Monkeystone делает мобильный/портативный порт Red Faction.</p>
+<p>Интересен как техническая работа:</p>
+<blockquote>
+<p>большой FPS → очень ограниченное мобильное железо.</p>
+</blockquote>
+<hr/>
+<h3 id="95-midway">95. Midway<a class="headerlink" href="#95-midway" title="Permanent link">¶</a></h3>
+<p>В 2003 году Romero приходит в:</p>
+<h4 id="midway">Midway.<a class="headerlink" href="#midway" title="Permanent link">¶</a></h4>
+<p>Основной проект:</p>
+<h4 id="gauntlet-seven-sorrows">Gauntlet: Seven Sorrows.<a class="headerlink" href="#gauntlet-seven-sorrows" title="Permanent link">¶</a></h4>
+<p>Он хочет превратить старую arcade Gauntlet в более серьёзную action-RPG.</p>
+<p>Приглашает:</p>
+<h4 id="josh-sawyer">Josh Sawyer<a class="headerlink" href="#josh-sawyer" title="Permanent link">¶</a></h4>
+<p>как lead designer.</p>
+<hr/>
+<h3 id="96-seven-sorrows">96. Конфликт вокруг Seven Sorrows<a class="headerlink" href="#96-seven-sorrows" title="Permanent link">¶</a></h3>
+<p>Romero хочет более амбициозную игру.</p>
+<p>Midway хочет релиз к Christmas 2005.</p>
+<p>Romero и руководство проекта сопротивляются.</p>
+<p>Его снимают с проекта / он уходит до релиза.</p>
+<p>Seven Sorrows выходит уже в сильно изменённой форме.</p>
+<hr/>
+<h3 id="97">97. Повторяющаяся карьерная тема<a class="headerlink" href="#97" title="Permanent link">¶</a></h3>
+<p>Romero постоянно сталкивается с одной и той же осью:</p>
+<div class="highlight"><pre><span></span><code>design ambition
+vs
+ship date
+</code></pre></div>
+<p>id.</p>
+<p>Ion Storm.</p>
+<p>Midway.</p>
+<p>В разных ролях он снова и снова оказывается на стороне:</p>
+<h4 id="_9">«дайте проекту больше пространства».<a class="headerlink" href="#_9" title="Permanent link">¶</a></h4>
+<hr/>
+<hr/>
+<h2 id="11-mmo-gazillion-social-era">11. MMO, Gazillion и social-era<a class="headerlink" href="#11-mmo-gazillion-social-era" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>Slipgate Ironworks, Project Redwood, Severity, Ravenwood Fair и Loot Drop.</p>
+</blockquote>
+<h3 id="98-slipgate-ironworks">98. Slipgate Ironworks<a class="headerlink" href="#98-slipgate-ironworks" title="Permanent link">¶</a></h3>
+<p>После Midway Romero основывает:</p>
+<h4 id="slipgate-ironworks">Slipgate Ironworks.<a class="headerlink" href="#slipgate-ironworks" title="Permanent link">¶</a></h4>
+<p>Главное направление:</p>
+<h4 id="mmo">MMO.<a class="headerlink" href="#mmo" title="Permanent link">¶</a></h4>
+<p>Название, конечно, от Quake Slipgate.</p>
+<hr/>
+<h3 id="99-world-of-warcraft">99. World of Warcraft<a class="headerlink" href="#99-world-of-warcraft" title="Permanent link">¶</a></h3>
+<p>Romero очень серьёзно увлекается WoW.</p>
+<p>Позднее говорил примерно о:</p>
+<h4 id="3000">3000+ часов<a class="headerlink" href="#3000" title="Permanent link">¶</a></h4>
+<p>и нескольких годах очень активной игры.</p>
+<p>Интерес к MMO был не маркетинговым.</p>
+<p>Он действительно хотел понять эту форму игр.</p>
+<hr/>
+<h3 id="100-gazillion-entertainment">100. Gazillion Entertainment<a class="headerlink" href="#100-gazillion-entertainment" title="Permanent link">¶</a></h3>
+<p>Slipgate становится частью:</p>
+<h4 id="gazillion-entertainment">Gazillion Entertainment.<a class="headerlink" href="#gazillion-entertainment" title="Permanent link">¶</a></h4>
+<p>Romero участвует в создании более крупной MMO-компании.</p>
+<hr/>
+<h3 id="101-project-redwood">101. Project Redwood<a class="headerlink" href="#101-project-redwood" title="Permanent link">¶</a></h3>
+<p>Один из невыпущенных MMO-проектов Romero.</p>
+<p>Идея грубо:</p>
+<div class="highlight"><pre><span></span><code>World of Warcraft
++
+Pokémon
++
+educational systems
+</code></pre></div>
+<p>Игрок не убивает животных, а постепенно получает их доверие.</p>
+<p>Они помогают защищаться от роботов.</p>
+<p>В игру хотели встроить образовательные элементы.</p>
+<p>Проект разрабатывался долго, но до выпуска не дошёл.</p>
+<hr/>
+<h3 id="102-severity">102. Severity<a class="headerlink" href="#102-severity" title="Permanent link">¶</a></h3>
+<p>Отдельный multiplayer FPS-проект, связанный с CPL.</p>
+<p>Цель:</p>
+<h4 id="competitiveesports-oriented-shooter">competitive/esports-oriented shooter.<a class="headerlink" href="#competitiveesports-oriented-shooter" title="Permanent link">¶</a></h4>
+<p>Использовать id technology.</p>
+<p>Проект издателя не находит и постепенно исчезает.</p>
+<hr/>
+<h3 id="103">103. Слабейший публичный период карьеры<a class="headerlink" href="#103" title="Permanent link">¶</a></h3>
+<p>Видимая линия примерно:</p>
+<div class="highlight"><pre><span></span><code>Daikatana
+↓
+mobile
+↓
+Gauntlet — ушёл до релиза
+↓
+MMO — не вышло
+↓
+Severity — не вышло
+</code></pre></div>
+<p>В этот момент можно было решить:</p>
+<blockquote>
+<p>Romero окончательно остался в прошлом.</p>
+</blockquote>
+<p>Но дальше происходит неожиданное.</p>
+<hr/>
+<h3 id="104-ravenwood-fair">104. Ravenwood Fair<a class="headerlink" href="#104-ravenwood-fair" title="Permanent link">¶</a></h3>
+<p>2010.</p>
+<p>Social/Facebook game.</p>
+<p>Romero помогает перепроектировать существующий social-game prototype.</p>
+<p>Получается:</p>
+<h4 id="ravenwood-fair">Ravenwood Fair.<a class="headerlink" href="#ravenwood-fair" title="Permanent link">¶</a></h4>
+<p>Игра становится огромным успехом.</p>
+<p>Примерно:</p>
+<h4 id="25">25 миллионов игроков.<a class="headerlink" href="#25" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="105-ravenwood-fair">105. Ravenwood Fair как важный контраргумент<a class="headerlink" href="#105-ravenwood-fair" title="Permanent link">¶</a></h3>
+<p>Romero оказывается способен понимать не только:</p>
+<blockquote>
+<p>old-school FPS.</p>
+</blockquote>
+<p>Он применяет обычные game-design principles к social gaming:</p>
+<div class="highlight"><pre><span></span><code>exploration
+визуальная идентичность
+quests
+монстры
+маленький мир
+</code></pre></div>
+<p>Сам участвует в звуке и раннем creative development.</p>
+<hr/>
+<h3 id="106-loot-drop">106. Loot Drop<a class="headerlink" href="#106-loot-drop" title="Permanent link">¶</a></h3>
+<p>Romero и Brenda Brathwaite/Romero создают:</p>
+<h4 id="loot-drop">Loot Drop.<a class="headerlink" href="#loot-drop" title="Permanent link">¶</a></h4>
+<p>Tom Hall снова оказывается рядом.</p>
+<p>Цель:</p>
+<blockquote>
+<p>делать social games профессиональными game designers.</p>
+</blockquote>
+<p>Один из проектов:</p>
+<h4 id="ghost-recon-commander">Ghost Recon Commander.<a class="headerlink" href="#ghost-recon-commander" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="107-social-era">107. Конец social-era<a class="headerlink" href="#107-social-era" title="Permanent link">¶</a></h3>
+<p>Facebook/social рынок быстро меняется.</p>
+<p>Проекты закрываются.</p>
+<p>Попытки crowdfunding old-school RPG не получают достаточной поддержки.</p>
+<p>Loot Drop постепенно заканчивает существование.</p>
+<hr/>
+<hr/>
+<h2 id="12-romero-games-fps">12. Romero Games и возвращение к классическому FPS<a class="headerlink" href="#12-romero-games-fps" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>BLACKROOM, SIGIL, SIGIL II, HELLION и новый современный FPS.</p>
+</blockquote>
+<h3 id="108-romero-games">108. Romero Games<a class="headerlink" href="#108-romero-games" title="Permanent link">¶</a></h3>
+<p>В 2015 году John и Brenda переезжают в Galway, Ireland.</p>
+<p>Создают:</p>
+<h4 id="romero-games">Romero Games.<a class="headerlink" href="#romero-games" title="Permanent link">¶</a></h4>
+<p>Это уже намного более зрелая студийная структура.</p>
+<p>Не:</p>
+<blockquote>
+<p>рок-звезда John Romero.</p>
+</blockquote>
+<p>А:</p>
+<div class="highlight"><pre><span></span><code>Brenda Romero
+→ CEO / game director
+
+John Romero
+→ game director / programmer / designer
+</code></pre></div>
+<hr/>
+<h3 id="109-gunman-taco-truck">109. Gunman Taco Truck<a class="headerlink" href="#109-gunman-taco-truck" title="Permanent link">¶</a></h3>
+<p>Один из ранних проектов Romero Games.</p>
+<p>Идея сына Romero:</p>
+<blockquote>
+<p>убивать постапокалиптических мутантов и делать из них тако.</p>
+</blockquote>
+<p>Маленькая характерная игра.</p>
+<hr/>
+<h3 id="110-doom">110. Возвращение к DOOM<a class="headerlink" href="#110-doom" title="Permanent link">¶</a></h3>
+<p>В 2016 Romero снова начинает делать карты для оригинальной Doom.</p>
+<p>Выпускает:</p>
+<div class="highlight"><pre><span></span><code>E1M8B — Tech Gone Bad
+E1M4B — Phobos Mission Control
+</code></pre></div>
+<p>И community понимает:</p>
+<h4 id="romero-doom-maps">Romero всё ещё умеет делать Doom maps.<a class="headerlink" href="#romero-doom-maps" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="111">111. Значение возвращения<a class="headerlink" href="#111" title="Permanent link">¶</a></h3>
+<p>До этого большая часть поздней карьеры Romero была сознательным движением:</p>
+<blockquote>
+<p>доказать, что я умею делать не только Doom.</p>
+</blockquote>
+<p>После 2015–2016 он перестаёт бояться собственного наследия.</p>
+<hr/>
+<h3 id="112-blackroom">112. BLACKROOM<a class="headerlink" href="#112-blackroom" title="Permanent link">¶</a></h3>
+<p>Romero снова объединяется с Adrian Carmack.</p>
+<p>Планируют:</p>
+<h4 id="blackroom">BLACKROOM.<a class="headerlink" href="#blackroom" title="Permanent link">¶</a></h4>
+<p>Old-school modern FPS.</p>
+<p>Fast movement.</p>
+<p>Exploration.</p>
+<p>Weapon mastery.</p>
+<p>Holographic environments.</p>
+<p>Kickstarter просит около $700 000.</p>
+<hr/>
+<h3 id="113-blackroom-cancellation">113. BLACKROOM cancellation<a class="headerlink" href="#113-blackroom-cancellation" title="Permanent link">¶</a></h3>
+<p>Campaign быстро собирает часть денег, но люди требуют:</p>
+<h4 id="gameplay">покажите gameplay.<a class="headerlink" href="#gameplay" title="Permanent link">¶</a></h4>
+<p>Romero признаёт проблему.</p>
+<p>Kickstarter отменяют всего через несколько дней.</p>
+<p>Команда делает prototype.</p>
+<p>Показывает publishers.</p>
+<p>Финансирование не получает.</p>
+<p>Проект окончательно не выходит.</p>
+<hr/>
+<h3 id="114-daikatana">114. Контраст с Daikatana<a class="headerlink" href="#114-daikatana" title="Permanent link">¶</a></h3>
+<p>Daikatana:</p>
+<div class="highlight"><pre><span></span><code>громкие обещания
+↓
+проблемы
+↓
+ещё обещания
+↓
+годы разработки
+</code></pre></div>
+<p>BLACKROOM:</p>
+<div class="highlight"><pre><span></span><code>рынок:
+«покажите proof»
+
+Romero:
+«справедливо»
+
+↓
+stop
+</code></pre></div>
+<p>Это показывает реальное изменение его production-мышления.</p>
+<hr/>
+<h3 id="115-sigil">115. SIGIL<a class="headerlink" href="#115-sigil" title="Permanent link">¶</a></h3>
+<p>В 2019 году Romero выпускает:</p>
+<h4 id="sigil">SIGIL.<a class="headerlink" href="#sigil" title="Permanent link">¶</a></h4>
+<p>Девять карт для оригинального Doom.</p>
+<p>Концептуально:</p>
+<h4 id="episode-5">Episode 5<a class="headerlink" href="#episode-5" title="Permanent link">¶</a></h4>
+<p>между Thy Flesh Consumed и Doom II.</p>
+<hr/>
+<h3 id="116-sigil-romero">116. Почему SIGIL важна для Romero<a class="headerlink" href="#116-sigil-romero" title="Permanent link">¶</a></h3>
+<p>Это не просто nostalgia.</p>
+<p>Она доказывает:</p>
+<blockquote>
+<p>E1M1 была не случайностью раннего жанра.</p>
+</blockquote>
+<p>Romero спустя 25 лет возвращается в сцену, где community уже десятилетиями делает выдающиеся Doom maps —</p>
+<p>и его собственный стиль всё ещё читается.</p>
+<hr/>
+<h3 id="117-sigil-design">117. SIGIL design<a class="headerlink" href="#117-sigil-design" title="Permanent link">¶</a></h3>
+<p>Сохраняет оригинальный Doom ruleset.</p>
+<p>Нет:</p>
+<div class="highlight"><pre><span></span><code>SSG
+Revenant
+Arch-vile
+Mancubus
+Chaingunner
+Pain Elemental
+Hell Knight
+Arachnotron
+</code></pre></div>
+<p>Сложность создаётся:</p>
+<div class="highlight"><pre><span></span><code>геометрией
+LOS
+ammo economy
+lighting
+damage floors
+trap timing
+enemy placement
+</code></pre></div>
+<hr/>
+<h3 id="118-modern-romero-mapping">118. Modern Romero mapping<a class="headerlink" href="#118-modern-romero-mapping" title="Permanent link">¶</a></h3>
+<p>Сохраняет старые признаки:</p>
+<div class="highlight"><pre><span></span><code>пространство показывается заранее
+окна
+возвраты
+loops
+высоты
+visual relationships
+</code></pre></div>
+<p>Но становится значительно:</p>
+<div class="highlight"><pre><span></span><code>злее
+темнее
+плотнее
+ресурсно строже
+</code></pre></div>
+<hr/>
+<h3 id="119-sigil">119. SIGIL как карьерный поворот<a class="headerlink" href="#119-sigil" title="Permanent link">¶</a></h3>
+<p>Молодой Romero:</p>
+<blockquote>
+<p>что ещё можно добавить?</p>
+</blockquote>
+<p>Поздний Romero:</p>
+<blockquote>
+<p>что ещё можно сделать с тем, что уже существует?</p>
+</blockquote>
+<p>Это важное взросление.</p>
+<hr/>
+<h3 id="120-one-humanity">120. One Humanity<a class="headerlink" href="#120-one-humanity" title="Permanent link">¶</a></h3>
+<p>В 2022 году Romero делает:</p>
+<h4 id="one-humanity">One Humanity.<a class="headerlink" href="#one-humanity" title="Permanent link">¶</a></h4>
+<p>Новую карту уже для:</p>
+<h4 id="doom-ii">DOOM II.<a class="headerlink" href="#doom-ii" title="Permanent link">¶</a></h4>
+<p>Доход идёт на гуманитарную помощь Украине.</p>
+<p>Это его первая новая Doom II-map примерно за 28 лет.</p>
+<p>Из неё начинает расти:</p>
+<h4 id="hellion">HELLION.<a class="headerlink" href="#hellion" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="121-sigil-ii">121. SIGIL II<a class="headerlink" href="#121-sigil-ii" title="Permanent link">¶</a></h3>
+<p>10 декабря 2023 года.</p>
+<p>Ровно к 30-летию Doom.</p>
+<p>Неофициальный:</p>
+<h4 id="episode-6">Episode 6.<a class="headerlink" href="#episode-6" title="Permanent link">¶</a></h4>
+<p>Снова Doom I ruleset.</p>
+<p>Девять карт.</p>
+<hr/>
+<h3 id="122-sigil-ii">122. SIGIL II — ключевое развитие<a class="headerlink" href="#122-sigil-ii" title="Permanent link">¶</a></h3>
+<p>SIGIL доказывала:</p>
+<blockquote>
+<p>Romero вернулся.</p>
+</blockquote>
+<p>SIGIL II:</p>
+<blockquote>
+<p>теперь он уже уверенно делает современный hardcore Doom.</p>
+</blockquote>
+<p>Она:</p>
+<div class="highlight"><pre><span></span><code>сложнее
+больше
+разнообразнее
+лучше выстроена как кампания
+</code></pre></div>
+<hr/>
+<h3 id="123-make-the-first-level-last">123. Make the First Level Last<a class="headerlink" href="#123-make-the-first-level-last" title="Permanent link">¶</a></h3>
+<p>Интересная поздняя методика Romero.</p>
+<p>Для SIGIL II:</p>
+<div class="highlight"><pre><span></span><code>сначала делает середину кампании
+↓
+понимает её язык
+↓
+только потом делает E6M1
+</code></pre></div>
+<p>Логика:</p>
+<blockquote>
+<p>первый уровень должен показывать уже сформировавшуюся идентичность набора.</p>
+</blockquote>
+<p>Очень зрелый production-подход.</p>
+<hr/>
+<h3 id="124-sigil-ii-difficulty">124. SIGIL II и difficulty<a class="headerlink" href="#124-sigil-ii-difficulty" title="Permanent link">¶</a></h3>
+<p>Ultra-Violence сознательно значительно тяжелее первой SIGIL.</p>
+<p>Romero проектирует его уже не как:</p>
+<blockquote>
+<p>могу пройти всю карту без save.</p>
+</blockquote>
+<p>А допускает:</p>
+<h4 id="_10">сам должен пользоваться сохранениями.<a class="headerlink" href="#_10" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="125-sigil-ii-design-evolution">125. SIGIL II design evolution<a class="headerlink" href="#125-sigil-ii-design-evolution" title="Permanent link">¶</a></h3>
+<p>Больше:</p>
+<div class="highlight"><pre><span></span><code>outdoor spaces
+дальних LOS
+techbase/Hell hybrid
+больших маршрутов
+verticality
+resource pressure
+</code></pre></div>
+<p>Меньше визуальной однотонности SIGIL I.</p>
+<hr/>
+<h3 id="126-sigil">126. Ограничение обеих SIGIL<a class="headerlink" href="#126-sigil" title="Permanent link">¶</a></h3>
+<p>Главный потолок:</p>
+<h4 id="doom-i-bestiary">Doom I bestiary.<a class="headerlink" href="#doom-i-bestiary" title="Permanent link">¶</a></h4>
+<p>После современной Doom-community неизбежно хочется:</p>
+<div class="highlight"><pre><span></span><code>SSG
+Revenant
+Arch-vile
+Chaingunner
+Mancubus
+</code></pre></div>
+<p>Именно поэтому следующий проект потенциально интереснее.</p>
+<hr/>
+<h3 id="127-hellion">127. HELLION<a class="headerlink" href="#127-hellion" title="Permanent link">¶</a></h3>
+<p>Текущий большой classic Doom-проект Romero.</p>
+<p>Уже:</p>
+<h4 id="doom-ii-ruleset">DOOM II ruleset.<a class="headerlink" href="#doom-ii-ruleset" title="Permanent link">¶</a></h4>
+<p>Вырос из One Humanity.</p>
+<p>План:</p>
+<h4 id="doom-ii_1">полноценный большой набор карт, связанный с Doom II.<a class="headerlink" href="#doom-ii_1" title="Permanent link">¶</a></h4>
+<p>Это впервые даёт современному Romero весь combat vocabulary Doom II:</p>
+<div class="highlight"><pre><span></span><code>Super Shotgun
+Revenant
+Chaingunner
+Mancubus
+Arachnotron
+Pain Elemental
+Hell Knight
+Arch-vile
+</code></pre></div>
+<p>HELLION всё ещё находится в разработке в 2026 году.</p>
+<hr/>
+<h3 id="128-quake-episode">128. Заявленный Quake episode<a class="headerlink" href="#128-quake-episode" title="Permanent link">¶</a></h3>
+<p>После HELLION Romero ранее говорил о желании сделать:</p>
+<h4 id="quake-episode">новый Quake episode.<a class="headerlink" href="#quake-episode" title="Permanent link">¶</a></h4>
+<p>Это особенно символично, потому что именно разработка первого Quake разрушила старую id и его отношения с Carmack.</p>
+<p>Пока это следующий заявленный проект, а не основной текущий релиз.</p>
+<hr/>
+<h3 id="129-empire-of-sin">129. Empire of Sin<a class="headerlink" href="#129-empire-of-sin" title="Permanent link">¶</a></h3>
+<p>Romero Games выпускает:</p>
+<h4 id="empire-of-sin">Empire of Sin.<a class="headerlink" href="#empire-of-sin" title="Permanent link">¶</a></h4>
+<p>Но важно:</p>
+<h4 id="brenda-romero">это прежде всего проект Brenda Romero.<a class="headerlink" href="#brenda-romero" title="Permanent link">¶</a></h4>
+<p>Не <code>John Romero's Empire of Sin</code>.</p>
+<p>John выступает скорее как:</p>
+<div class="highlight"><pre><span></span><code>sounding board
+audio / implementation
+combat feel support
+testing
+</code></pre></div>
+<p>Студия уже не строится вокруг одного имени John Romero.</p>
+<hr/>
+<h3 id="130-fps-romero-games">130. Новый большой FPS Romero Games<a class="headerlink" href="#130-fps-romero-games" title="Permanent link">¶</a></h3>
+<p>С начала 2020-х Romero Games работает над:</p>
+<h4 id="fps-ip">новой FPS IP.<a class="headerlink" href="#fps-ip" title="Permanent link">¶</a></h4>
+<p>Technology:</p>
+<h4 id="unreal-engine-5">Unreal Engine 5.<a class="headerlink" href="#unreal-engine-5" title="Permanent link">¶</a></h4>
+<p>John снова становится:</p>
+<h4 id="fps-game-director">FPS game director.<a class="headerlink" href="#fps-game-director" title="Permanent link">¶</a></h4>
+<p>Это первое серьёзное возвращение к современной большой FPS-разработке спустя много лет.</p>
+<hr/>
+<h3 id="131-2025">131. Кризис финансирования 2025<a class="headerlink" href="#131-2025" title="Permanent link">¶</a></h3>
+<p>В 2025 году publisher прекращает финансирование проекта.</p>
+<p>Romero Games проходит через тяжёлый период.</p>
+<p>Сокращения.</p>
+<p>Появляются слухи о закрытии.</p>
+<p>Но студия заявляет:</p>
+<h4 id="_11">мы не закрылись.<a class="headerlink" href="#_11" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="132-rescope">132. Rescope<a class="headerlink" href="#132-rescope" title="Permanent link">¶</a></h3>
+<p>Большой FPS не бросают полностью.</p>
+<p>Проект:</p>
+<div class="highlight"><pre><span></span><code>сохраняет часть уже сделанной работы
+↓
+существенно уменьшается
+↓
+перепроектируется
+↓
+разработка продолжается
+</code></pre></div>
+<p>Это особенно интересно после Daikatana.</p>
+<p>Молодой Romero:</p>
+<div class="highlight"><pre><span></span><code>scope слишком большой?
+↓
+продолжаем
+</code></pre></div>
+<p>Современный Romero:</p>
+<div class="highlight"><pre><span></span><code>финансирование изменилось?
+↓
+уменьшаем scope
+↓
+переделываем
+↓
+ship-ориентированное решение
+</code></pre></div>
+<hr/>
+<h3 id="133-romero-2026">133. Romero в 2026 году<a class="headerlink" href="#133-romero-2026" title="Permanent link">¶</a></h3>
+<p>Основные направления:</p>
+<h4 id="romero-games_1">Romero Games<a class="headerlink" href="#romero-games_1" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>новый современный FPS
+↓
+game director
+</code></pre></div>
+<p>Проект жив после rescope.</p>
+<hr/>
+<h4 id="hellion_1">HELLION<a class="headerlink" href="#hellion_1" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>DOOM II
+↓
+современный Romero mapping
+</code></pre></div>
+<p>Находится в разработке.</p>
+<hr/>
+<h4 id="_12">В перспективе<a class="headerlink" href="#_12" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>Quake episode
+</code></pre></div>
+<hr/>
+<h4 id="id-preservation">История id / preservation<a class="headerlink" href="#id-preservation" title="Permanent link">¶</a></h4>
+<p>Romero активно:</p>
+<div class="highlight"><pre><span></span><code>сохраняет старые материалы
+участвует в ретроспективах
+публикует архивные документы
+общается с Doom/Quake community
+</code></pre></div>
+<p>У него есть большая личная коллекция материалов ранней id.</p>
+<hr/>
+<hr/>
+<h2 id="13">13. Ретроспектива: отношения, роли, сильные и слабые стороны<a class="headerlink" href="#13" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>DOOM Guy, Carmack/Hall/Spector и разбор реальных компетенций Romero.</p>
+</blockquote>
+<h3 id="134-doom-guy">134. DOOM Guy<a class="headerlink" href="#134-doom-guy" title="Permanent link">¶</a></h3>
+<p>Romero выпускает автобиографию:</p>
+<h4 id="doom-guy-life-in-first-person">DOOM Guy: Life in First Person.<a class="headerlink" href="#doom-guy-life-in-first-person" title="Permanent link">¶</a></h4>
+<p>В ней подробно проходит:</p>
+<div class="highlight"><pre><span></span><code>раннее программирование
+Softdisk
+id
+Carmack
+Doom
+Quake
+Ion Storm
+Daikatana
+дальнейшую карьеру
+</code></pre></div>
+<p>Поздняя часть его деятельности включает осознанное документирование истории ранней PC-индустрии.</p>
+<hr/>
+<h3 id="135-carmack">135. Отношения с Carmack спустя десятилетия<a class="headerlink" href="#135-carmack" title="Permanent link">¶</a></h3>
+<p>Старый конфликт сильно остыл.</p>
+<p>Romero и Carmack публично обсуждают историю id значительно спокойнее.</p>
+<p>В современных ретроспективах становится понятнее:</p>
+<h4 id="quake-romero-carmack">Quake была системным конфликтом компании, а не простой историей «Romero ленивый / Carmack злой».<a class="headerlink" href="#quake-romero-carmack" title="Permanent link">¶</a></h4>
+<p>Carmack признаёт часть собственных чрезмерных технологических требований.</p>
+<p>Romero намного спокойнее оценивает собственные ошибки.</p>
+<hr/>
+<h3 id="136-romero-vs-carmack">136. Romero vs Carmack — вся карьерная дуга<a class="headerlink" href="#136-romero-vs-carmack" title="Permanent link">¶</a></h3>
+<p>Очень красивая разница сохраняется всю жизнь.</p>
+<h4 id="carmack">Carmack<a class="headerlink" href="#carmack" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>1990:
+как заставить PC делать невозможное?
+
+↓
+rockets
+
+↓
+VR
+
+↓
+AGI
+</code></pre></div>
+<p>Его постоянно тянет:</p>
+<h4 id="_13">к следующей фундаментальной технологической проблеме.<a class="headerlink" href="#_13" title="Permanent link">¶</a></h4>
+<hr/>
+<h4 id="romero_3">Romero<a class="headerlink" href="#romero_3" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>1990:
+какой уровень будет весёлым?
+
+↓
+
+mobile
+MMO
+social
+strategy
+
+↓
+
+Doom editor
+
+↓
+
+какой уровень будет весёлым?
+</code></pre></div>
+<p>Его в конечном итоге всегда тянет:</p>
+<h4 id="_14">обратно к игре.<a class="headerlink" href="#_14" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="137-romero-vs-hall">137. Romero vs Hall<a class="headerlink" href="#137-romero-vs-hall" title="Permanent link">¶</a></h3>
+<p>Hall:</p>
+<div class="highlight"><pre><span></span><code>world
+characters
+fiction
+humour
+adventure
+</code></pre></div>
+<p>Romero:</p>
+<div class="highlight"><pre><span></span><code>moment-to-moment gameplay
+space
+movement
+flow
+combat
+</code></pre></div>
+<p>Поэтому Commander Keen хорошо использует обоих.</p>
+<p>На Doom Hall постепенно становится лишним именно для выбранного core.</p>
+<hr/>
+<h3 id="138-romero-vs-spector">138. Romero vs Spector<a class="headerlink" href="#138-romero-vs-spector" title="Permanent link">¶</a></h3>
+<p>Romero:</p>
+<div class="highlight"><pre><span></span><code>flow
+space
+movement
+immediate play
+</code></pre></div>
+<p>Spector:</p>
+<div class="highlight"><pre><span></span><code>systems
+choice
+player agency
+world simulation
+</code></pre></div>
+<p>Ion Storm дала обоим свободу.</p>
+<p>Результаты:</p>
+<div class="highlight"><pre><span></span><code>Romero
+→ Daikatana
+
+Spector
+→ Deus Ex
+</code></pre></div>
+<p>Главный урок не:</p>
+<blockquote>
+<p>один талантливый, другой нет.</p>
+</blockquote>
+<p>А:</p>
+<h4 id="creative-freedom-production-style">creative freedom усиливает уже существующий production style автора.<a class="headerlink" href="#creative-freedom-production-style" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="139-romero-programmer">139. Romero как programmer<a class="headerlink" href="#139-romero-programmer" title="Permanent link">¶</a></h3>
+<p>Не надо забывать, что он изначально:</p>
+<h4 id="_15">серьёзный программист.<a class="headerlink" href="#_15" title="Permanent link">¶</a></h4>
+<p>Программировал игры до Carmack.</p>
+<p>После ухода из большого AAA-management снова возвращался к коду.</p>
+<p>Главные известные areas:</p>
+<div class="highlight"><pre><span></span><code>gameplay code
+tools
+editors
+asset utilities
+installers
+multiplayer utilities
+mobile code
+</code></pre></div>
+<p>Он не уровня Carmack в graphics architecture —</p>
+<p>но это и не была его специализация.</p>
+<hr/>
+<h3 id="140-romero-tools-programmer">140. Romero как tools programmer<a class="headerlink" href="#140-romero-tools-programmer" title="Permanent link">¶</a></h3>
+<p>Один из его самых фундаментальных вкладов.</p>
+<p>Ключевая линия:</p>
+<div class="highlight"><pre><span></span><code>Dangerous Dave editor
+↓
+TEd
+↓
+Wolfenstein production tools
+↓
+DoomEd
+↓
+QuakeEd
+</code></pre></div>
+<p>Эти инструменты буквально определяют:</p>
+<h4 id="engine-carmack">как дизайнеры производят контент для engine Carmack.<a class="headerlink" href="#engine-carmack" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="141-romero-level-designer">141. Romero как level designer<a class="headerlink" href="#141-romero-level-designer" title="Permanent link">¶</a></h3>
+<p>Главная дизайнерская область.</p>
+<p>Характерные приёмы:</p>
+<div class="highlight"><pre><span></span><code>показать пространство заранее
+
+закольцевать маршрут
+
+дать смотреть из одной области в другую
+
+контрастировать тесное и открытое
+
+использовать высоту
+
+создавать landmarks
+
+строить secrets через spatial relationships
+
+повторно использовать одну область
+с разных направлений
+</code></pre></div>
+<hr/>
+<h3 id="142-romero-encounter-designer">142. Romero как encounter designer<a class="headerlink" href="#142-romero-encounter-designer" title="Permanent link">¶</a></h3>
+<p>Особенно поздний Romero всё сильнее работает:</p>
+<div class="highlight"><pre><span></span><code>enemy placement
++
+LOS
++
+resource economy
++
+geometry
+</code></pre></div>
+<p>SIGIL/SIGIL II показывают развитие от чистого spatial design к более злому encounter design.</p>
+<hr/>
+<h3 id="143-romero-multiplayer-designer">143. Romero как multiplayer designer<a class="headerlink" href="#143-romero-multiplayer-designer" title="Permanent link">¶</a></h3>
+<p>Очень важная часть.</p>
+<p>Он любит:</p>
+<h4 id="deathmatch_1">deathmatch.<a class="headerlink" href="#deathmatch_1" title="Permanent link">¶</a></h4>
+<p>Ещё со времён Doom.</p>
+<p>Quake DM3 становится одним из символов ранней competitive Quake.</p>
+<p>Он хорошо понимает:</p>
+<div class="highlight"><pre><span></span><code>weapon placement
+resource control
+map flow
+verticality
+re-entry routes
+</code></pre></div>
+<p>Даже у Daikatana multiplayer часто считается одной из более удачных частей.</p>
+<hr/>
+<h3 id="144-romero">144. Romero и моддинг<a class="headerlink" href="#144-romero" title="Permanent link">¶</a></h3>
+<p>Очень положительное отношение к community проходит через всю карьеру.</p>
+<div class="highlight"><pre><span></span><code>Doom WADs
+↓
+community authors
+↓
+Master Levels ecosystem
+↓
+TNT
+↓
+Final Doom
+</code></pre></div>
+<p>Позднее:</p>
+<div class="highlight"><pre><span></span><code>сам становится фактически community mapper
+↓
+SIGIL
+SIGIL II
+HELLION
+</code></pre></div>
+<p>Очень красивая обратная дуга.</p>
+<hr/>
+<h3 id="145-romero-fps">145. Главная заслуга Romero в истории FPS<a class="headerlink" href="#145-romero-fps" title="Permanent link">¶</a></h3>
+<p>Не:</p>
+<blockquote>
+<p>он придумал FPS.</p>
+</blockquote>
+<p>Не:</p>
+<blockquote>
+<p>он написал Doom Engine.</p>
+</blockquote>
+<p>Главный вклад:</p>
+<h4 id="first-person-rendering">он помог превратить техническую возможность first-person rendering в язык непосредственно интересного игрового пространства.<a class="headerlink" href="#first-person-rendering" title="Permanent link">¶</a></h4>
+<p>Особенно:</p>
+<div class="highlight"><pre><span></span><code>Wolfenstein
+→ скорость
+
+DOOM
+→ пространственный flow
+
+Quake
+→ настоящий 3D level design
+</code></pre></div>
+<hr/>
+<h3 id="146">146. Главная сильная сторона<a class="headerlink" href="#146" title="Permanent link">¶</a></h3>
+<h4 id="gameplay_1">Чувство моментального gameplay.<a class="headerlink" href="#gameplay_1" title="Permanent link">¶</a></h4>
+<p>Romero хорошо чувствует:</p>
+<div class="highlight"><pre><span></span><code>движение
+пространство
+темп
+секрет
+первую секунду encounter
+flow между помещениями
+</code></pre></div>
+<p>Когда он работает непосредственно внутри editor/playtest loop —</p>
+<p>очень силён.</p>
+<hr/>
+<h3 id="147">147. Главная слабость<a class="headerlink" href="#147" title="Permanent link">¶</a></h3>
+<h4 id="production-management">Большой долгий production management.<a class="headerlink" href="#production-management" title="Permanent link">¶</a></h4>
+<p>Daikatana особенно показывает проблемы с:</p>
+<div class="highlight"><pre><span></span><code>scope
+schedule
+team scaling
+dependency management
+feature commitment
+длительным large-team production
+</code></pre></div>
+<p>Отличный game maker не автоматически отличный CEO/studio manager.</p>
+<hr/>
+<h3 id="148-feature-breadth">148. Другая слабость: feature breadth<a class="headerlink" href="#148-feature-breadth" title="Permanent link">¶</a></h3>
+<p>В молодости после id он часто стремился:</p>
+<blockquote>
+<p>добавить больше.</p>
+</blockquote>
+<p>Daikatana особенно:</p>
+<div class="highlight"><pre><span></span><code>эпохи
+оружие
+RPG
+sidekicks
+меч
+story
+multiplayer
+</code></pre></div>
+<p>Поздний Romero явно больше ценит:</p>
+<h4 id="ruleset">ограниченный ruleset + плотность.<a class="headerlink" href="#ruleset" title="Permanent link">¶</a></h4>
+<p>SIGIL — лучший символ этого изменения.</p>
+<hr/>
+<h3 id="149">149. Мифы и важные уточнения<a class="headerlink" href="#149" title="Permanent link">¶</a></h3>
+<h4 id="romero_4">Миф: Romero просто делал карты<a class="headerlink" href="#romero_4" title="Permanent link">¶</a></h4>
+<p>Неверно.</p>
+<p>Он:</p>
+<div class="highlight"><pre><span></span><code>programmer
+tools programmer
+editor author
+project lead
+level designer
+producer
+multiplayer evangelist
+community liaison
+</code></pre></div>
+<hr/>
+<h4 id="carmack-id-romero">Миф: Carmack создал id, Romero потом пришёл<a class="headerlink" href="#carmack-id-romero" title="Permanent link">¶</a></h4>
+<p>Неверно.</p>
+<p>Romero — один из основателей id и один из людей, собравших будущую команду ещё внутри Softdisk.</p>
+<hr/>
+<h4 id="quake-romero">Миф: к Quake Romero уже ничего не делал<a class="headerlink" href="#quake-romero" title="Permanent link">¶</a></h4>
+<p>Неверно.</p>
+<p>Он:</p>
+<div class="highlight"><pre><span></span><code>QuakeEd
+design work
+много Quake maps
+Episode 2 почти целиком
+E1M1
+DM3
+финальный production
+</code></pre></div>
+<hr/>
+<h4 id="id_1">Миф: из id его выгнали просто потому, что он ничего не делал<a class="headerlink" href="#id_1" title="Permanent link">¶</a></h4>
+<p>Слишком примитивно.</p>
+<p>Production-output действительно стал предметом конфликта.</p>
+<p>Но проблема системная:</p>
+<div class="highlight"><pre><span></span><code>новый масштаб проекта
++
+technology R&amp;D
++
+разные рабочие стили
++
+отсутствие management layer
++
+внешняя загрузка Romero
+</code></pre></div>
+<hr/>
+<h4 id="daikatana_2">Миф: Daikatana — худшая игра в истории<a class="headerlink" href="#daikatana_2" title="Permanent link">¶</a></h4>
+<p>Нет.</p>
+<p>Она скорее:</p>
+<h4 id="-old-school-fps-production-hype">посредственно-хороший местами old-school FPS, похороненный под ужасным production, багами и гигантским hype.<a class="headerlink" href="#-old-school-fps-production-hype" title="Permanent link">¶</a></h4>
+<p>С современным patch 1.3 воспринимается значительно лучше.</p>
+<hr/>
+<h4 id="romero-ion-storm">Миф: Romero один уничтожил Ion Storm<a class="headerlink" href="#romero-ion-storm" title="Permanent link">¶</a></h4>
+<p>Нет.</p>
+<p>Dallas страдала от:</p>
+<div class="highlight"><pre><span></span><code>4 центра власти
+management wars
+shared resources
+publisher obligations
+Dominion
+Daikatana
+огромных задержек
+politics
+</code></pre></div>
+<p>Romero сделал серьёзные leadership mistakes, но крах был системным.</p>
+<hr/>
+<h4 id="romero-daikatana">Миф: Romero = Daikatana<a class="headerlink" href="#romero-daikatana" title="Permanent link">¶</a></h4>
+<p>Исторически неверно.</p>
+<p>Его более полная линия:</p>
+<div class="highlight"><pre><span></span><code>Dangerous Dave
+Commander Keen
+Wolfenstein
+Doom
+Doom II
+Quake
+Ion Storm
+Daikatana
+mobile
+MMO
+Ravenwood Fair
+Romero Games
+SIGIL
+SIGIL II
+HELLION
+</code></pre></div>
+<hr/>
+<hr/>
+<h2 id="14-romero">14. Итоговая модель Romero<a class="headerlink" href="#14-romero" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>Сводные выводы, карьерная линия и формула его устойчивой роли в истории игр.</p>
+</blockquote>
+<h3 id="150-romero">150. Наш общий итог по Romero<a class="headerlink" href="#150-romero" title="Permanent link">¶</a></h3>
+<p>Если убрать легенду и мемы:</p>
+<h4 id="john-romero-game-maker">John Romero — прежде всего game maker.<a class="headerlink" href="#john-romero-game-maker" title="Permanent link">¶</a></h4>
+<p>Не computer scientist уровня Carmack.</p>
+<p>Не world-builder уровня Hall.</p>
+<p>Не systemic designer уровня Spector.</p>
+<p>Его собственная зона:</p>
+<div class="highlight"><pre><span></span><code>пространство
++
+движение
++
+flow
++
+игровой ритм
++
+редактор
++
+быстрая итерация
+</code></pre></div>
+<hr/>
+<h3 id="151-id">151. Почему ранняя id без него была бы другой<a class="headerlink" href="#151-id" title="Permanent link">¶</a></h3>
+<p>Carmack мог построить великий renderer.</p>
+<p>Но renderer не говорит:</p>
+<blockquote>
+<p>где должен стоять shotgun;</p>
+<p>что игрок должен увидеть через окно;</p>
+<p>когда маршрут должен закольцеваться;</p>
+<p>где сделать secret;</p>
+<p>как познакомить человека с новым engine без tutorial text.</p>
+</blockquote>
+<p>Это и есть область Romero.</p>
+<hr/>
+<h3 id="152-romero-carmack">152. Почему Romero без Carmack тоже оказался другим<a class="headerlink" href="#152-romero-carmack" title="Permanent link">¶</a></h3>
+<p>Daikatana показывает обратную сторону.</p>
+<p>Carmack был не только:</p>
+<blockquote>
+<p>человек, который ограничивал его creative vision.</p>
+</blockquote>
+<p>Он также был:</p>
+<h4 id="scope">естественным ограничителем scope.<a class="headerlink" href="#scope" title="Permanent link">¶</a></h4>
+<p>В ранней id идеи постоянно сталкивались с жёстким:</p>
+<blockquote>
+<p>нет.</p>
+</blockquote>
+<p>Это иногда убивало интересные идеи.</p>
+<p>Но также концентрировало игры.</p>
+<p>В Ion Storm Romero впервые получает почти абсолютную свободу —</p>
+<p>и узнаёт цену отсутствия ограничений.</p>
+<hr/>
+<h3 id="153">153. Позднее взросление<a class="headerlink" href="#153" title="Permanent link">¶</a></h3>
+<p>Самая красивая карьерная дуга:</p>
+<div class="highlight"><pre><span></span><code>Romero 1997
+↓
+больше
+больше
+больше
+
+Romero 2019+
+↓
+старый ruleset
++
+хорошая карта
++
+ничего лишнего
+</code></pre></div>
+<p>SIGIL показывает:</p>
+<h4 id="breadth-density">дизайнер вернулся от breadth к density.<a class="headerlink" href="#breadth-density" title="Permanent link">¶</a></h4>
+<hr/>
+<h3 id="154-sigil-nostalgia">154. Поэтому SIGIL важнее nostalgia<a class="headerlink" href="#154-sigil-nostalgia" title="Permanent link">¶</a></h3>
+<p>Она доказывает:</p>
+<blockquote>
+<p>Romero не просто исторический первопроходец.</p>
+</blockquote>
+<p>Он всё ещё способен сделать хороший level после десятилетий эволюции community.</p>
+<p>SIGIL II подтверждает это ещё сильнее.</p>
+<hr/>
+<h3 id="155-2026">155. Текущее состояние на 2026<a class="headerlink" href="#155-2026" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>John Romero
+
+↓
+Romero Games
+Galway
+</code></pre></div>
+<p>Основное:</p>
+<h4 id="fps_1">Новый современный FPS<a class="headerlink" href="#fps_1" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>в разработке
+↓
+в 2025 потерял publisher funding
+↓
+rescope
+↓
+разработка продолжается
+</code></pre></div>
+<h4 id="hellion_2">HELLION<a class="headerlink" href="#hellion_2" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>новый Doom II project
+↓
+в разработке
+</code></pre></div>
+<h4 id="_16">Далее заявлялся<a class="headerlink" href="#_16" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>новый Quake episode
+</code></pre></div>
+<h4 id="_17">Параллельно<a class="headerlink" href="#_17" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>история id
+архивы
+community
+retrospectives
+</code></pre></div>
+<hr/>
+<h3 id="156">156. Итоговая карьерная линия<a class="headerlink" href="#156" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>Apple II
+↓
+ранние собственные игры
+↓
+Origin Systems
+↓
+Ideas from the Deep
+↓
+Dangerous Dave
+↓
+Softdisk
+↓
+Gamer's Edge
+↓
+Carmack / Hall / Adrian
+↓
+Commander Keen
+↓
+id Software
+↓
+Softdisk contract games
+↓
+Hovertank
+↓
+Catacomb 3-D
+↓
+Wolfenstein 3D
+↓
+Spear of Destiny
+↓
+DOOM
+↓
+DOOM II
+↓
+Heretic / external production
+↓
+Ultimate Doom
+↓
+Hexen
+↓
+Final Doom ecosystem
+↓
+Quake
+↓
+уход из id
+↓
+Ion Storm
+↓
+Daikatana
+↓
+создание условий для Deus Ex
+↓
+закрытие Dallas
+↓
+Monkeystone
+↓
+mobile
+↓
+Midway
+↓
+Gauntlet: Seven Sorrows
+↓
+Slipgate Ironworks
+↓
+MMO
+↓
+Gazillion
+↓
+Severity
+↓
+Ravenwood Fair
+↓
+Loot Drop
+↓
+social games
+↓
+Romero Games
+↓
+BLACKROOM
+↓
+возвращение к Doom mapping
+↓
+SIGIL
+↓
+One Humanity
+↓
+SIGIL II
+↓
+HELLION
+↓
+новый FPS
+</code></pre></div>
+<hr/>
+<h3 id="157-romero">157. Romero одной фразой<a class="headerlink" href="#157-romero" title="Permanent link">¶</a></h3>
+<p>Carmack всю жизнь спрашивает:</p>
+<blockquote>
+<p><strong>Что технология сможет сделать дальше?</strong></p>
+</blockquote>
+<p>Romero:</p>
+<blockquote>
+<p><strong>Что здесь будет интересно делать игроку?</strong></p>
+</blockquote>
+<p>И после всех:</p>
+<div class="highlight"><pre><span></span><code>Ferrari
+Daikatana
+Ion Storm
+MMO
+Facebook
+strategy
+Unreal Engine
+</code></pre></div>
+<p>он в итоге снова оказывается перед level editor и решает ровно ту же задачу, которую решал в 1991 году:</p>
+<h4 id="_18">где поставить следующую дверь, окно, монстра и дробовик, чтобы игроку было интересно через пять секунд.<a class="headerlink" href="#_18" title="Permanent link">¶</a></h4>
+<p>Это и есть самый устойчивый John Romero.</p>
+<hr/>
+<h2 id="15">15. Навигационные выводы — быстрые связи между эпохами<a class="headerlink" href="#15" title="Permanent link">¶</a></h2>
+<h3 id="technology-tools-game">Technology → tools → game<a class="headerlink" href="#technology-tools-game" title="Permanent link">¶</a></h3>
+<p>Основная ранняя связка файла: Carmack расширяет технически возможное, Romero строит инструменты и превращает новую возможность в непосредственно работающий игровой процесс.</p>
+<h3 id="id-ion-storm">id → Ion Storm<a class="headerlink" href="#id-ion-storm" title="Permanent link">¶</a></h3>
+<p>Ion Storm является сознательной реакцией на опыт id: вместо принципа «technology first» Romero и Hall формулируют <code>Design Is Law</code>. Daikatana показывает, что абсолютный design-first без жёсткого scope и production discipline так же опасен, как технологический диктат.</p>
+<h3 id="daikatana-romero">Daikatana → поздний Romero<a class="headerlink" href="#daikatana-romero" title="Permanent link">¶</a></h3>
+<p>Главная поздняя дуга базы — переход от feature breadth и гигантского scope к ограниченному ruleset, плотности и быстрым итерациям. BLACKROOM уже останавливается при отсутствии достаточного proof, а SIGIL/SIGIL II строятся вокруг намеренно ограниченного инструментария Doom.</p>
+<h3 id="community_1">Community как постоянная линия<a class="headerlink" href="#community_1" title="Permanent link">¶</a></h3>
+<p>От Doom WADs, TeamTNT и Final Doom до собственного возвращения в статус community mapper через SIGIL: Romero последовательно воспринимает сообщество не как периферию индустрии, а как источник контента, людей и новых форм жизни старых игр.</p>
+</article>
+</div>
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+</div>
+<button class="md-top md-icon" data-md-component="top" hidden="" type="button">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  К началу
+</button>
+</main>
+<footer class="md-footer">
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}, "version": null}</script>
+<script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+</body>
+</html>

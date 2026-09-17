@@ -1,0 +1,117 @@
+#!/Users/lirik/Documents/Codex/knowledge/.venv/bin/python
+
+docs_dir: data
+site_dir: site
+site_name: База данных
+site_url: https://lirikonov.github.io/university/
+
+markdown_extensions:
+  - tables
+  - fenced_code
+
+  - toc:
+      toc_depth: 2
+      permalink: true
+
+  # Нормальные якоря: ## Заголовок { #p001 }
+  - attr_list
+
+  # Красивые блоки !!! note / warning / info
+  - admonition
+  - pymdownx.details
+
+  # Вложенные code blocks и Mermaid
+  - pymdownx.superfences
+
+  # Вкладки
+  - pymdownx.tabbed:
+      alternate_style: true
+
+  # Footnotes
+  - footnotes
+
+  # ~~зачёркивание~~, ==выделение== и т.п.
+  - pymdownx.mark
+  - pymdownx.tilde
+
+  # Клавиши вроде ++ctrl+shift+p++
+  - pymdownx.keys
+
+  # Task lists
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+
+plugins:
+  - search:
+      lang: ru
+
+  - gen-files:
+      scripts:
+        - scripts/generate-slides-index.py
+
+  - exporter:
+      buttons:
+        - title: Скачать PDF
+          icon: material-file-download-outline
+          enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.enabled
+          attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
+
+      formats:
+        pdf:
+          enabled: true
+
+          # Генерировать PDF только для явно отмеченных страниц
+          explicit: true
+
+          # Большая база — не стоит запускать слишком много
+          # браузерных рендеров одновременно.
+          concurrency: 4
+
+          browser:
+            timeout: 300000
+
+          # Собрать все страницы MkDocs в один PDF.
+          aggregator:
+            enabled: false
+
+          stylesheets:
+            - resources/stylesheets/pdf.scss
+
+theme:
+  name: material
+  language: ru
+
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Тёмная тема
+
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Светлая тема
+
+  features:
+    # Навигация
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - navigation.footer
+
+    # Правый TOC следует за текущим разделом
+    - toc.follow
+
+    # Поиск
+    - search.suggest
+    - search.highlight
+
+    # Код
+    - content.code.copy
+    - content.code.annotate
+
+#use_directory_urls: false
+

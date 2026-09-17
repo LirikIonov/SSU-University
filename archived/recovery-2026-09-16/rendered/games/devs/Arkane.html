@@ -1,0 +1,4521 @@
+<!DOCTYPE html>
+<html class="no-js" lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<link href="../../assets/images/favicon.png" rel="icon"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.7.7" name="generator"/>
+<title>Arkane - База данных</title>
+<link href="../../assets/stylesheets/main.ec1eaa64.min.css" rel="stylesheet"/>
+<link href="../../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+<script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+</head>
+<body data-md-color-accent="indigo" data-md-color-primary="indigo" data-md-color-scheme="default" dir="ltr">
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#arkane">
+          Перейти к содержанию
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header md-header--shadow" data-md-component="header">
+<nav aria-label="Верхний колонтитул" class="md-header__inner md-grid">
+<a aria-label="База данных" class="md-header__button md-logo" data-md-component="logo" href="../.." title="База данных">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            База данных
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              Arkane
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Тёмная тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: light)" data-md-color-primary="indigo" data-md-color-scheme="default" id="__palette_0" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Тёмная тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+<input aria-label="Светлая тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-primary="indigo" data-md-color-scheme="slate" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_0" hidden="" title="Светлая тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+</form>
+<script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Поиск" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Поиск" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</label>
+<nav aria-label="Поиск" class="md-search__options">
+<button aria-label="Очистить" class="md-search__icon md-icon" tabindex="-1" title="Очистить" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+</nav>
+<div class="md-search__suggest" data-md-component="search-suggest"></div>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="" tabindex="0">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Инициализация поиска
+          </div>
+<ol class="md-search-result__list" role="presentation"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Навигация" class="md-nav md-nav--primary" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="База данных" class="md-nav__button md-logo" data-md-component="logo" href="../.." title="База данных">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+    База данных
+  </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" id="__nav_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Игры
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_1_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Игры
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../people/index.html">
+<span class="md-ellipsis">
+    
+  
+    Люди
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="index.html">
+<span class="md-ellipsis">
+    
+  
+    Разработчики
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../series/index.html">
+<span class="md-ellipsis">
+    
+  
+    Серии
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../technology/index.html">
+<span class="md-ellipsis">
+    
+  
+    Технологии
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../personal/index.html">
+<span class="md-ellipsis">
+    
+  
+    Личное
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Содержание" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#0-arkane">
+<span class="md-ellipsis">
+      
+        0. Arkane в одном абзаце
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#1">
+<span class="md-ellipsis">
+      
+        1. Ключевая организационная схема
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#2">
+<span class="md-ellipsis">
+      
+        2. Проектная хронология — быстрый индекс
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#3-arkane-arx-fatalis">
+<span class="md-ellipsis">
+      
+        3. Истоки Arkane и Arx Fatalis
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#4-dark-messiah-of-might-and-magic">
+<span class="md-ellipsis">
+      
+        4. Dark Messiah of Might and Magic
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#5-arkane-austin-2006">
+<span class="md-ellipsis">
+      
+        5. Открытие Arkane Austin — 2006
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#6-return-to-ravenholm-half-life-arkane">
+<span class="md-ellipsis">
+      
+        6. Return to Ravenholm / отменённый Half-Life Arkane
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#7-the-crossing">
+<span class="md-ellipsis">
+      
+        7. The Crossing
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#8-lmno-spielberg-ea-doug-church">
+<span class="md-ellipsis">
+      
+        8. LMNO — Spielberg / EA / Doug Church
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#9-20082010">
+<span class="md-ellipsis">
+      
+        9. Период выживания 2008–2010
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#10-bioshock-2-20092010-work-for-hire-arkane">
+<span class="md-ellipsis">
+      
+        10. BioShock 2 — 2009–2010: work-for-hire, который действительно подходит Arkane
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#11">
+<span class="md-ellipsis">
+      
+        11. Почему независимость перестала казаться свободой
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#12-bethesda-thief-4-blade-runner-dishonored">
+<span class="md-ellipsis">
+      
+        12. Bethesda, Thief 4 и Blade Runner — преддверие Dishonored
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#13-harvey-smith-arkane">
+<span class="md-ellipsis">
+      
+        13. Harvey Smith — путь до Arkane и почему он важен для студии
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#14-dishonored">
+<span class="md-ellipsis">
+      
+        14. Dishonored — происхождение и разработка
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#15-post-release-dishonored-1">
+<span class="md-ellipsis">
+      
+        15. Post-release Dishonored 1
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#16-dishonored-arkane">
+<span class="md-ellipsis">
+      
+        16. После Dishonored: Arkane становится двумя студиями
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#17-dishonored-2">
+<span class="md-ellipsis">
+      
+        17. Dishonored 2
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#18-dishonored-death-of-the-outsider-2017">
+<span class="md-ellipsis">
+      
+        18. Dishonored: Death of the Outsider — 2017
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#19-prey-2017">
+<span class="md-ellipsis">
+      
+        19. Prey — 2017
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#20-prey-mooncrash-2018">
+<span class="md-ellipsis">
+      
+        20. Prey: Mooncrash — 2018
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#21-typhon-hunter-transtar-vr-2018">
+<span class="md-ellipsis">
+      
+        21. Typhon Hunter и TranStar VR — 2018
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#22-prey-austin">
+<span class="md-ellipsis">
+      
+        22. Значение Prey-эпохи для Austin
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#23-wolfenstein-youngblood-2019">
+<span class="md-ellipsis">
+      
+        23. Wolfenstein: Youngblood — 2019
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#24-wolfenstein-cyberpilot-2019">
+<span class="md-ellipsis">
+      
+        24. Wolfenstein: Cyberpilot — 2019
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#25-deathloop-2021">
+<span class="md-ellipsis">
+      
+        25. Deathloop — 2021
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#26-redfall-2023">
+<span class="md-ellipsis">
+      
+        26. Redfall — 2023
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#27-marvels-blade-lyon">
+<span class="md-ellipsis">
+      
+        27. Marvel’s Blade — текущая глава Lyon
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#28-arkane-dna">
+<span class="md-ellipsis">
+      
+        28. Arkane DNA — эволюция принципов
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#29-">
+<span class="md-ellipsis">
+      
+        29. Главные причинно-следственные цепочки
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#30-arkane">
+<span class="md-ellipsis">
+      
+        30. Главные люди Arkane в нашей хронологии
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#31">
+<span class="md-ellipsis">
+      
+        31. Сводная временная шкала с выводом по каждому этапу
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#32-arkane">
+<span class="md-ellipsis">
+      
+        32. Итоговая формула Arkane
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#33">
+<span class="md-ellipsis">
+      
+        33. Что считать ядром базы при будущих обновлениях
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#34">
+<span class="md-ellipsis">
+      
+        34. Короткий индекс проектов по статусу
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#35-13-2026">
+<span class="md-ellipsis">
+      
+        35. Текущее состояние на 13 сентября 2026
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#36">
+<span class="md-ellipsis">
+      
+        36. Последний вывод
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<h1 id="arkane">Arkane<a class="headerlink" href="#arkane" title="Permanent link">¶</a></h1>
+<h3 id="arkane-studios">Arkane Studios — история студии, проектов и дизайнерской ДНК<a class="headerlink" href="#arkane-studios" title="Permanent link">¶</a></h3>
+<blockquote>
+<p><strong>Назначение файла:</strong> долговременная база знаний по Arkane.  </p>
+<p>Структура сделана так, чтобы файл можно было дальше пополнять: каждый проект — отдельная глава с полями <code>Период / Офис / Статус / Люди / Технология / Что хотели / Что получилось / Что не получилось / Что перешло дальше</code>.</p>
+</blockquote>
+<h3 id="_1">Как читать эту базу<a class="headerlink" href="#_1" title="Permanent link">¶</a></h3>
+<p>В тексте различаются три типа утверждений:</p>
+<ul>
+<li>
+<p><strong>Факт</strong> — публично подтверждённая информация о релизе, структуре студии, роли разработчика и т. п.</p>
+</li>
+<li>
+<p><strong>Ретроспектива разработчиков</strong> — поздние воспоминания участников; полезны, но могут отличаться в деталях от contemporaneous-источников.</p>
+</li>
+<li>
+<p><strong>Наш вывод</strong> — причинно-следственная интерпретация, которую мы сформулировали в обсуждении. Она помечается как вывод, а не выдаётся за прямую цитату разработчиков.</p>
+</li>
+</ul>
+<hr/>
+<h2 id="0-arkane">0. Arkane в одном абзаце<a class="headerlink" href="#0-arkane" title="Permanent link">¶</a></h2>
+<p>Arkane появилась в Лионе в 1999 году, потому что Рафаэль Колантонио хотел делать игры в духе <strong>Ultima Underworld</strong>, а крупные компании такую возможность ему не давали. Первая Arx Fatalis уже сформулировала почти всю философию студии: правдоподобное место, физические предметы, системные правила, несколько способов решать задачи и минимум искусственного разделения между «уровнем» и «миром». Dark Messiah добавила к этому физический first-person action и идею «сама комната — оружие». Отменённые Ravenholm, The Crossing и LMNO научили Arkane production-art, альтернативной истории, системному multiplayer и работе с поведением NPC, но едва не разорили компанию. В 2010 ZeniMax купила студию и дала ей возможность несколько лет делать одну большую собственную игру — Dishonored. После успеха Dishonored Arkane раскололась на две полноценные производственные ветви: <strong>Lyon</strong> пошла по линии Dishonored → Deathloop, а <strong>Austin</strong> по линии Arx/System Shock → Prey → Mooncrash. Austin затем попыталась сделать более массовый open-world co-op Redfall, потеряла значительную часть ветеранов Prey, выпустила провальную игру и была закрыта Microsoft в 2024 году. Исходная Arkane Lyon продолжает существовать и на сентябрь 2026 года официально разрабатывает <strong>Marvel’s Blade</strong>.</p>
+<hr/>
+<h2 id="1">1. Ключевая организационная схема<a class="headerlink" href="#1" title="Permanent link">¶</a></h2>
+<h3 id="19992006-arkane">1999–2006: одна Arkane<a class="headerlink" href="#19992006-arkane" title="Permanent link">¶</a></h3>
+<p><strong>Arkane Studios Lyon</strong> основана в 1999 году. До появления американского офиса слово «Arkane» фактически означает именно французскую студию.</p>
+<p>Основные проекты периода:</p>
+<ul>
+<li>
+<p>Arx Fatalis;</p>
+</li>
+<li>
+<p>ранний Arx Fatalis 2;</p>
+</li>
+<li>
+<p>Dark Messiah of Might and Magic.</p>
+</li>
+</ul>
+<h3 id="2006-arkane-austin">2006: появляется Arkane Austin<a class="headerlink" href="#2006-arkane-austin" title="Permanent link">¶</a></h3>
+<p>Американский офис открывается в <strong>Остине, штат Техас, в 2006 году</strong>. Колантонио переезжает в США.</p>
+<p>Почему именно Austin:</p>
+<ul>
+<li>
+<p>исторический центр Origin / Looking Glass / Ion Storm;</p>
+</li>
+<li>
+<p>там находились Warren Spector, Harvey Smith, Ricardo Bare и множество разработчиков школы Ultima/System Shock/Deus Ex;</p>
+</li>
+<li>
+<p>американский офис упрощал переговоры с издателями и поиск контрактов/сотрудников.</p>
+</li>
+</ul>
+<p>Важно: Austin сначала не был «студией Prey». Он был второй площадкой одной компании и частично деловым мостом Arkane к американской индустрии.</p>
+<h3 id="2010-zenimax-arkane">2010: ZeniMax покупает всю Arkane<a class="headerlink" href="#2010-zenimax-arkane" title="Permanent link">¶</a></h3>
+<p>Покупка включает Lyon и Austin.</p>
+<h3 id="2012-dishonored-arkane">2012: Dishonored делает общая Arkane<a class="headerlink" href="#2012-dishonored-arkane" title="Permanent link">¶</a></h3>
+<p>Первый Dishonored — последняя крупная игра, которую корректно воспринимать как единый трансатлантический production Lyon + Austin.</p>
+<h3 id="dishonored">После Dishonored: две самостоятельные линии<a class="headerlink" href="#dishonored" title="Permanent link">¶</a></h3>
+<p><strong>Arkane Lyon</strong>
+- Dishonored 2;
+- Death of the Outsider;
+- Wolfenstein: Youngblood / Cyberpilot;
+- Deathloop;
+- Marvel’s Blade.</p>
+<p><strong>Arkane Austin</strong>
+- Prey;
+- Mooncrash;
+- Typhon Hunter / TranStar VR;
+- Redfall;
+- закрыта Microsoft 7 мая 2024 года.</p>
+<h3 id="_2">Сегодня<a class="headerlink" href="#_2" title="Permanent link">¶</a></h3>
+<p>После закрытия Austin бренд Arkane фактически снова означает исходную французскую студию — <strong>Arkane Lyon</strong>. Официальный сайт в 2026 году по-прежнему указывает Lyon и Marvel’s Blade как текущий проект.</p>
+<hr/>
+<h2 id="2">2. Проектная хронология — быстрый индекс<a class="headerlink" href="#2" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Годы</th>
+<th>Проект</th>
+<th>Офис / роль</th>
+<th>Статус</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>~1999–2000</td>
+<td>Ultima Underworld 3 pitch/prototype</td>
+<td>будущая Arkane Lyon</td>
+<td>не состоялся как лицензированный проект</td>
+</tr>
+<tr>
+<td>2000–2002</td>
+<td>Arx Fatalis</td>
+<td>Lyon</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2003</td>
+<td>Arx Fatalis Xbox</td>
+<td>Arkane + внешняя помощь</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>~2003–2004</td>
+<td>Arx Fatalis 2</td>
+<td>Lyon</td>
+<td>отменён / трансформирован</td>
+</tr>
+<tr>
+<td>2004–2006</td>
+<td>Dark Messiah of Might and Magic</td>
+<td>Lyon</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2006</td>
+<td>Arkane Austin</td>
+<td>второй офис</td>
+<td>открыт</td>
+</tr>
+<tr>
+<td>~2006–2007</td>
+<td>Return to Ravenholm / Half-Life project</td>
+<td>Arkane</td>
+<td>отменён Valve</td>
+</tr>
+<tr>
+<td>~2006–2009</td>
+<td>The Crossing</td>
+<td>Arkane</td>
+<td>заморожен / отменён</td>
+</tr>
+<tr>
+<td>~2007–2008</td>
+<td>LMNO</td>
+<td>EA + Arkane contractor</td>
+<td>отменён</td>
+</tr>
+<tr>
+<td>2008</td>
+<td>Call of Duty: World at War</td>
+<td>ограниченный support</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2008–2009</td>
+<td>Ubisoft RPG consulting / Boom Blox / другие контракты</td>
+<td>work-for-hire</td>
+<td>support</td>
+</tr>
+<tr>
+<td>2009</td>
+<td>KarmaStar</td>
+<td>Arkane / Harvey Smith side project</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2009–2010</td>
+<td>BioShock 2</td>
+<td>Arkane support team</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>~2009–2010</td>
+<td>Thief 4 pitch</td>
+<td>Arkane + Bethesda discussions</td>
+<td>не реализован</td>
+</tr>
+<tr>
+<td>~2009–2010</td>
+<td>Blade Runner pitch</td>
+<td>Arkane + Bethesda discussions</td>
+<td>не реализован</td>
+</tr>
+<tr>
+<td>2009–2012</td>
+<td>Dishonored</td>
+<td>Lyon + Austin</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2012</td>
+<td>Dunwall City Trials</td>
+<td>Arkane</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2013</td>
+<td>The Knife of Dunwall</td>
+<td>Arkane</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2013</td>
+<td>The Brigmore Witches</td>
+<td>Arkane</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2013–2016</td>
+<td>Dishonored 2</td>
+<td>Lyon</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2013–2017</td>
+<td>Prey</td>
+<td>Austin</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2017</td>
+<td>Death of the Outsider</td>
+<td>Lyon</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2017–2018</td>
+<td>Prey: Mooncrash</td>
+<td>Austin</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2018</td>
+<td>Typhon Hunter / TranStar VR</td>
+<td>Austin</td>
+<td>выпущены</td>
+</tr>
+<tr>
+<td>2017–2019</td>
+<td>Wolfenstein: Youngblood</td>
+<td>Lyon + MachineGames</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2017–2019</td>
+<td>Wolfenstein: Cyberpilot</td>
+<td>Lyon + MachineGames</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>~2017–2021</td>
+<td>Deathloop</td>
+<td>Lyon</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>~2018–2023</td>
+<td>Redfall</td>
+<td>Austin + большой внешний support</td>
+<td>выпущен</td>
+</tr>
+<tr>
+<td>2023–...</td>
+<td>Marvel’s Blade</td>
+<td>Lyon</td>
+<td>в разработке</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="3-arkane-arx-fatalis">3. Истоки Arkane и Arx Fatalis<a class="headerlink" href="#3-arkane-arx-fatalis" title="Permanent link">¶</a></h2>
+<h3 id="_3">Период<a class="headerlink" href="#_3" title="Permanent link">¶</a></h3>
+<p>1999–2003.</p>
+<h3 id="_4">Офис<a class="headerlink" href="#_4" title="Permanent link">¶</a></h3>
+<p>Lyon.</p>
+<h3 id="_5">Ключевые люди<a class="headerlink" href="#_5" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Raphaël Colantonio — основатель Arkane, creative lead;</p>
+</li>
+<li>
+<p>маленькая исходная команда Arkane, порядка единиц/низких десятков человек.</p>
+</li>
+</ul>
+<h3 id="ultima-underworld-3">Исходная идея: сделать Ultima Underworld 3<a class="headerlink" href="#ultima-underworld-3" title="Permanent link">¶</a></h3>
+<p>Arkane появилась не потому, что Колантонио хотел «свою компанию» как бизнес-цель. Он хотел делать игры типа <strong>Ultima Underworld</strong>, а крупные издатели не давали ему такую игру вести.</p>
+<p>Первоначальный проект по сути и был попыткой сделать официальный <strong>Ultima Underworld 3</strong>. Arkane собрала демо, вышла через сообщество Looking Glass на Doug Church и Paul Neurath и пыталась договориться с EA, владевшей Ultima.</p>
+<p>EA не приняла проект в том виде, в каком Arkane хотела его делать. В результате студия отказалась от лицензии и превратила основу в собственную игру.</p>
+<h3 id="arx-fatalis-2002">Arx Fatalis — 2002<a class="headerlink" href="#arx-fatalis-2002" title="Permanent link">¶</a></h3>
+<h4 id="_6">Что хотели<a class="headerlink" href="#_6" title="Permanent link">¶</a></h4>
+<p>Не просто «RPG от первого лица», а:
+- ограниченный, но свободно исследуемый мир;
+- физическое присутствие игрока в пространстве;
+- предметы и системы, которые ведут себя по правилам мира;
+- минимум абстракции между действием игрока и действием персонажа.</p>
+<h4 id="_7">Структура мира<a class="headerlink" href="#_7" title="Permanent link">¶</a></h4>
+<p>Весь мир находится под землёй после катастрофы, погасившей солнце. Люди, гоблины, тролли и другие общества живут на разных уровнях подземного комплекса.</p>
+<p>Ключевой принцип — это <strong>не последовательность одноразовых уровней</strong>. Игрок постоянно возвращается в знакомые области, запоминает, как они связаны, открывает новые проходы и постепенно строит карту мира у себя в голове.</p>
+<p>Именно эта структура спустя 15 лет напрямую отзовётся в Prey: Talos I будет тем же принципом «одно место, которое изучаешь как физическую систему», только вместо подземелья — космическая станция.</p>
+<h4 id="_8">Системность<a class="headerlink" href="#_8" title="Permanent link">¶</a></h4>
+<p>Примеры того, что уже было в первой игре Arkane:</p>
+<ul>
+<li>
+<p>еду можно готовить у огня;</p>
+</li>
+<li>
+<p>ингредиенты можно комбинировать;</p>
+</li>
+<li>
+<p>предметы физически занимают место;</p>
+</li>
+<li>
+<p>свет важен для stealth;</p>
+</li>
+<li>
+<p>звук шагов зависит от поверхности/снаряжения;</p>
+</li>
+<li>
+<p>предметами можно воздействовать на нажимные плиты;</p>
+</li>
+<li>
+<p>есть алхимия, инструменты и физическое окружение.</p>
+</li>
+</ul>
+<p>Главная ранняя формула Arkane:</p>
+<blockquote>
+<p><strong>не делай кнопку «решить головоломку» — дай игроку предметы и правила.</strong></p>
+</blockquote>
+<h4 id="_9">Магия<a class="headerlink" href="#_9" title="Permanent link">¶</a></h4>
+<p>Заклинания состоят из комбинаций рун. Игрок не просто выбирает spell icon, а мышью рисует соответствующие символы.</p>
+<p>Это неудобно по современным UX-меркам, но идеально показывает раннюю философию Arkane: интерфейс может быть менее удобным, если действие из-за этого ощущается физическим действием персонажа внутри мира.</p>
+<h4 id="_10">Что не получилось<a class="headerlink" href="#_10" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>melee ещё довольно грубый;</p>
+</li>
+<li>
+<p>UI и inventory тяжёлые;</p>
+</li>
+<li>
+<p>игра местами плохо направляет;</p>
+</li>
+<li>
+<p>много backtracking;</p>
+</li>
+<li>
+<p>баги и технические проблемы;</p>
+</li>
+<li>
+<p>коммерчески игра оказалась слишком нишевой.</p>
+</li>
+</ul>
+<h4 id="_11">Релизная ситуация<a class="headerlink" href="#_11" title="Permanent link">¶</a></h4>
+<p>2002 год — Morrowind, Neverwinter Nights и другие огромные RPG. Arx выходит почти без сильного маркетинга на фоне проблем издателя.</p>
+<p>Критики игру в основном понимают. Денег она почти не приносит.</p>
+<p>Здесь впервые формируется повторяющийся сюжет Arkane:</p>
+<blockquote>
+<p><strong>очень необычная системная игра → критики/жанровая аудитория любят → коммерчески намного слабее ожидаемого.</strong></p>
+</blockquote>
+<p>Позже тот же нерв будет у Prey.</p>
+<h3 id="xbox-arx-fatalis-2003">Xbox-версия Arx Fatalis — 2003<a class="headerlink" href="#xbox-arx-fatalis-2003" title="Permanent link">¶</a></h3>
+<p>Arx показывает, что сложную PC-RPG можно перенести на консоль, если адаптировать интерфейс и управление, а не уничтожать фундаментальную структуру игры.</p>
+<p>Этот пример позже полезен в нашем обсуждении Deus Ex: консоль сама по себе не обязана убивать сложность — вопрос в том, <strong>что именно команда готова пожертвовать</strong>.</p>
+<h3 id="arx-fatalis-2">Arx Fatalis 2<a class="headerlink" href="#arx-fatalis-2" title="Permanent link">¶</a></h3>
+<p>После первой игры Arkane естественно начинает Arx 2.</p>
+<p>Основная ранняя идея:
+- город;
+- осада орками;
+- более современная технология;
+- переход на middleware вместо нового собственного движка.</p>
+<p>Студия рассматривает Source.</p>
+<p>Главная проблема — первая Arx продалась слишком слабо. Издатели не хотят финансировать прямой сиквел.</p>
+<p>Arkane снова оказывается почти без денег.</p>
+<h4 id="_12">Что произошло дальше<a class="headerlink" href="#_12" title="Permanent link">¶</a></h4>
+<p>Ubisoft, только что получившая права на Might &amp; Magic, видит прототип и предлагает:</p>
+<blockquote>
+<p>оставить фундамент игры, но сделать её частью Might &amp; Magic.</p>
+</blockquote>
+<p>Arx Fatalis 2 постепенно превращается в <strong>Dark Messiah of Might and Magic</strong>.</p>
+<hr/>
+<h2 id="4-dark-messiah-of-might-and-magic">4. Dark Messiah of Might and Magic<a class="headerlink" href="#4-dark-messiah-of-might-and-magic" title="Permanent link">¶</a></h2>
+<h3 id="_13">Период<a class="headerlink" href="#_13" title="Permanent link">¶</a></h3>
+<p>Примерно 2004–2006.</p>
+<h3 id="_14">Офис<a class="headerlink" href="#_14" title="Permanent link">¶</a></h3>
+<p>Преимущественно Lyon. Austin открывается уже на финальной стадии проекта.</p>
+<h3 id="_15">Ключевые люди<a class="headerlink" href="#_15" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Raphaël Colantonio — Creative Director;</p>
+</li>
+<li>
+<p>Sébastien Mitton — приходит в Arkane в 2004 году;</p>
+</li>
+<li>
+<p>Christophe Carrier — level design;</p>
+</li>
+<li>
+<p>Randy Smith — внешний design consultant;</p>
+</li>
+<li>
+<p>расширившаяся Arkane-команда.</p>
+</li>
+</ul>
+<h3 id="_16">Технология<a class="headerlink" href="#_16" title="Permanent link">¶</a></h3>
+<p><strong>Source Engine.</strong></p>
+<p>Это фундаментальный производственный поворот.</p>
+<p>После Arx Колантонио считает создание собственного движка ошибкой для маленькой студии. Вместо того чтобы тратить годы на renderer/editor/basic tech, Arkane берёт готовую технологию Valve.</p>
+<h3 id="arx-2-might-magic">Из Arx 2 в Might &amp; Magic<a class="headerlink" href="#arx-2-might-magic" title="Permanent link">¶</a></h3>
+<p>Изначально Mitton ещё застал проект именно как <strong>Arx 2</strong>.</p>
+<p>После сделки с Ubisoft:
+- сеттинг встраивают в новый мир Ashan;
+- Ubisoft контролирует lore-фрейм;
+- RPG-часть становится компактнее;
+- экшен выходит на первый план.</p>
+<h3 id="_17">Главная дизайнерская задача<a class="headerlink" href="#_17" title="Permanent link">¶</a></h3>
+<p>Arkane хочет решить проблему:</p>
+<blockquote>
+<p><strong>как сделать ближний бой от первого лица действительно телесным и приятным?</strong></p>
+</blockquote>
+<p>Не «меч прошёл перед камерой, враг получил -20 HP», а:
+- дистанция;
+- масса;
+- импульс;
+- парирование;
+- толчок;
+- окружение;
+- попадание, которое ощущается верным, даже если физическая геометрия клинка несовершенна.</p>
+<p>Команда много экспериментирует с FOV, анимацией, hit detection и видимым телом игрока.</p>
+<h3 id="_18">Рождение «ноги»<a class="headerlink" href="#_18" title="Permanent link">¶</a></h3>
+<p>Пинок становится не просто дополнительной атакой, а главной системной кнопкой.</p>
+<p>Игрок начинает смотреть на комнату так:</p>
+<ul>
+<li>
+<p>где шипы;</p>
+</li>
+<li>
+<p>где обрыв;</p>
+</li>
+<li>
+<p>где огонь;</p>
+</li>
+<li>
+<p>где тяжёлый предмет;</p>
+</li>
+<li>
+<p>где лестница;</p>
+</li>
+<li>
+<p>что можно сломать.</p>
+</li>
+</ul>
+<p>Вопрос меняется с:</p>
+<blockquote>
+<p>«какое оружие сильнее?»</p>
+</blockquote>
+<p>на:</p>
+<blockquote>
+<p><strong>«что в комнате можно превратить в убийство?»</strong></p>
+</blockquote>
+<p>Это один из важнейших моментов формирования Arkane DNA.</p>
+<h3 id="source">Source как соавтор дизайна<a class="headerlink" href="#source" title="Permanent link">¶</a></h3>
+<p>Half-Life 2 показала физику как игровую систему. Arkane делает следующий шаг:
+- физический объект — не головоломка ради физики;
+- физика становится частью боя.</p>
+<p>Примеры:
+- оборвать опору и сбросить груз;
+- перерезать верёвку;
+- сбить противника в ловушку;
+- использовать лёд/огонь/телекинез;
+- взаимодействовать с объектами арены.</p>
+<h3 id="rpg">RPG отходит назад<a class="headerlink" href="#rpg" title="Permanent link">¶</a></h3>
+<p>По сравнению с Arx:
+- мир становится линейнее;
+- меньше backtracking;
+- progression проще;
+- есть warrior/mage/stealth направления;
+- магазины в процессе разработки вырезали, потому что они ломали темп.</p>
+<p>Arkane впервые явно ставит <strong>темп action-игры выше полноты RPG-симуляции</strong>.</p>
+<h3 id="_19">Важный урок производства<a class="headerlink" href="#_19" title="Permanent link">¶</a></h3>
+<p>Финальная хорошая версия combat появилась слишком поздно.</p>
+<p>К моменту, когда команда поняла, насколько сильно игра должна строиться вокруг пинка/физики, значительная часть уровней уже существовала.</p>
+<p>Колантонио позже считал это ошибкой:</p>
+<blockquote>
+<p>core mechanic надо находить раньше, чтобы весь level design вырос вокруг неё.</p>
+</blockquote>
+<p>Этот урок станет важным при создании Dishonored: сначала определить player verbs/powers, потом строить мир под них.</p>
+<h3 id="_20">Визуальная проблема<a class="headerlink" href="#_20" title="Permanent link">¶</a></h3>
+<p>Mitton воспринимал Dark Messiah как слишком generic fantasy:
+- орки;
+- гоблины;
+- замки;
+- знакомая fantasy-иконография.</p>
+<p>После проекта у Arkane усиливается желание:</p>
+<blockquote>
+<p>следующий мир должен иметь <strong>очень конкретную авторскую визуальную идентичность</strong>.</p>
+</blockquote>
+<p>Это напрямую ведёт к The Crossing, а затем Dishonored.</p>
+<h3 id="randy-smith">Randy Smith<a class="headerlink" href="#randy-smith" title="Permanent link">¶</a></h3>
+<p>После Looking Glass / Thief / Ion Storm Randy Smith консультирует Arkane по:
+- level design;
+- combat;
+- общей design structure.</p>
+<p>Это один из прямых мостов школы Looking Glass в Arkane ещё до прихода Harvey Smith.</p>
+<h3 id="_21">Релиз и приём<a class="headerlink" href="#_21" title="Permanent link">¶</a></h3>
+<p>PC-версия выходит в 2006 году.</p>
+<p>Критика смешанная:
+- часть прессы любит физический melee и системность;
+- часть считает сюжет/RPG слишком простыми;
+- технический релиз страдает от крэшей и других проблем.</p>
+<p>Со временем репутация игры становится заметно лучше. Для игроков главным наследием остаются:
+- пинок;
+- физика;
+- environmental kills;
+- очень непосредственный first-person melee.</p>
+<h3 id="elements-2008">Elements — 2008<a class="headerlink" href="#elements-2008" title="Permanent link">¶</a></h3>
+<p>Консольная версия для Xbox 360 — <strong>Dark Messiah of Might &amp; Magic: Elements</strong>, в основном работа Ubisoft Annecy с материалами/участием Arkane.</p>
+<p>Она:
+- сильнее фиксирует классы;
+- хуже технически;
+- заметно слабее принята.</p>
+<p>В исторической линии Arkane основной Dark Messiah — это <strong>PC-версия 2006 года</strong>.</p>
+<h3 id="_22">Что перешло дальше<a class="headerlink" href="#_22" title="Permanent link">¶</a></h3>
+<p>Из Dark Messiah в будущую Arkane:
+- environment as weapon;
+- first-person body/melee;
+- abilities как глаголы, а не просто damage modifiers;
+- идея «дизайнер готовит возможность, игрок должен чувствовать, что придумал её сам»;
+- пинок, который буквально вернётся в Deathloop.</p>
+<hr/>
+<h2 id="5-arkane-austin-2006">5. Открытие Arkane Austin — 2006<a class="headerlink" href="#5-arkane-austin-2006" title="Permanent link">¶</a></h2>
+<h3 id="_23">Зачем<a class="headerlink" href="#_23" title="Permanent link">¶</a></h3>
+<p>Austin создаётся:
+- для американских контактов и сделок;
+- для доступа к большому пулу талантов Origin / Looking Glass / Ion Storm;
+- как второй производственный и деловой центр компании.</p>
+<p>Raphaël Colantonio переезжает в Austin.</p>
+<h3 id="_24">Важно<a class="headerlink" href="#_24" title="Permanent link">¶</a></h3>
+<p>Dark Messiah остаётся в основном Lyon-проектом. Не нужно ретроспективно описывать её как совместную двухофисную игру.</p>
+<p>Настоящая трансатлантическая Arkane начинает складываться <strong>после</strong> Dark Messiah.</p>
+<hr/>
+<h2 id="6-return-to-ravenholm-half-life-arkane">6. Return to Ravenholm / отменённый Half-Life Arkane<a class="headerlink" href="#6-return-to-ravenholm-half-life-arkane" title="Permanent link">¶</a></h2>
+<h3 id="_25">Период<a class="headerlink" href="#_25" title="Permanent link">¶</a></h3>
+<p>Примерно 2006–2007.</p>
+<h3 id="_26">Офис<a class="headerlink" href="#_26" title="Permanent link">¶</a></h3>
+<p>Arkane; проект строится на Source.</p>
+<h3 id="junction-point">Предыстория: Junction Point<a class="headerlink" href="#junction-point" title="Permanent link">¶</a></h3>
+<p>До Arkane над Ravenholm-направлением работала <strong>Junction Point Уоррена Спектора</strong>.</p>
+<p>Их версия:
+- должна была рассказать о Ravenholm до состояния, в котором его увидел Gordon Freeman;
+- подробнее раскрыть Father Grigori;
+- экспериментировала с <strong>Magnet Gun</strong>, позволявшим использовать металлические объекты как физическое оружие.</p>
+<p>Valve закрыла эту версию, но сама идея внешнего Half-Life-проекта не умерла.</p>
+<h3 id="arkane_1">Почему проект передали Arkane<a class="headerlink" href="#arkane_1" title="Permanent link">¶</a></h3>
+<p>Arkane идеально подходила:
+- только что выпустила Dark Messiah на Source;
+- умела работать с Havok/physics;
+- любила системные first-person взаимодействия;
+- уже была знакома Valve;
+- имела опыт физического боя и environmental tools.</p>
+<h3 id="arkane-">Arkane-версия — это уже другая игра<a class="headerlink" href="#arkane-" title="Permanent link">¶</a></h3>
+<p>Не прямое продолжение проекта Junction Point.</p>
+<h4 id="_27">Главный герой<a class="headerlink" href="#_27" title="Permanent link">¶</a></h4>
+<p><strong>Adrian Shephard</strong> из Half-Life: Opposing Force.</p>
+<p>Это потенциально было его полноценное возвращение после 1999 года.</p>
+<h4 id="_28">Ключевой персонаж<a class="headerlink" href="#_28" title="Permanent link">¶</a></h4>
+<p><strong>Father Grigori.</strong></p>
+<p>В версии Arkane он:
+- экспериментирует с headcrabs;
+- пытается создать средство, защищающее от заражения;
+- использует результаты исследований на себе;
+- постепенно начинает мутировать.</p>
+<p>Сам сюжет должен был показать, как человек из Half-Life 2 приходит к своему странному состоянию и что происходит с ним дальше.</p>
+<h3 id="_29">Системные инструменты<a class="headerlink" href="#_29" title="Permanent link">¶</a></h3>
+<h4 id="magnet-gun">Magnet Gun<a class="headerlink" href="#magnet-gun" title="Permanent link">¶</a></h4>
+<p>Наследие эксперимента Junction Point: физическое управление металлическими объектами.</p>
+<h4 id="nail-gun">Nail Gun<a class="headerlink" href="#nail-gun" title="Permanent link">¶</a></h4>
+<p>Особенно важная идея:
+- оружие стреляет гвоздями;
+- гвозди проводят электричество;
+- ими можно строить электрические цепи;
+- одна система работает как weapon, puzzle tool и инфраструктурный инструмент.</p>
+<p>Это очень зрелая Arkane-логика:</p>
+<blockquote>
+<p>один инструмент должен иметь несколько универсальных функций.</p>
+</blockquote>
+<h4 id="_30">Другие прототипы<a class="headerlink" href="#_30" title="Permanent link">¶</a></h4>
+<p>Фигурировали:
+- air/leaf-blower-like tool;
+- chainsaw;
+- физические ловушки и другие interaction tools.</p>
+<h3 id="_31">Насколько далеко дошёл проект<a class="headerlink" href="#_31" title="Permanent link">¶</a></h3>
+<p>Это был не маленький paper pitch.</p>
+<p>По поздним воспоминаниям Колантонио:
+- существовал полный playable path от начала до конца;
+- несколько участков были близки к polished/cinematic качеству;
+- большая часть остального — alpha;
+- потребовалось бы ещё примерно 6–12 месяцев разработки.</p>
+<h3 id="viktor-antonov">Viktor Antonov<a class="headerlink" href="#viktor-antonov" title="Permanent link">¶</a></h3>
+<p>Ravenholm — один из важнейших невидимых проектов истории Arkane именно из-за работы с <strong>Viktor Antonov</strong>, визуальным архитектором Half-Life 2 / City 17.</p>
+<p>Колантонио позднее описывал Ravenholm как:</p>
+<blockquote>
+<p><strong>школу для Arkane.</strong></p>
+</blockquote>
+<p>Антонов помогал команде мыслить не «красивым уровнем», а:
+- архитектурной логикой;
+- production art;
+- культурой места;
+- связью art direction и gameplay;
+- историей пространства.</p>
+<p>Это напрямую подготовило студию к Dishonored.</p>
+<h3 id="_32">Почему отменили<a class="headerlink" href="#_32" title="Permanent link">¶</a></h3>
+<p>Разные участники в разные годы упоминали:
+- усталость Half-Life от zombies/headcrabs;
+- ограничения timeline относительно Episode Two/Three;
+- экономику;
+- стоимость внешней эпизодической разработки.</p>
+<p>Поздняя позиция Колантонио наиболее прозаична:</p>
+<blockquote>
+<p>Valve поняла, что экономика episodic-модели не сходится достаточно хорошо; Arkane требовала ещё значительное время, и бизнес-кейс перестал работать.</p>
+</blockquote>
+<h3 id="_33">Наследие<a class="headerlink" href="#_33" title="Permanent link">¶</a></h3>
+<p>Ravenholm не вышла, но дала Arkane:
+- глубокий опыт Source/Valve production;
+- Viktor Antonov;
+- понимание системного инструмента, который одновременно является оружием и частью мира;
+- ещё один опыт отмены почти готовой большой игры.</p>
+<hr/>
+<h2 id="7-the-crossing">7. The Crossing<a class="headerlink" href="#7-the-crossing" title="Permanent link">¶</a></h2>
+<h3 id="_34">Период<a class="headerlink" href="#_34" title="Permanent link">¶</a></h3>
+<p>Примерно 2006–2009.</p>
+<h3 id="_35">Статус<a class="headerlink" href="#_35" title="Permanent link">¶</a></h3>
+<p>Собственная IP Arkane; публично показана; серьёзно профинансирована самой студией; заморожена и фактически отменена.</p>
+<h3 id="_36">Значение<a class="headerlink" href="#_36" title="Permanent link">¶</a></h3>
+<p>Первый большой проект, где Arkane пыталась придумать <strong>не просто игру, а новую форму взаимодействия single-player и multiplayer</strong>.</p>
+<h3 id="crossplayer">Crossplayer<a class="headerlink" href="#crossplayer" title="Permanent link">¶</a></h3>
+<p>Основная идея:
+- сюжетный игрок проходит first-person campaign;
+- часть противников в ключевых зонах может контролироваться живыми игроками;
+- multiplayer-участник не обязательно воспринимается как отдельный «invader»;
+- он органично занимает роль персонажа мира.</p>
+<p>В идеале campaign-player мог не знать:</p>
+<blockquote>
+<p>перед ним AI или живой человек.</p>
+</blockquote>
+<h3 id="_37">Два типа игроков<a class="headerlink" href="#_37" title="Permanent link">¶</a></h3>
+<p>Упрощённо:
+- <strong>story players</strong> — более сильные персонажи, проходящие кампанию;
+- <strong>skirmish players</strong> — сетевые игроки, занимающие роли более обычных противников/участников конфликта.</p>
+<p>Для multiplayer-человека сюжетный герой мог становиться специальной целью внутри привычного сетевого матча.</p>
+<p>Это и было настоящим смыслом названия <strong>The Crossing</strong>: пересечение разных режимов/ролей внутри одной игры.</p>
+<h3 id="_38">Главная дизайнерская проблема<a class="headerlink" href="#_38" title="Permanent link">¶</a></h3>
+<p>Свободный immersive sim любит:
+- паузы;
+- медленное исследование;
+- чтение;
+- долгий выбор маршрута.</p>
+<p>Multiplayer любит:
+- постоянное действие;
+- предсказуемый темп;
+- быстрое появление противников/целей.</p>
+<p>Если story-player десять минут читает документы, живые противники не могут десять минут сидеть и ждать.</p>
+<p>Поэтому структура начала делиться на:
+- narrative/traversal sections;
+- multiplayer hotspots, где происходят встречи.</p>
+<p>То есть сама multiplayer-механика начинала ограничивать свободу single-player — фундаментальный конфликт проекта.</p>
+<h3 id="_39">Мир: два Парижа<a class="headerlink" href="#_39" title="Permanent link">¶</a></h3>
+<p>The Crossing была первой большой попыткой Arkane после Dark Messiah создать очень сильную собственную визуальную идентичность.</p>
+<h4 id="no1">Париж №1<a class="headerlink" href="#no1" title="Permanent link">¶</a></h4>
+<p>Близкий к современному миру:
+- политический/социальный распад;
+- вооружённые группы;
+- современная урбанистика;
+- узнаваемая городская реальность.</p>
+<h4 id="no2">Париж №2<a class="headerlink" href="#no2" title="Permanent link">¶</a></h4>
+<p>Альтернативная история:
+- в XIV веке тамплиеров не уничтожили;
+- они захватили/сохранили власть;
+- их цивилизация развивается дальше столетиями;
+- современность получается готической, рыцарско-технологической и совершенно иной.</p>
+<p>Миры начинают пересекаться из-за экспериментов/портальной технологии.</p>
+<h3 id="viktor-antonov-sebastien-mitton">Viktor Antonov + Sébastien Mitton<a class="headerlink" href="#viktor-antonov-sebastien-mitton" title="Permanent link">¶</a></h3>
+<p>The Crossing — первый большой оригинальный мир, где Arkane серьёзно применяет совместную художественную школу Mitton + Antonov.</p>
+<p>Здесь уже появляется метод, который позже станет центральным в Dishonored:</p>
+<blockquote>
+<p>знакомая европейская архитектура + история, пошедшая по другой ветке + альтернативная технология.</p>
+</blockquote>
+<h3 id="_40">Геймплейная смесь<a class="headerlink" href="#_40" title="Permanent link">¶</a></h3>
+<p>Проект хотел объединить:
+- firearms;
+- first-person melee;
+- mobility tools;
+- systemic environment;
+- сетевых людей как часть encounter design.</p>
+<p>То есть это логическое продолжение Dark Messiah и Ravenholm.</p>
+<h3 id="_41">Насколько далеко дошёл проект<a class="headerlink" href="#_41" title="Permanent link">¶</a></h3>
+<p>Это не был pitch на десять страниц:
+- был рабочий vertical slice;
+- проект показывали журналистам и издателям;
+- люди реально играли друг против друга;
+- Arkane потратила примерно <strong>около €1 млн собственных средств</strong>.</p>
+<p>Для независимой Arkane это был огромный риск.</p>
+<h3 id="_42">Почему проект не получил нормального издателя<a class="headerlink" href="#_42" title="Permanent link">¶</a></h3>
+<p>Проблемы:</p>
+<h4 id="1_1">1. Непонятный продукт<a class="headerlink" href="#1_1" title="Permanent link">¶</a></h4>
+<p>Издатель задавал базовый вопрос:</p>
+<blockquote>
+<p>это single-player или multiplayer?</p>
+</blockquote>
+<p>В 2007 году рынок ещё не имел привычного языка вроде:
+- invasion;
+- asynchronous multiplayer;
+- shared-world systemic campaign.</p>
+<h4 id="2_1">2. Технический риск<a class="headerlink" href="#2_1" title="Permanent link">¶</a></h4>
+<p>Нужно было решить:
+- matchmaking;
+- разрыв соединения;
+- skill mismatch;
+- живых игроков, которые знают карту лучше campaign-player;
+- timing story-player vs multiplayer users.</p>
+<p>Arkane даже привлекала <strong>Max Hoberman</strong>, одного из ключевых людей multiplayer Halo 2, чтобы укрепить сетевую сторону pitch.</p>
+<h4 id="3">3. Платформы<a class="headerlink" href="#3" title="Permanent link">¶</a></h4>
+<p>PC + Xbox 360 были реальны. PS3 добавляла дорогой технический риск, но крупные издатели хотели широкий рынок.</p>
+<h4 id="4">4. Стоимость<a class="headerlink" href="#4" title="Permanent link">¶</a></h4>
+<p>Полная реализация оценивалась примерно в $15–20 млн — огромная сумма для независимой Arkane того периода.</p>
+<h4 id="5">5. Издатели хотели изменить сам проект<a class="headerlink" href="#5" title="Permanent link">¶</a></h4>
+<p>Кто-то хотел:
+- убрать multiplayer;
+- убрать single-player;
+- сделать более обычный shooter;
+- радикально сменить сеттинг.</p>
+<p>Один потенциальный партнёр почти дошёл до сделки, но:
+- бюджет уменьшался;
+- требований становилось больше;
+- риск переезжал на Arkane.</p>
+<p>Колантонио решил, что контракт станет <strong>setup for failure</strong>, и отказался.</p>
+<h3 id="_43">Почему проект в итоге заморозили<a class="headerlink" href="#_43" title="Permanent link">¶</a></h3>
+<p>EA предложила Arkane более безопасный контракт:
+- финансирование;
+- Spielberg;
+- Doug Church;
+- крупный first-person проект LMNO.</p>
+<p>После риска The Crossing это выглядело разумнее.</p>
+<p>Arkane переключила ресурсы на LMNO.</p>
+<p>В 2009 году The Crossing публично объявили «on hold». Больше она не вернулась.</p>
+<h3 id="_44">Что перешло дальше<a class="headerlink" href="#_44" title="Permanent link">¶</a></h3>
+<h4 id="_45">Визуально<a class="headerlink" href="#_45" title="Permanent link">¶</a></h4>
+<p>The Crossing → Dishonored:
+- альтернативная европейская история;
+- сильная архитектурная идентичность;
+- школа Antonov/Mitton.</p>
+<h4 id="_46">Системно<a class="headerlink" href="#_46" title="Permanent link">¶</a></h4>
+<p>Crossplayer → позднее Deathloop:
+- живой человек внутри твоей одиночной fiction;
+- multiplayer не отдельным меню, а частью мира.</p>
+<p>В Deathloop Arkane наконец решит scope-проблему:</p>
+<blockquote>
+<p>вместо целой команды живых противников — <strong>одна Julianna</strong>.</p>
+</blockquote>
+<hr/>
+<h2 id="8-lmno-spielberg-ea-doug-church">8. LMNO — Spielberg / EA / Doug Church<a class="headerlink" href="#8-lmno-spielberg-ea-doug-church" title="Permanent link">¶</a></h2>
+<h3 id="_47">Период<a class="headerlink" href="#_47" title="Permanent link">¶</a></h3>
+<p>Основная версия с участием Arkane: примерно 2007–2008. Остаточная разработка внутри EA тянулась дольше; официальная отмена была подтверждена позже.</p>
+<h3 id="arkane_2">Статус Arkane<a class="headerlink" href="#arkane_2" title="Permanent link">¶</a></h3>
+<p>Arkane — не единственный и не главный разработчик всей LMNO. Основной проект шёл внутри EA Los Angeles / EA Blueprint. Arkane подключили как сильную внешнюю first-person команду, особенно по melee/level design/vertical slice.</p>
+<h3 id="_48">Ключевые люди<a class="headerlink" href="#_48" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Steven Spielberg — исходная концепция/история;</p>
+</li>
+<li>
+<p>Doug Church — один из главных игровых руководителей;</p>
+</li>
+<li>
+<p>Neil Young — внутренний покровитель проекта в EA;</p>
+</li>
+<li>
+<p>Arkane — внешний разработчик значимого vertical slice;</p>
+</li>
+<li>
+<p>Sébastien Mitton и другие сотрудники Arkane — визуальная/level/design работа.</p>
+</li>
+</ul>
+<h3 id="_49">Исходная задача<a class="headerlink" href="#_49" title="Permanent link">¶</a></h3>
+<p>Не сделать «Spielberg shooter», а ответить на вопрос:</p>
+<blockquote>
+<p><strong>может ли игра заставить игрока эмоционально привязаться к AI-партнёру через сами игровые системы?</strong></p>
+</blockquote>
+<p>Центральный NPC — инопланетная девушка <strong>Eve</strong>.</p>
+<p>Главный человеческий герой в поздних материалах — <strong>Lincoln</strong>.</p>
+<h3 id="_50">Сюжетная основа<a class="headerlink" href="#_50" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Eve удерживают в секретном исследовательском комплексе;</p>
+</li>
+<li>
+<p>Lincoln помогает ей сбежать;</p>
+</li>
+<li>
+<p>начинается road movie через США;</p>
+</li>
+<li>
+<p>государственные силы преследуют героев;</p>
+</li>
+<li>
+<p>игрок вместе с Eve проезжает мотели, кафе, заправки, маленькие города.</p>
+</li>
+</ul>
+<p>Тональность очень Spielberg:
+- E.T.;
+- Close Encounters;
+- road movie;
+- человеческая близость важнее «спасти галактику».</p>
+<h3 id="eve">Eve как игровая система<a class="headerlink" href="#eve" title="Permanent link">¶</a></h3>
+<p>Eve должна была:
+- наблюдать за человеческими предметами;
+- пробовать их использовать;
+- ошибаться;
+- реагировать на поведение игрока;
+- развивать отношения с Lincoln;
+- открывать/усиливать возможности в зависимости от сформировавшейся связи.</p>
+<p>Идея:</p>
+<blockquote>
+<p><strong>отношения = gameplay/progression</strong>, а не отдельная полоска Like +5.</p>
+</blockquote>
+<p>Характерный пример из сохранившихся материалов: Eve в кафе пробует майонез, не понимая человеческой еды, и реагирует на него как на странный объект.</p>
+<p>Это мелочь, но она показывает центр дизайна:</p>
+<blockquote>
+<p>NPC должен казаться существом, изучающим мир, а не скриптовым companion.</p>
+</blockquote>
+<h3 id="movement-parkour">Movement / parkour<a class="headerlink" href="#movement-parkour" title="Permanent link">¶</a></h3>
+<p>LMNO проектировалась от первого лица с:
+- бегом;
+- прыжками;
+- climbing;
+- wall-running;
+- более физичной навигацией.</p>
+<p>Eve должна была двигаться ещё необычнее и сверхчеловечески.</p>
+<p>Параллельно внутри EA развивалась Mirror’s Edge, что создавало естественное сравнение технологий/parkour-направления, хотя нельзя сводить отмену LMNO к существованию Mirror’s Edge.</p>
+<h3 id="no-guns">No guns<a class="headerlink" href="#no-guns" title="Permanent link">¶</a></h3>
+<p>Spielberg не хотел превращать проект в обычный shooter.</p>
+<p>Поэтому ключевым направлением стал <strong>first-person melee</strong>, более похожий на Jason Bourne:
+- захваты;
+- быстрые удары;
+- использование окружения;
+- обезвреживание вместо мясного FPS.</p>
+<p>Именно здесь опыт Dark Messiah делает Arkane идеальным подрядчиком.</p>
+<h3 id="vertical-slice-arkane">Vertical slice Arkane<a class="headerlink" href="#vertical-slice-arkane" title="Permanent link">¶</a></h3>
+<p>Arkane делала заметный кусок вокруг американского <strong>truck stop / roadside diner</strong>.</p>
+<p>Команда:
+- ездила по США;
+- фотографировала реальные места;
+- собирала field references;
+- строила пространство и взаимодействия.</p>
+<p>Mitton позднее считал LMNO важной школой именно в методе полевых визуальных исследований. Этот подход потом станет нормой Arkane:</p>
+<blockquote>
+<p>понять реальное место → собрать реальные материалы → стилизовать, а не выдумывать визуальный шум из головы.</p>
+</blockquote>
+<h3 id="production">Проблемы production<a class="headerlink" href="#production" title="Permanent link">¶</a></h3>
+<p>LMNO слишком долго находилась в research/prototyping:
+- как сделать Eve убедительной;
+- как связать relationship и gameplay;
+- как сделать parkour;
+- как сделать melee;
+- какой длины должна быть игра;
+- насколько она должна быть replayable.</p>
+<p>Один из вариантов — короткая 2–3-часовая кампания с сильной вариативностью и повторными прохождениями.</p>
+<p>Для AAA EA конца 2000-х это было очень трудно продавать:
+- цена полной игры;
+- короткое прохождение;
+- эпоха страха used-game resale;
+- нет очевидного multiplayer retention.</p>
+<h3 id="_51">Почему проект умер<a class="headerlink" href="#_51" title="Permanent link">¶</a></h3>
+<p>Ключевые факторы:
+- проект долго не переходил из экспериментов в уверенный mass production;
+- внутренний покровитель Neil Young покинул EA;
+- финансовый кризис 2008;
+- EA начала сокращать и закрывать рискованные проекты;
+- основной состав LMNO расформировали;
+- участие Arkane прекратилось;
+- остаточная версия внутри EA постепенно превращалась в более обычный cinematic action-проект и тоже умерла.</p>
+<h3 id="arkane_3">Почему отмена особенно ударила Arkane<a class="headerlink" href="#arkane_3" title="Permanent link">¶</a></h3>
+<p>The Crossing была рискованной собственной инициативой.</p>
+<p>LMNO, наоборот, была попыткой выбрать <strong>безопасный большой контракт</strong>:
+- EA;
+- Spielberg;
+- Doug Church;
+- оплачиваемая работа.</p>
+<p>Когда умерла даже она, Arkane получила очень неприятный урок:</p>
+<blockquote>
+<p>даже большой издатель и большая лицензия не дают независимой студии стабильности.</p>
+</blockquote>
+<p>После этого компания буквально распалась на work-for-hire группы.</p>
+<h3 id="arkane-dna">Что осталось в Arkane DNA<a class="headerlink" href="#arkane-dna" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>интерес к поведению NPC как к системе;</p>
+</li>
+<li>
+<p>first-person melee;</p>
+</li>
+<li>
+<p>real-world field reference;</p>
+</li>
+<li>
+<p>production discipline;</p>
+</li>
+<li>
+<p>ещё один опыт, где одна амбициозная идея не может быть доведена без чёткого scope.</p>
+</li>
+</ul>
+<hr/>
+<h2 id="9-20082010">9. Период выживания 2008–2010<a class="headerlink" href="#9-20082010" title="Permanent link">¶</a></h2>
+<p>После LMNO Arkane временно перестаёт выглядеть как единая авторская студия.</p>
+<p>Людей раскидывают по контрактам:
+- Call of Duty;
+- BioShock 2;
+- Boom Blox;
+- Ubisoft consulting;
+- небольшие неизвестные проекты;
+- KarmaStar;
+- другие work-for-hire задачи.</p>
+<p>Harvey Smith в поздней ретроспективе вспоминал момент, когда Arkane одновременно имела примерно <strong>девять проектов</strong>, а финансовый runway мог составлять около четырёх месяцев.</p>
+<p>Главный вывод:</p>
+<blockquote>
+<p>стратегия «много маленьких контрактов = безопасность» помогает платить зарплаты, но уничтожает общий фокус и не создаёт будущее самой Arkane.</p>
+</blockquote>
+<h3 id="91-call-of-duty-world-at-war-2008">9.1 Call of Duty: World at War — 2008<a class="headerlink" href="#91-call-of-duty-world-at-war-2008" title="Permanent link">¶</a></h3>
+<p>Важно:</p>
+<blockquote>
+<p>Arkane не была основным разработчиком World at War.</p>
+</blockquote>
+<p>Основная игра — Treyarch.</p>
+<p>Certain Affinity помогала с multiplayer.</p>
+<p>Часть людей Arkane работала через эту связку над multiplayer/level задачами.</p>
+<p>Для истории Arkane важен не масштаб вклада, а контраст:
+- студия системных first-person RPG;
+- после нескольких отмен;
+- отдаёт специалистов в оплачиваемый production Call of Duty.</p>
+<p>Это нормальная коммерческая работа, но не авторский проект Arkane.</p>
+<h3 id="92-karmastar-2009">9.2 KarmaStar — 2009<a class="headerlink" href="#92-karmastar-2009" title="Permanent link">¶</a></h3>
+<p>Маленькая стратегия/карточная игра для iPhone.</p>
+<h4 id="harvey-smith">Harvey Smith<a class="headerlink" href="#harvey-smith" title="Permanent link">¶</a></h4>
+<p>После Deus Ex / Invisible War / BlackSite работает над микропроектом, прототипировавшимся буквально карточками и кубиками.</p>
+<p>Суть:
+- человеческая жизнь как восемь ходов;
+- несколько характеристик/ценностей;
+- компактные решения;
+- маленькая команда.</p>
+<p>Для Харви это было творческим восстановлением после тяжёлого AAA:</p>
+<blockquote>
+<p>снова можно видеть механику целиком и быстро понимать, работает ли решение.</p>
+</blockquote>
+<p>Для Arkane это одновременно:
+- side project;
+- способ занять часть людей;
+- симптом периода, когда студия берёт любую оплачиваемую работу.</p>
+<h3 id="93-ubisoft-rpg-consulting">9.3 Ubisoft RPG consulting<a class="headerlink" href="#93-ubisoft-rpg-consulting" title="Permanent link">¶</a></h3>
+<p>Колантонио и Harvey консультировали Ubisoft по RPG/design.</p>
+<p>Конкретный проект в нашем обсуждении надёжно не идентифицирован, поэтому в базе не приписываем ему название.</p>
+<p>Значение:</p>
+<blockquote>
+<p>два человека школы Deus Ex/Arx объясняют другому издателю, как делать RPG, вместо того чтобы вести собственную.</p>
+</blockquote>
+<h3 id="94-boom-blox">9.4 Boom Blox<a class="headerlink" href="#94-boom-blox" title="Permanent link">¶</a></h3>
+<p>Поздние воспоминания Harvey подтверждают работу Arkane на EA/Boom Blox в этот период.</p>
+<p>Детальный scope вклада в обсуждении не зафиксирован, поэтому не выдумываем конкретные levels/features.</p>
+<p>Значение — снова симптом work-for-hire режима.</p>
+<h3 id="95-zombie-shooter">9.5 Неизвестный zombie shooter<a class="headerlink" href="#95-zombie-shooter" title="Permanent link">¶</a></h3>
+<p>Harvey упоминал небольшую группу сотрудников, отданных на внешний zombie-shooter project.</p>
+<p>Название надёжно не установлено.</p>
+<p>Сохраняем как факт существования внешнего контракта, но без домыслов.</p>
+<hr/>
+<h2 id="10-bioshock-2-20092010-work-for-hire-arkane">10. BioShock 2 — 2009–2010: work-for-hire, который действительно подходит Arkane<a class="headerlink" href="#10-bioshock-2-20092010-work-for-hire-arkane" title="Permanent link">¶</a></h2>
+<h3 id="_52">Роль<a class="headerlink" href="#_52" title="Permanent link">¶</a></h3>
+<p>Не основной разработчик. Основная студия — 2K Marin, с несколькими крупными партнёрами.</p>
+<p>Arkane получает значимый блок:
+- level architecture;
+- level design;
+- art;
+- animation;
+- часть production для кампании.</p>
+<p>Это уже не «пара людей в аренду», а отдельный Arkane-под внутри большого AAA.</p>
+<h3 id="_53">Почему работа важна<a class="headerlink" href="#_53" title="Permanent link">¶</a></h3>
+<p>BioShock родственен школе Arkane:
+- System Shock;
+- first-person;
+- powers;
+- environmental storytelling;
+- системные encounter;
+- плотные interior spaces.</p>
+<p>То есть Arkane наконец платят за то, <strong>в чём она реально сильна</strong>.</p>
+<h3 id="_54">Производственная школа<a class="headerlink" href="#_54" title="Permanent link">¶</a></h3>
+<p>Arkane должна работать не в собственном мире, а внутри уже существующего Rapture:
+- соблюдать art bible;
+- понимать чужую systemic grammar;
+- строить уровень так, чтобы он выглядел частью BioShock, а не Arkane fan mod.</p>
+<p>Полезный урок:</p>
+<blockquote>
+<p>авторская идентичность — не только «придумать своё», но и уметь понять внутреннюю логику чужого мира.</p>
+</blockquote>
+<h3 id="_55">Косвенное наследие<a class="headerlink" href="#_55" title="Permanent link">¶</a></h3>
+<p>Технические приёмы с несколькими состояниями пространства/визуальными переключениями в BioShock 2 позднее всплывают как часть общего опыта, родственного тому, что Arkane значительно мощнее реализует в Dishonored 2: A Crack in the Slab.</p>
+<p>Не утверждаем прямую «копию», но фиксируем технологическую школу.</p>
+<h3 id="bioshock-2-arkane">Что BioShock 2 дала бизнесу Arkane<a class="headerlink" href="#bioshock-2-arkane" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>крупный выпущенный AAA-credit;</p>
+</li>
+<li>
+<p>подтверждение компетенции в first-person level design;</p>
+</li>
+<li>
+<p>работа после серии отменённых проектов;</p>
+</li>
+<li>
+<p>более убедительное портфолио перед Bethesda/ZeniMax.</p>
+</li>
+</ul>
+<hr/>
+<h2 id="11">11. Почему независимость перестала казаться свободой<a class="headerlink" href="#11" title="Permanent link">¶</a></h2>
+<p>К 2009–2010 Колантонио приходит к парадоксальному выводу:</p>
+<blockquote>
+<p>формально independent studio может быть <strong>сильнее зависима</strong>, потому что каждый следующий проект зависит от внешнего издателя.</p>
+</blockquote>
+<p>Независимая Arkane постоянно должна:
+- искать следующий контракт;
+- доказывать право существовать;
+- переключать людей между чужими production;
+- принимать отмену как финансовую угрозу всей компании.</p>
+<p>Колантонио не создавал Arkane из романтики владения бизнесом. Он создал её, потому что иначе не мог делать игры типа Ultima Underworld.</p>
+<p>Если крупная компания даст:
+- деньги;
+- стабильность;
+- право делать Arkane-игры,</p>
+<p>то сама корпоративная независимость ему не особенно нужна.</p>
+<p>На этом фоне предложение ZeniMax выглядит не «продажей принципов», а потенциальным способом <strong>наконец получить больше творческой свободы через финансовую зависимость от одного владельца, а не десяти клиентов</strong>.</p>
+<hr/>
+<h2 id="12-bethesda-thief-4-blade-runner-dishonored">12. Bethesda, Thief 4 и Blade Runner — преддверие Dishonored<a class="headerlink" href="#12-bethesda-thief-4-blade-runner-dishonored" title="Permanent link">¶</a></h2>
+<p>Перед тем как окончательно прийти к собственной IP, Arkane обсуждала с Bethesda несколько мечтательных вариантов.</p>
+<h3 id="121-thief-4-pitch">12.1 Thief 4 pitch<a class="headerlink" href="#121-thief-4-pitch" title="Permanent link">¶</a></h3>
+<p>Для Колантонио это почти идеальный проект:
+- основал Arkane из любви к Looking Glass;
+- Arx выросла из Ultima Underworld;
+- Arkane уже работала с Randy Smith, Harvey Smith, Antonov;
+- теперь можно официально продолжить Thief.</p>
+<p>Существовал реальный pitch, включая visual/video материалы.</p>
+<p>Это не просто «хотели бы когда-нибудь сделать Thief».</p>
+<h3 id="122-blade-runner-pitch">12.2 Blade Runner pitch<a class="headerlink" href="#122-blade-runner-pitch" title="Permanent link">¶</a></h3>
+<p>Параллельный вариант, особенно близкий Harvey Smith.</p>
+<p>Arkane экспериментировала:
+- с first-person физикой репликанта;
+- с анимацией;
+- с тем, как отличать нечеловеческое тело не цифрой +Strength, а действиями и поведением;
+- с системными идеями вокруг мира Blade Runner.</p>
+<p>Harvey гораздо сильнее тяготел к Blade Runner, Raph — к Thief.</p>
+<h3 id="123">12.3 Оба варианта не становятся реальными играми<a class="headerlink" href="#123" title="Permanent link">¶</a></h3>
+<p>Лицензионные/коммерческие конструкции не закрываются.</p>
+<p>Самое важное — Bethesda не уходит.</p>
+<p>Она фактически говорит:</p>
+<blockquote>
+<p>нам нужна не только лицензия. Нам нужна <strong>игра Arkane</strong>.</p>
+</blockquote>
+<p>Работа над Thief-like first-person systemic проектом остаётся фундаментом.</p>
+<p>Параллельно/следом переосмысливается ранняя концепция supernatural ninja/revenge game.</p>
+<p>Из этого начинает собираться собственная IP.</p>
+<h3 id="124-zenimax-12-2010">12.4 Покупка ZeniMax — 12 августа 2010<a class="headerlink" href="#124-zenimax-12-2010" title="Permanent link">¶</a></h3>
+<p>ZeniMax покупает Arkane Studios целиком:
+- Lyon;
+- Austin.</p>
+<p>К моменту покупки Arkane уже работает над неназванным проектом Bethesda — будущим Dishonored.</p>
+<p>Ключевое изменение:</p>
+<blockquote>
+<p>Arkane больше не надо каждые несколько месяцев делить команду между контрактами.</p>
+</blockquote>
+<hr/>
+<h2 id="13-harvey-smith-arkane">13. Harvey Smith — путь до Arkane и почему он важен для студии<a class="headerlink" href="#13-harvey-smith-arkane" title="Permanent link">¶</a></h2>
+<p>Этот раздел не заменяет историю Arkane, а фиксирует только ту карьерную линию Harvey, которая объясняет, <strong>что именно он принёс в Dishonored</strong>.</p>
+<h3 id="super-wing-commander-1994">Super Wing Commander — 1994<a class="headerlink" href="#super-wing-commander-1994" title="Permanent link">¶</a></h3>
+<p>Роль: QA в Origin.</p>
+<p>Harvey ещё не автор дизайна, но попадает внутрь компании, где:
+- интерактивное кино;
+- нелинейные кампании;
+- Warren Spector и Origin-school.</p>
+<h3 id="system-shock-1994">System Shock — 1994<a class="headerlink" href="#system-shock-1994" title="Permanent link">¶</a></h3>
+<p>Роль: lead tester.</p>
+<p>Ключевая точка всей карьеры:
+- Doug Church;
+- Warren Spector;
+- Looking Glass;
+- пространство как реальное место;
+- systemic design;
+- environmental storytelling.</p>
+<p>Сам Harvey позже считал этот опыт своим дизайнерским bootcamp.</p>
+<h3 id="ultima-viii-pagan-cd-re-release">Ultima VIII: Pagan — CD re-release<a class="headerlink" href="#ultima-viii-pagan-cd-re-release" title="Permanent link">¶</a></h3>
+<p>Роль: production/QA/design-adjacent работа.</p>
+<p>Урок:</p>
+<blockquote>
+<p>упрощение/экшенизация сложной RPG может потерять часть её идентичности.</p>
+</blockquote>
+<p>Впоследствии особенно иронично рифмуется с Invisible War.</p>
+<h3 id="bioforge-1995">BioForge — 1995<a class="headerlink" href="#bioforge-1995" title="Permanent link">¶</a></h3>
+<p>Не считаем ключевой авторской игрой Harvey. Он не был одним из главных дизайнеров; важнее как соседний эксперимент Origin.</p>
+<h3 id="cybermage-darklight-awakening-1995">CyberMage: Darklight Awakening — 1995<a class="headerlink" href="#cybermage-darklight-awakening-1995" title="Permanent link">¶</a></h3>
+<p>Harvey уже Associate Producer + немного design/dialogue.</p>
+<p>Работает рядом с Warren Spector и David W. Bradley.</p>
+<p>Ранний гибрид:
+- FPS;
+- RPG;
+- способности;
+- сюжет;
+- транспорт.</p>
+<p>Для Harvey это переход от QA к настоящему production/design.</p>
+<h3 id="technosaur-19951996">Technosaur — ~1995–1996, отменён<a class="headerlink" href="#technosaur-19951996" title="Permanent link">¶</a></h3>
+<p>Первая собственная крупная игра Harvey.</p>
+<p>RTS:
+- погода;
+- распространяющийся огонь;
+- environment simulation;
+- кибернетические велоцирапторы.</p>
+<p>Здесь уже виден будущий Harvey:</p>
+<blockquote>
+<p>универсальные системы лучше сотни специальных скриптов.</p>
+</blockquote>
+<p>Проект закрывают на фоне финансовой/организационной перестройки Origin/EA.</p>
+<h3 id="fireteam-1998">FireTeam — 1998<a class="headerlink" href="#fireteam-1998" title="Permanent link">¶</a></h3>
+<p>Harvey — Lead Designer.</p>
+<p>Командный multiplayer:
+- классы;
+- objectives;
+- встроенный voice chat;
+- lobby/community;
+- рейтинги/кланы.</p>
+<p>Очень современная конструкция для 1998 года, но рынок/аудитория слишком малы.</p>
+<p>Во время работы Warren Spector зовёт Harvey в Ion Storm Austin.</p>
+<h3 id="deus-ex-2000">Deus Ex — 2000<a class="headerlink" href="#deus-ex-2000" title="Permanent link">¶</a></h3>
+<p>Harvey — Lead Designer.</p>
+<p>Главный вклад в нашей истории:
+- problem, not puzzle;
+- multiple paths;
+- systemic consistency;
+- less is more;
+- дисциплина сокращения гигантского design scope;
+- навыки/аугментации/level-design grammar.</p>
+<p>Warren Spector приносит огромную авторскую концепцию, Harvey помогает превратить её в работающую игру.</p>
+<h3 id="deus-ex-the-conspiracy-2002">Deus Ex: The Conspiracy — 2002<a class="headerlink" href="#deus-ex-the-conspiracy-2002" title="Permanent link">¶</a></h3>
+<p>PS2-адаптация.</p>
+<p>Урок:</p>
+<blockquote>
+<p>сложную PC immersive sim можно перенести на консоль, если адаптировать интерфейс/техническую структуру, а не уничтожать ядро.</p>
+</blockquote>
+<p>Карты режут дополнительными загрузками, но структура Deus Ex сохраняется лучше, чем в Invisible War.</p>
+<h3 id="deus-ex-invisible-war-2003">Deus Ex: Invisible War — 2003<a class="headerlink" href="#deus-ex-invisible-war-2003" title="Permanent link">¶</a></h3>
+<p>Harvey — Project Director.</p>
+<p>Ключевой болезненный урок:
+- общий с Thief технологический фундамент;
+- тяжёлая динамическая технология;
+- Xbox 64 MB;
+- маленькие карты;
+- conscious streamlining;
+- skills убраны;
+- universal ammo (идея Harvey);
+- меньше пространства для планирования.</p>
+<p>Поздняя ретроспектива Harvey/Ricardo:</p>
+<blockquote>
+<p>shared tech, плохо подходившая Deus Ex, была одной из больших ошибок.</p>
+</blockquote>
+<p>Invisible War важна для будущего Arkane именно как <strong>набор анти-уроков</strong>:
+- не жертвовать пространством ради renderer;
+- не считать всю «сложность» мусором;
+- упрощение должно увеличивать решения, а не уменьшать их.</p>
+<h3 id="thief-deadly-shadows-2004">Thief: Deadly Shadows — 2004<a class="headerlink" href="#thief-deadly-shadows-2004" title="Permanent link">¶</a></h3>
+<p>Не игра Harvey как руководителя.</p>
+<p>Главные люди: Randy Smith / Jordan Thomas.</p>
+<p>Harvey помогает ближе к финалу, в частности с locomotion first-/third-person.</p>
+<p>Урок:</p>
+<blockquote>
+<p>технология, плохая для больших пространств Deus Ex, лучше подходит Thief, потому что свет/тень/компактные помещения — сердце Thief.</p>
+</blockquote>
+<h3 id="area-51-2005">Area 51 — 2005<a class="headerlink" href="#area-51-2005" title="Permanent link">¶</a></h3>
+<p>Harvey приходит в Midway уже ближе к окончанию проекта.</p>
+<p>Не считаем Area 51 «его игрой»:
+- Studio Creative Director;
+- additional design/writing.</p>
+<p>Это нормальный линейный коммерческий FPS, сильно отличающийся от immersive sim.</p>
+<h3 id="criminal-career-criminal">Criminal / Career Criminal — отменён<a class="headerlink" href="#criminal-career-criminal" title="Permanent link">¶</a></h3>
+<p>Один из самых интересных потерянных проектов.</p>
+<p>Концепция:</p>
+<blockquote>
+<p><strong>Heat + open-world immersive sim.</strong></p>
+</blockquote>
+<p>Идеи:
+- профессиональные ограбления;
+- предварительная разведка;
+- команда;
+- распределение ролей;
+- intimidation вместо обязательного убийства;
+- поведение заложников;
+- полиция как последствие ошибок;
+- побег после heist.</p>
+<p>Harvey пришёл в Midway во многом из-за интереса к этому направлению, но затем его перебросили спасать другой проблемный FPS-проект.</p>
+<h3 id="blacksite-area-51-2007">BlackSite: Area 51 — 2007<a class="headerlink" href="#blacksite-area-51-2007" title="Permanent link">¶</a></h3>
+<p>Harvey получает тяжёлый production, который сам не выбирал как игру мечты.</p>
+<p>После релиза публично критикует состояние разработки и ранний выпуск.</p>
+<p>Midway и Harvey расстаются.</p>
+<p>Главный личный урок:</p>
+<blockquote>
+<p>он больше не хочет выпускать игру, если считает её неготовой.</p>
+</blockquote>
+<h3 id="arkane-2008">Приход в Arkane — 2008<a class="headerlink" href="#arkane-2008" title="Permanent link">¶</a></h3>
+<p>Colantonio и Smith знают друг друга много лет и имеют общую интеллектуальную родословную:
+- Ultima Underworld;
+- System Shock;
+- Looking Glass;
+- Deus Ex.</p>
+<p>Harvey приходит в Arkane после тяжёлого Midway-периода с огромным набором:
+- systemic design;
+- stealth;
+- level design;
+- production trauma;
+- понимание цены неправильной технологии;
+- желание снова делать глубокие first-person игры.</p>
+<p>Именно встреча:</p>
+<blockquote>
+<p><strong>Arx/Dark Messiah (Raph)</strong> + <strong>System Shock/Deus Ex/Thief (Harvey)</strong></p>
+</blockquote>
+<p>станет фундаментом Dishonored.</p>
+<hr/>
+<h2 id="14-dishonored">14. Dishonored — происхождение и разработка<a class="headerlink" href="#14-dishonored" title="Permanent link">¶</a></h2>
+<h3 id="_56">Период<a class="headerlink" href="#_56" title="Permanent link">¶</a></h3>
+<p>Примерно 2009–2012.</p>
+<h3 id="_57">Офисы<a class="headerlink" href="#_57" title="Permanent link">¶</a></h3>
+<p>Lyon + Austin как единая Arkane.</p>
+<h3 id="_58">Ключевые люди<a class="headerlink" href="#_58" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Raphaël Colantonio — co-creative director;</p>
+</li>
+<li>
+<p>Harvey Smith — co-creative director;</p>
+</li>
+<li>
+<p>Sébastien Mitton — Art Director;</p>
+</li>
+<li>
+<p>Viktor Antonov — Visual Design Director / world conception;</p>
+</li>
+<li>
+<p>Christophe Carrier и другие lead designers;</p>
+</li>
+<li>
+<p>Austin Grossman, Terri Brosius и другие writers;</p>
+</li>
+<li>
+<p>команда Lyon + Austin.</p>
+</li>
+</ul>
+<h3 id="_59">Технология<a class="headerlink" href="#_59" title="Permanent link">¶</a></h3>
+<p><strong>Unreal Engine 3</strong> + собственные Arkane systems/tools.</p>
+<h3 id="141-dishonored-thief-4-blade-runner-ninja-">14.1 До Dishonored: Thief 4, Blade Runner и ninja-концепт<a class="headerlink" href="#141-dishonored-thief-4-blade-runner-ninja-" title="Permanent link">¶</a></h3>
+<p>Ранняя история проекта грязная и складывается из нескольких слоёв:</p>
+<ol>
+<li>
+<p>Arkane обсуждает с Bethesda полноценный <strong>Thief 4</strong> pitch.</p>
+</li>
+<li>
+<p>Параллельно Harvey ведёт pitch по <strong>Blade Runner</strong>.</p>
+</li>
+<li>
+<p>Обе лицензионные версии не становятся production.</p>
+</li>
+<li>
+<p>Сохраняется first-person systemic foundation, особенно Thief-подобная логика пространства.</p>
+</li>
+<li>
+<p>Параллельно/следом существует ранний Bethesda-концепт supernatural ninja revenge game.</p>
+</li>
+<li>
+<p>Arkane заменяет феодальную Японию на более близкий ей европейский материал.</p>
+</li>
+<li>
+<p>Игра постепенно превращается в самостоятельную IP.</p>
+</li>
+</ol>
+<p>Свежие воспоминания разработчиков уточняют старую simplified legend «Japan → London → Dunwall»: между этими точками реально существовали Thief 4 и Blade Runner pitches.</p>
+<h3 id="142-london-1666">14.2 London 1666<a class="headerlink" href="#142-london-1666" title="Permanent link">¶</a></h3>
+<p>Первая сильная авторская версия:
+- Лондон;
+- 1666 год;
+- Великая чума;
+- Великий пожар;
+- убийца;
+- политический кризис;
+- мрачный город.</p>
+<p>Но геймдизайн начинает требовать технологий:
+- Walls of Light;
+- Tallboys;
+- прожекторы;
+- сложные механические системы.</p>
+<p>Художественная команда всё сильнее уходит в более поздний XIX век.</p>
+<p>В какой-то момент исторический Лондон уже не выдерживает накопившихся отклонений.</p>
+<p>Так возникает <strong>Dunwall</strong> и собственная Empire of the Isles.</p>
+<h3 id="143-player-fantasy">14.3 Player fantasy сначала, мир потом<a class="headerlink" href="#143-player-fantasy" title="Permanent link">¶</a></h3>
+<p>После ошибки Dark Messiah Arkane старается раньше понять:</p>
+<blockquote>
+<p>что игрок должен делать каждую минуту?</p>
+</blockquote>
+<p>Главная формула:
+<strong>supernatural assassin.</strong></p>
+<p>Отсюда уже строятся:
+- уровни;
+- архитектура;
+- powers;
+- AI;
+- verticality.</p>
+<p>Это важный производственный рост Arkane:</p>
+<blockquote>
+<p>core verbs определяются раньше, чем весь мир окончательно заморожен.</p>
+</blockquote>
+<h3 id="144-co-direction-raph-harvey">14.4 Co-direction Raph + Harvey<a class="headerlink" href="#144-co-direction-raph-harvey" title="Permanent link">¶</a></h3>
+<p>Оба привыкли быть финальным творческим руководителем.</p>
+<p>Для Dishonored они становятся равноправными co-creative directors.</p>
+<p>Упрощённая разница подходов:
+- Raph — simulation, физические interaction, неожиданные системные комбинации;
+- Harvey — stealth, level-design discipline, narrative reactivity, multiple solutions.</p>
+<p>Dishonored становится точкой встречи их биографий.</p>
+<h3 id="145-viktor-antonov-sebastien-mitton">14.5 Viktor Antonov + Sébastien Mitton<a class="headerlink" href="#145-viktor-antonov-sebastien-mitton" title="Permanent link">¶</a></h3>
+<p>Именно здесь опыт Ravenholm/The Crossing окупается полностью.</p>
+<h4 id="antonov">Antonov<a class="headerlink" href="#antonov" title="Permanent link">¶</a></h4>
+<p>Большая концепция:
+- архитектура;
+- промышленность;
+- технологическая история;
+- силуэт города;
+- социальная структура пространства.</p>
+<h4 id="mitton">Mitton<a class="headerlink" href="#mitton" title="Permanent link">¶</a></h4>
+<p>Production-art:
+- персонажи;
+- материалы;
+- читаемость;
+- стилизация;
+- приведение большого visual bible в реальную игру.</p>
+<h3 id="146-whale-oil-worldbuilding">14.6 Whale oil: worldbuilding через причинность<a class="headerlink" href="#146-whale-oil-worldbuilding" title="Permanent link">¶</a></h3>
+<p>Нужен источник энергии.</p>
+<p>Arkane выбирает <strong>китовый жир</strong>.</p>
+<p>Из одного решения логически следуют:
+- китобойный флот;
+- переработка;
+- рабочие;
+- порты;
+- экономика;
+- fuel tanks;
+- military tech;
+- социальный класс;
+- индустриальные районы.</p>
+<p>Whale-oil tank одновременно:
+- lore object;
+- gameplay resource;
+- explosive;
+- power source;
+- security-system component.</p>
+<p>Это один из чистейших примеров Arkane:</p>
+<blockquote>
+<p><strong>один объект должен работать и на fiction, и на системную игру.</strong></p>
+</blockquote>
+<h3 id="147">14.7 Визуальная читаемость выше технологического шума<a class="headerlink" href="#147" title="Permanent link">¶</a></h3>
+<p>В 2012 индустрия одержима высокочастотными текстурами и детализацией.</p>
+<p>Arkane сознательно стилизует:
+- крупные формы;
+- живописные поверхности;
+- читаемые силуэты;
+- преувеличенные лица/руки/тела.</p>
+<p>Принцип:</p>
+<blockquote>
+<p>игрок должен мгновенно видеть окно, трубу, дверь, карниз, врага и маршрут.</p>
+</blockquote>
+<p>Визуальная стилизация — не просто арт, а часть level design.</p>
+<h3 id="148-stealth-thief">14.8 Stealth: не копия Thief<a class="headerlink" href="#148-stealth-thief" title="Permanent link">¶</a></h3>
+<p>Thief сильно опирается на тьму как числовую механику.</p>
+<p>Dishonored больше использует:
+- line of sight;
+- view cones;
+- расстояние;
+- периферию;
+- архитектуру;
+- вертикальность.</p>
+<p>Ключевой сдвиг:</p>
+<blockquote>
+<p><strong>Thief прячется в темноте; Dishonored прячется в архитектуре.</strong></p>
+</blockquote>
+<h3 id="149-blink">14.9 Blink<a class="headerlink" href="#149-blink" title="Permanent link">¶</a></h3>
+<p>Blink становится центральной механикой не сразу.</p>
+<p>Ранние варианты movement были менее чистыми.</p>
+<p>Плейтесты показали:
+- люди часто играли почти как в обычный FPS;
+- многие не использовали powers.</p>
+<p>Решение:</p>
+<blockquote>
+<p>дать базовый Blink всем и сделать его фундаментальной частью movement grammar.</p>
+</blockquote>
+<p>Отсюда дизайнеры могут гарантированно строить:
+- крыши;
+- фонари;
+- трубы;
+- окна;
+- балконы;
+- вертикальные shortcuts.</p>
+<p>Минимальная mana regeneration специально поддерживает частое использование Blink.</p>
+<p>Урок по сравнению с Invisible War:</p>
+<blockquote>
+<p>хорошее упрощение не уменьшает decisions — оно <strong>чаще приводит игрока к интересным decisions</strong>.</p>
+</blockquote>
+<h3 id="1410-powers-verbs">14.10 Powers как verbs<a class="headerlink" href="#1410-powers-verbs" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Blink — изменить позицию игрока;</p>
+</li>
+<li>
+<p>Possession — изменить, кем является игрок;</p>
+</li>
+<li>
+<p>Bend Time — изменить правила времени;</p>
+</li>
+<li>
+<p>Windblast — изменить положение объектов/людей;</p>
+</li>
+<li>
+<p>Devouring Swarm — создать самостоятельных существ;</p>
+</li>
+<li>
+<p>Dark Vision — изменить доступную информацию.</p>
+</li>
+</ul>
+<p>Это не просто «spells с damage values».</p>
+<p>Именно поэтому системы комбинируются без сотен специальных scripted combos.</p>
+<h3 id="1411-exploits">14.11 Весёлые exploits<a class="headerlink" href="#1411-exploits" title="Permanent link">¶</a></h3>
+<p>Arkane сознательно различает:
+- баг, ломающий progression;
+- неожиданный interaction, логично вытекающий из систем.</p>
+<p>Второй тип часто оставляют.</p>
+<p>Философия:</p>
+<blockquote>
+<p>если игрок сделал что-то неожиданное, логичное и весёлое — не спешить чинить только потому, что дизайнер это не планировал.</p>
+</blockquote>
+<h3 id="1412-mini-open-worlds">14.12 Mini-open worlds<a class="headerlink" href="#1412-mini-open-worlds" title="Permanent link">¶</a></h3>
+<p>Dishonored не open world.</p>
+<p>Структура:
+- последовательность hand-crafted missions;
+- каждая миссия — большой автономный район;
+- внутри района множество путей.</p>
+<p>Это компромисс между:
+- Arx — одним большим связанным миром;
+- линейным action;
+- слишком маленькими пространствами Invisible War.</p>
+<h3 id="1413-hound-pits-pub">14.13 Hound Pits Pub<a class="headerlink" href="#1413-hound-pits-pub" title="Permanent link">¶</a></h3>
+<p>Hub между миссиями:
+- передышка;
+- персонажи;
+- реакция на предыдущие действия;
+- ощущение дома;
+- контраст с грязным Dunwall.</p>
+<p>Hub помогает кампании ощущаться единым путешествием, а не меню миссий.</p>
+<h3 id="1414">14.14 Нелетальные устранения<a class="headerlink" href="#1414" title="Permanent link">¶</a></h3>
+<p>Изначально targets надо было именно assassinate.</p>
+<p>Но система позволяла проходить рядовых врагов:
+- мимо;
+- choke;
+- sleep dart.</p>
+<p>Возникла логическая проблема:</p>
+<blockquote>
+<p>почему pacifist-прохождение внезапно обязано убивать главную цель?</p>
+</blockquote>
+<p>Arkane добавляет для каждой target нелетальный вариант.</p>
+<p>Важно:</p>
+<blockquote>
+<p>non-lethal ≠ moral good.</p>
+</blockquote>
+<p>Некоторые наказания хуже быстрой смерти:
+- Heretic’s Brand;
+- Pendleton brothers отправляют в рабство;
+- Lady Boyle — похищение одержимым поклонником.</p>
+<h3 id="1415-chaos">14.15 Chaos<a class="headerlink" href="#1415-chaos" title="Permanent link">¶</a></h3>
+<p>Arkane избегает шкалы Good/Evil.</p>
+<p>Chaos — реакция мира на уровень насилия:
+- больше трупов;
+- больше крыс;
+- больше Weepers;
+- более тяжёлое состояние города;
+- изменения диалогов/Emily/финала.</p>
+<p>Но система создаёт противоречие:
+- игра даёт очень весёлые lethal tools;
+- игрок начинает воспринимать Low Chaos как «правильный» стиль;
+- часть дорогой боевой системы психологически оказывается запрещённой.</p>
+<p>Это станет одной из вещей, которые Arkane попытается исправить в Dishonored 2 и радикально отбросит в Deathloop.</p>
+<h3 id="1416-corvo">14.16 Corvo — молчаливый<a class="headerlink" href="#1416-corvo" title="Permanent link">¶</a></h3>
+<p>Причина:</p>
+<blockquote>
+<p>voiced protagonist может сказать фразу, противоречащую стилю конкретного игрока.</p>
+</blockquote>
+<p>Поэтому Corvo остаётся blank-slate avatar.</p>
+<p>Цена:
+- сильное projection;
+- слабее character arc;
+- эмоциональная дистанция.</p>
+<p>Daud DLC потом покажут преимущества voiced protagonist.</p>
+<h3 id="1417-outsider">14.17 Outsider<a class="headerlink" href="#1417-outsider" title="Permanent link">¶</a></h3>
+<p>Удобная fiction-фигура для supernatural powers.</p>
+<p>Также тематически почти отражает самого дизайнера:</p>
+<blockquote>
+<p>даёт человеку силы и наблюдает, что он с ними сделает.</p>
+</blockquote>
+<p>В первой игре Outsider намеренно остаётся загадкой.</p>
+<h3 id="1418-unreal-engine-3">14.18 Unreal Engine 3 и собственные системы<a class="headerlink" href="#1418-unreal-engine-3" title="Permanent link">¶</a></h3>
+<p>Arkane выбирает зрелый middleware вместо технологической гонки.</p>
+<p>Пишет поверх UE3:
+- stealth/AI;
+- audio propagation;
+- dialog/story tools;
+- gameplay systems;
+- <strong>Soiree</strong> — систему, позволяющую NPC плавно переключаться между scripted сценами и systemic AI.</p>
+<p>Это важный анти-Invisible-War урок:</p>
+<blockquote>
+<p>renderer не должен быть главной инновацией игры; инженерное время важнее вложить в взаимодействие систем.</p>
+</blockquote>
+<h3 id="1419-2012">14.19 Релиз — октябрь 2012<a class="headerlink" href="#1419-2012" title="Permanent link">¶</a></h3>
+<p>Dishonored:
+- получает высокие оценки;
+- продаётся выше ожиданий Bethesda;
+- быстро воспринимается как новая франшиза;
+- получает BAFTA Best Game.</p>
+<p>Историческое значение для Arkane:</p>
+<blockquote>
+<p>впервые большая оригинальная игра студии одновременно <strong>вышла, была высоко оценена и коммерчески сработала</strong>.</p>
+</blockquote>
+<p>После Arx, Dark Messiah и серии отмен это главный перелом.</p>
+<hr/>
+<h2 id="15-post-release-dishonored-1">15. Post-release Dishonored 1<a class="headerlink" href="#15-post-release-dishonored-1" title="Permanent link">¶</a></h2>
+<h3 id="151-dunwall-city-trials-2012">15.1 Dunwall City Trials — 2012<a class="headerlink" href="#151-dunwall-city-trials-2012" title="Permanent link">¶</a></h3>
+<h4 id="_60">Формат<a class="headerlink" href="#_60" title="Permanent link">¶</a></h4>
+<p>10 challenge maps:
+- combat;
+- stealth;
+- mobility;
+- score/leaderboards.</p>
+<h4 id="_61">Значение<a class="headerlink" href="#_61" title="Permanent link">¶</a></h4>
+<p>Arkane вынимает Dishonored systems из мира и проверяет:</p>
+<blockquote>
+<p>достаточно ли они хороши как чистая механическая игрушка?</p>
+</blockquote>
+<p>Ответ:
+- да, механически игра работает;
+- но без пространства, истории и worldbuilding магия Dishonored заметно слабее.</p>
+<h4 id="_62">Кадровая линия<a class="headerlink" href="#_62" title="Permanent link">¶</a></h4>
+<p>Внутри этих DLC растут будущие лидеры:
+- Ricardo Bare;
+- Dinga Bakaba.</p>
+<h3 id="152-the-knife-of-dunwall-2013">15.2 The Knife of Dunwall — 2013<a class="headerlink" href="#152-the-knife-of-dunwall-2013" title="Permanent link">¶</a></h3>
+<h4 id="_63">Главный герой<a class="headerlink" href="#_63" title="Permanent link">¶</a></h4>
+<p><strong>Daud.</strong></p>
+<h4 id="_64">Почему он идеален<a class="headerlink" href="#_64" title="Permanent link">¶</a></h4>
+<p>Он:
+- тоже отмечен Outsider;
+- тоже supernatural assassin;
+- уже много лет использует powers;
+- убил Jessamine;
+- теперь живёт с последствиями.</p>
+<p>Corvo — история о том, <strong>станет ли человек монстром</strong>.</p>
+<p>Daud — история о том, <strong>может ли человек, который уже стал монстром, остановиться</strong>.</p>
+<h4 id="voiced-protagonist">Voiced protagonist<a class="headerlink" href="#voiced-protagonist" title="Permanent link">¶</a></h4>
+<p>Michael Madsen озвучивает Daud.</p>
+<p>Arkane получает опыт:
+- protagonist может иметь характер;
+- при этом gameplay agency не исчезает.</p>
+<p>Это важный промежуточный шаг к voiced Corvo/Emily в Dishonored 2.</p>
+<h4 id="rothwild-slaughterhouse">Rothwild Slaughterhouse<a class="headerlink" href="#rothwild-slaughterhouse" title="Permanent link">¶</a></h4>
+<p>Worldbuilding whale-oil экономики становится физическим:
+- живые/умирающие киты;
+- переработка;
+- рабочие;
+- промышленная жестокость.</p>
+<p>Фикция превращается в уровень.</p>
+<h4 id="_65">Новые механики<a class="headerlink" href="#_65" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>Daud’s Blink с остановкой времени при прицеливании;</p>
+</li>
+<li>
+<p>Summon Assassin;</p>
+</li>
+<li>
+<p>Favors;</p>
+</li>
+<li>
+<p>новые mines/tools;</p>
+</li>
+<li>
+<p>другой powerset.</p>
+</li>
+</ul>
+<h4 id="favors">Favors<a class="headerlink" href="#favors" title="Permanent link">¶</a></h4>
+<p>Показывают статус Daud:</p>
+<blockquote>
+<p>он не беглец без ресурсов, а руководитель сети убийц.</p>
+</blockquote>
+<p>Перед миссией можно заплатить людям за:
+- информацию;
+- тайник;
+- подготовленный маршрут;
+- дополнительный ресурс.</p>
+<p>Character fiction → gameplay.</p>
+<h4 id="billie-lurk">Billie Lurk<a class="headerlink" href="#billie-lurk" title="Permanent link">¶</a></h4>
+<p>Вводится как lieutenant Daud.</p>
+<p>Позже:
+- Dishonored 2 — Meagan Foster;
+- Death of the Outsider — главный герой.</p>
+<h3 id="153-the-brigmore-witches-2013">15.3 The Brigmore Witches — 2013<a class="headerlink" href="#153-the-brigmore-witches-2013" title="Permanent link">¶</a></h3>
+<h4 id="_66">Продолжение<a class="headerlink" href="#_66" title="Permanent link">¶</a></h4>
+<p>Save из Knife of Dunwall можно переносить:
+- powers;
+- upgrades;
+- inventory;
+- Chaos;
+- решения.</p>
+<p>Обе DLC фактически являются одной второй кампанией.</p>
+<h4 id="delilah-copperspoon">Delilah Copperspoon<a class="headerlink" href="#delilah-copperspoon" title="Permanent link">¶</a></h4>
+<p>Здесь Arkane создаёт:
+- главного антагониста Dishonored 2;
+- witch/painting/Void направление;
+- основу следующего большого конфликта серии.</p>
+<h4 id="_67">Новые пространства<a class="headerlink" href="#_67" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>Coldridge с точки зрения Daud;</p>
+</li>
+<li>
+<p>Drapers Ward;</p>
+</li>
+<li>
+<p>криминальные фракции;</p>
+</li>
+<li>
+<p>Brigmore Manor.</p>
+</li>
+</ul>
+<h4 id="daud-arc">Daud arc<a class="headerlink" href="#daud-arc" title="Permanent link">¶</a></h4>
+<p>Low Chaos теперь особенно органичен:</p>
+<blockquote>
+<p>механика не просто оценивает игрока, а поддерживает тему попытки искупления.</p>
+</blockquote>
+<h4 id="dishonored-2">Наследие для Dishonored 2<a class="headerlink" href="#dishonored-2" title="Permanent link">¶</a></h4>
+<p>Daud DLC становятся реальной лабораторией:
+- improved Blink;
+- voiced protagonist;
+- более сложные supernatural enemies;
+- более персонализированная narrative reactivity.</p>
+<h3 id="154-rat-ball-arkane">15.4 Rat Ball — вырезанный символ Arkane<a class="headerlink" href="#154-rat-ball-arkane" title="Permanent link">¶</a></h3>
+<p>Ricardo Bare хотел способность собирать крыс в шар и кидать его.</p>
+<p>Production сказала «нет, сроки».</p>
+<p>Идеальный микро-анекдот Arkane:</p>
+<blockquote>
+<p>даже перед релизом дизайнер всё ещё хочет добавить ещё одну универсальную системную игрушку.</p>
+</blockquote>
+<hr/>
+<h2 id="16-dishonored-arkane">16. После Dishonored: Arkane становится двумя студиями<a class="headerlink" href="#16-dishonored-arkane" title="Permanent link">¶</a></h2>
+<h3 id="20122013">2012–2013<a class="headerlink" href="#20122013" title="Permanent link">¶</a></h3>
+<p>Успех Dishonored даёт компании возможность больше не заставлять Lyon и Austin работать одной трансатлантической командой над одной игрой.</p>
+<h4 id="lyon">Lyon<a class="headerlink" href="#lyon" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>Harvey Smith переезжает во Францию;</p>
+</li>
+<li>
+<p>Sébastien Mitton;</p>
+</li>
+<li>
+<p>постепенно растёт Dinga Bakaba;</p>
+</li>
+<li>
+<p>проект: Dishonored 2.</p>
+</li>
+</ul>
+<h4 id="austin">Austin<a class="headerlink" href="#austin" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>Raphaël Colantonio;</p>
+</li>
+<li>
+<p>Ricardo Bare;</p>
+</li>
+<li>
+<p>Susan Kath;</p>
+</li>
+<li>
+<p>проект: новая игра, будущая Prey.</p>
+</li>
+</ul>
+<p>Ирония:
+- француз Raph остаётся в Texas;
+- техасец Harvey несколько лет живёт и руководит Lyon.</p>
+<h3 id="_68">Производственная философия<a class="headerlink" href="#_68" title="Permanent link">¶</a></h3>
+<p>Студии:
+- делятся feedback;
+- тестируют работы друг друга;
+- сохраняют общую Arkane DNA;</p>
+<p>но получают отдельные проекты, leadership и технологии.</p>
+<hr/>
+<h2 id="17-dishonored-2">17. Dishonored 2<a class="headerlink" href="#17-dishonored-2" title="Permanent link">¶</a></h2>
+<h3 id="_69">Период<a class="headerlink" href="#_69" title="Permanent link">¶</a></h3>
+<p>2013–2016.</p>
+<h3 id="_70">Офис<a class="headerlink" href="#_70" title="Permanent link">¶</a></h3>
+<p>Arkane Lyon.</p>
+<h3 id="_71">Ключевые люди<a class="headerlink" href="#_71" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Harvey Smith — Creative Director;</p>
+</li>
+<li>
+<p>Sébastien Mitton — Art Director;</p>
+</li>
+<li>
+<p>Dinga Bakaba — Lead Designer;</p>
+</li>
+<li>
+<p>Christophe Carrier;</p>
+</li>
+<li>
+<p>Dana Nightingale и другие level designers.</p>
+</li>
+</ul>
+<h3 id="_72">Технология<a class="headerlink" href="#_72" title="Permanent link">¶</a></h3>
+<p><strong>Void Engine</strong>, глубоко переделанный id Tech 5.</p>
+<h3 id="171">17.1 Задача сиквела<a class="headerlink" href="#171" title="Permanent link">¶</a></h3>
+<p>Первая игра уже определила:
+- мир;
+- язык;
+- powers;
+- stealth/combat philosophy.</p>
+<p>Поэтому Dishonored 2 может заниматься:</p>
+<blockquote>
+<p>не изобретением формы, а <strong>углублением</strong>.</p>
+</blockquote>
+<p>Цели:
+- улучшить sword combat;
+- дать больше non-lethal combat;
+- улучшить stealth feedback;
+- сделать Chaos тоньше;
+- показать другой регион мира;
+- сделать миссии ещё более концептуально смелыми.</p>
+<h3 id="172-emily-playable-protagonist">17.2 Emily как playable protagonist<a class="headerlink" href="#172-emily-playable-protagonist" title="Permanent link">¶</a></h3>
+<p>Через 15 лет девочка из первой игры становится императрицей.</p>
+<p>Идея сильна потому, что игрок:
+- знает её ребёнком;
+- видел, как действия Corvo формировали её мировоззрение;
+- теперь играет за результат этих событий.</p>
+<p>Позже добавляют и Corvo.</p>
+<p>Игрок выбирает одного героя на всю кампанию.</p>
+<h3 id="173-powerset">17.3 Два powerset<a class="headerlink" href="#173-powerset" title="Permanent link">¶</a></h3>
+<p>Emily — не skin Corvo.</p>
+<h4 id="emily">Emily<a class="headerlink" href="#emily" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p>Far Reach;</p>
+</li>
+<li>
+<p>Domino;</p>
+</li>
+<li>
+<p>Mesmerize;</p>
+</li>
+<li>
+<p>Doppelganger;</p>
+</li>
+<li>
+<p>Shadow Walk.</p>
+</li>
+</ul>
+<h4 id="corvo">Corvo<a class="headerlink" href="#corvo" title="Permanent link">¶</a></h4>
+<ul>
+<li>развивает знакомые Dishonored powers.</li>
+</ul>
+<p>Главная цель:</p>
+<blockquote>
+<p>выбор героя должен менять, <strong>как игрок читает пространство</strong>, а не только голос и анимацию.</p>
+</blockquote>
+<h3 id="174-far-reach-vs-blink">17.4 Far Reach vs Blink<a class="headerlink" href="#174-far-reach-vs-blink" title="Permanent link">¶</a></h3>
+<p>Blink — мгновенное перемещение.</p>
+<p>Far Reach:
+- физически тянет Emily;
+- имеет инерцию;
+- может подтягивать объекты/людей;
+- позволяет использовать momentum.</p>
+<p>Даже «аналогичная» mobility power создаёт другой способ движения.</p>
+<h3 id="175-domino">17.5 Domino<a class="headerlink" href="#175-domino" title="Permanent link">¶</a></h3>
+<p>Одна из чистейших Arkane-механик:</p>
+<blockquote>
+<p>связать состояния нескольких NPC.</p>
+</blockquote>
+<p>Это не AoE spell, а новое системное правило:
+- усыпил одного — заснули связанные;
+- убил одного — умерли связанные;
+- другие systems могут воздействовать на связь.</p>
+<h3 id="176-no-powers">17.6 No Powers<a class="headerlink" href="#176-no-powers" title="Permanent link">¶</a></h3>
+<p>Можно отказаться от Mark Outsider.</p>
+<p>Это заставляет level design быть честным:
+- каждый ключевой маршрут должен иметь физическую логику;
+- powers расширяют пространство решений, но не являются обязательным ключом.</p>
+<h3 id="177-voiced-corvo-emily">17.7 Voiced Corvo / Emily<a class="headerlink" href="#177-voiced-corvo-emily" title="Permanent link">¶</a></h3>
+<p>Опыт Daud DLC показывает плюсы voiced protagonist.</p>
+<p>Corvo получает голос <strong>Stephen Russell</strong>, Garrett из классических Thief.</p>
+<p>Философский сдвиг:</p>
+<blockquote>
+<p>Arkane выбирает более определённых персонажей вместо почти полного player projection.</p>
+</blockquote>
+<h3 id="178-karnaca">17.8 Karnaca<a class="headerlink" href="#178-karnaca" title="Permanent link">¶</a></h3>
+<p>Mitton не хочет ещё четыре года делать холодный Dunwall.</p>
+<p>Новый город:
+- Serkonos;
+- солнце;
+- море;
+- южная архитектура;
+- испано-итало-средиземноморские мотивы;
+- яркие интерьеры;
+- совсем другая социальная/географическая логика.</p>
+<p>Задача:</p>
+<blockquote>
+<p>за секунду понятно, что это Dishonored, но это не Dunwall.</p>
+</blockquote>
+<h3 id="179-worldbuilding-gameplay">17.9 Worldbuilding → gameplay<a class="headerlink" href="#179-worldbuilding-gameplay" title="Permanent link">¶</a></h3>
+<h4 id="_73">Плоские крыши<a class="headerlink" href="#_73" title="Permanent link">¶</a></h4>
+<p>В южной культуре крыши используются людьми → roof route больше не гарантированно безопасен.</p>
+<h4 id="bloodflies">Bloodflies<a class="headerlink" href="#bloodflies" title="Permanent link">¶</a></h4>
+<p>Экология трупов и заразы вместо повторения крыс.</p>
+<h4 id="dust-district">Dust District<a class="headerlink" href="#dust-district" title="Permanent link">¶</a></h4>
+<p>Геология серебряных шахт → пыль → архитектура/windbreakers → gameplay routes → dust storms, меняющие visibility/stealth.</p>
+<p>Классическая Arkane-причинность:</p>
+<blockquote>
+<p>геология → экономика → архитектура → механика.</p>
+</blockquote>
+<h3 id="1710">17.10 Каждая миссия как отдельный тезис<a class="headerlink" href="#1710" title="Permanent link">¶</a></h3>
+<p>Lyon максимально использует mission-based structure:
+- можно создать уникальную систему для одного уровня;
+- не надо сохранять её для всей игры.</p>
+<p>Именно здесь Lyon формируется как студия <strong>великих отдельных уровней</strong>.</p>
+<h3 id="1711-clockwork-mansion">17.11 Clockwork Mansion<a class="headerlink" href="#1711-clockwork-mansion" title="Permanent link">¶</a></h3>
+<p>Kirin Jindosh живёт в доме, который реально перестраивается.</p>
+<p>Механика:
+- стены двигаются;
+- комнаты меняют конфигурацию;
+- backstage spaces существуют за декорациями;
+- игрок может буквально залезть внутрь механизма.</p>
+<p>Особенно Arkane:</p>
+<blockquote>
+<p>вместо того чтобы уважать «сцену трансформации», игрок может обходить её из технических кишок дома.</p>
+</blockquote>
+<h4 id="production_1">Production<a class="headerlink" href="#production_1" title="Permanent link">¶</a></h4>
+<p>Уровень потребовал:
+- специальных moving-geometry tools;
+- сложной AI/navigation работы;
+- обработки объектов/трупов/мин во время трансформации;
+- технологий, которые потом пригодились другим картам.</p>
+<h4 id="clockwork-soldiers">Clockwork Soldiers<a class="headerlink" href="#clockwork-soldiers" title="Permanent link">¶</a></h4>
+<p>Роботы меняют знакомую grammar combat:
+- нельзя choke;
+- видят в разные стороны;
+- отрубленная голова не убивает, а делает робота слепым;
+- слепой робот может атаковать всё по звуку, включая союзников.</p>
+<p>Уничтожение части врага создаёт <strong>новое состояние</strong>, а не просто HP reduction.</p>
+<h3 id="1712-a-crack-in-the-slab">17.12 A Crack in the Slab<a class="headerlink" href="#1712-a-crack-in-the-slab" title="Permanent link">¶</a></h3>
+<p>Два состояния одного особняка:
+- настоящее;
+- прошлое.</p>
+<p>Timepiece:
+- показывает другую временную линию;
+- позволяет мгновенно переключаться;
+- перемещение между эпохами становится traversal/puzzle/stealth tool.</p>
+<p>Действия в прошлом меняют настоящее.</p>
+<p>Если спасти Stilton от травмирующего ритуала:
+- меняется судьба персонажа;
+- состояние дома;
+- часть окружения/мира.</p>
+<p>Это дорогой контент, который часть игроков вообще не увидит.</p>
+<p>Именно за такую расточительность hand-crafted possibility-space Dishonored 2 становится культовой.</p>
+<h4 id="powers">Powers отключены<a class="headerlink" href="#powers" title="Permanent link">¶</a></h4>
+<p>Arkane временно забирает обычный powerset, чтобы игрок действительно освоил новую механику времени и снова начал читать архитектуру ногами.</p>
+<h3 id="1713-dust-district-jindosh-lock">17.13 Dust District / Jindosh Lock<a class="headerlink" href="#1713-dust-district-jindosh-lock" title="Permanent link">¶</a></h3>
+<p>Фракционный конфликт:
+- Howlers;
+- Overseers.</p>
+<p>Можно:
+- помочь одной стороне;
+- другой;
+- нейтрализовать обоих лидеров;
+- вообще не играть в эту ветку.</p>
+<p>Если самостоятельно решить Jindosh Lock:</p>
+<blockquote>
+<p>можно пропустить значительную часть дорогого faction-content.</p>
+</blockquote>
+<p>Игра уважает решение игрока даже когда это означает:</p>
+<blockquote>
+<p>он не увидит то, на что мы потратили бюджет.</p>
+</blockquote>
+<h3 id="1714-chaos-20">17.14 Chaos 2.0<a class="headerlink" href="#1714-chaos-20" title="Permanent link">¶</a></h3>
+<p>Arkane сохраняет реактивность мира, но расширяет:
+- non-lethal combat;
+- drop knockout;
+- parry → choke;
+- stun options;
+- более тонкий вес отдельных NPC.</p>
+<p>Low Chaos больше не обязан означать:</p>
+<blockquote>
+<p>только choke сзади всю игру.</p>
+</blockquote>
+<h3 id="1715-void-engine">17.15 Void Engine<a class="headerlink" href="#1715-void-engine" title="Permanent link">¶</a></h3>
+<p>Lyon берёт id Tech 5 и настолько сильно его модифицирует, что получается собственный <strong>Void Engine</strong>.</p>
+<p>Плюсы:
+- технология под Dishonored;
+- большая визуальная/системная амбиция.</p>
+<p>Минусы:
+- огромный production risk;
+- первые годы инструменты/движок нестабильны;
+- контент приходится переделывать;
+- PC launch страдает.</p>
+<h3 id="1716-2016">17.16 Релиз — ноябрь 2016<a class="headerlink" href="#1716-2016" title="Permanent link">¶</a></h3>
+<p>Как дизайн/level design:</p>
+<blockquote>
+<p>одна из вершин Arkane.</p>
+</blockquote>
+<p>Как PC-релиз:
+- stuttering;
+- performance issues;
+- проблемы с scaling/settings;
+- технические патчи после запуска.</p>
+<p>Коммерчески:
+- старт не показывает огромный рост относительно первой игры;
+- полные официальные lifetime sales не раскрыты;
+- поздние бывшие разработчики говорили, что игра не достигла внутренних ожиданий Bethesda;
+- утверждение «стоило дороже Skyrim» существует как позднее свидетельство бывшего сотрудника, а не опубликованный бюджет, поэтому в базе держим его как <strong>reported claim</strong>, а не бесспорный факт.</p>
+<h3 id="_74">Итог<a class="headerlink" href="#_74" title="Permanent link">¶</a></h3>
+<p>Dishonored 2 — пик Lyon-формулы:
+- компактность;
+- очень высокая плотность решений;
+- уникальные mission gimmicks;
+- systems + authored spaces;
+- минимальный filler.</p>
+<p>Но экономически это дорогая модель:</p>
+<blockquote>
+<p>можно потратить огромные ресурсы на целый механический дом или две временные версии особняка, которые игрок увидит один раз и частично.</p>
+</blockquote>
+<p>Эта проблема позже станет важна для Deathloop, где повторное освоение одних и тех же районов станет частью самой структуры.</p>
+<hr/>
+<h2 id="18-dishonored-death-of-the-outsider-2017">18. Dishonored: Death of the Outsider — 2017<a class="headerlink" href="#18-dishonored-death-of-the-outsider-2017" title="Permanent link">¶</a></h2>
+<h3 id="_75">Офис<a class="headerlink" href="#_75" title="Permanent link">¶</a></h3>
+<p>Arkane Lyon.</p>
+<h3 id="_76">Формат<a class="headerlink" href="#_76" title="Permanent link">¶</a></h3>
+<p>Standalone expansion / самостоятельная компактная игра на фундаменте Dishonored 2.</p>
+<h3 id="_77">Ключевые люди<a class="headerlink" href="#_77" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Dinga Bakaba и новое Lyon leadership;</p>
+</li>
+<li>
+<p>Harvey Smith уже постепенно возвращается к Austin;</p>
+</li>
+<li>
+<p>Sébastien Mitton и команда Lyon.</p>
+</li>
+</ul>
+<h3 id="_78">Исходная идея<a class="headerlink" href="#_78" title="Permanent link">¶</a></h3>
+<p>Не делать Dishonored 3 сразу после огромной Dishonored 2.</p>
+<p>Вместо этого:
+- использовать уже созданный Void Engine;
+- сделать компактный финал большой сюжетной эпохи;
+- закрыть линии Daud / Billie / Outsider;
+- экспериментировать с системами без стоимости ещё одной огромной кампании.</p>
+<h3 id="_79">Главная героиня<a class="headerlink" href="#_79" title="Permanent link">¶</a></h3>
+<p><strong>Billie Lurk</strong>.</p>
+<p>Её линия:
+- lieutenant Daud в DLC;
+- Meagan Foster в Dishonored 2;
+- теперь полноценный protagonist.</p>
+<p>Это хороший пример того, как Arkane превращает DLC-персонажа в центральную фигуру серии.</p>
+<h3 id="daud">Daud<a class="headerlink" href="#daud" title="Permanent link">¶</a></h3>
+<p>Дауд снова появляется как ключевой человек, но центр действия передан Billie.</p>
+<h3 id="_80">Центральная задача<a class="headerlink" href="#_80" title="Permanent link">¶</a></h3>
+<p>Буквально:</p>
+<blockquote>
+<p><strong>убить Outsider.</strong></p>
+</blockquote>
+<p>То есть после нескольких игр, где Outsider является наблюдателем и источником сил, сюжет наконец направляет игрока прямо в Void и ставит вопрос о существовании самой supernatural-системы мира.</p>
+<h3 id="_81">Системные изменения<a class="headerlink" href="#_81" title="Permanent link">¶</a></h3>
+<p>Arkane позволяет себе чуть сильнее отойти от привычного Dishonored:
+- другая система powers;
+- нет классической Mark-конструкции;
+- mana регенерирует свободнее;
+- меньше моральной бухгалтерии Chaos;
+- Billie ощущается иначе, чем Corvo/Emily.</p>
+<p>Это логично:</p>
+<blockquote>
+<p>профессиональная убийца, идущая убивать бога, не должна постоянно жить под тем же моральным UI, что Corvo в первой части.</p>
+</blockquote>
+<h3 id="the-bank-job">The Bank Job<a class="headerlink" href="#the-bank-job" title="Permanent link">¶</a></h3>
+<p>Одна из самых сильных миссий:
+- банк;
+- security systems;
+- разные входы;
+- крыша;
+- подземные маршруты;
+- вентиляция;
+- возможность манипулировать инфраструктурой здания.</p>
+<p>Это Arkane в чистом виде:</p>
+<blockquote>
+<p>одно здание как системная задача.</p>
+</blockquote>
+<h3 id="_82">Значение<a class="headerlink" href="#_82" title="Permanent link">¶</a></h3>
+<p>Death of the Outsider:
+- закрывает большую арку первой эпохи Dishonored;
+- даёт Lyon компактный production после очень дорогой D2;
+- передаёт лидерство следующему поколению;
+- позволяет студии психологически завершить восьмилетнюю жизнь внутри Dishonored.</p>
+<p>После неё Lyon сознательно хочет <strong>другую игру</strong>, а не Dishonored 3.</p>
+<hr/>
+<h2 id="19-prey-2017">19. Prey — 2017<a class="headerlink" href="#19-prey-2017" title="Permanent link">¶</a></h2>
+<h3 id="_83">Период<a class="headerlink" href="#_83" title="Permanent link">¶</a></h3>
+<p>Примерно 2013–2017.</p>
+<h3 id="_84">Офис<a class="headerlink" href="#_84" title="Permanent link">¶</a></h3>
+<p>Arkane Austin.</p>
+<h3 id="_85">Ключевые люди<a class="headerlink" href="#_85" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Raphaël Colantonio — Creative Director;</p>
+</li>
+<li>
+<p>Ricardo Bare — Lead Designer;</p>
+</li>
+<li>
+<p>Susan Kath — Lead Producer;</p>
+</li>
+<li>
+<p>Austin team.</p>
+</li>
+</ul>
+<h3 id="_86">Технология<a class="headerlink" href="#_86" title="Permanent link">¶</a></h3>
+<p><strong>CryEngine.</strong></p>
+<h3 id="191-austin">19.1 Почему Austin выбирает другой путь<a class="headerlink" href="#191-austin" title="Permanent link">¶</a></h3>
+<p>После Dishonored Austin не хочет делать вторую Dishonored.</p>
+<p>Колантонио возвращается к первоначальной мечте Arkane:
+- Arx Fatalis;
+- Ultima Underworld;
+- System Shock.</p>
+<p>Логика:</p>
+<blockquote>
+<p>Dishonored стала нашим Thief-наследником; теперь хотим сделать свою System Shock-игру.</p>
+</blockquote>
+<h3 id="192">19.2 Структура рождается раньше названия и сюжета<a class="headerlink" href="#192" title="Permanent link">¶</a></h3>
+<p>Проект изначально не был reboot Prey.</p>
+<p>Раннее рабочее название/направление связано с <strong>Project Danielle</strong>, отсылкой к SHODAN.</p>
+<p>Главный structural pitch:</p>
+<blockquote>
+<p>взять Arx — один связанный мир — и сделать вместо подземелья космическую станцию.</p>
+</blockquote>
+<p>Так появляется фундамент <strong>Talos I</strong>.</p>
+<h3 id="193-cryengine-risk-management">19.3 CryEngine как risk management<a class="headerlink" href="#193-cryengine-risk-management" title="Permanent link">¶</a></h3>
+<p>Lyon одновременно строит Void Engine для Dishonored 2.</p>
+<p>Austin сознательно не хочет одновременно рисковать:
+- новой IP;
+- новой структурой;
+- новым огромным движком.</p>
+<p>Поэтому берёт более готовый CryEngine.</p>
+<p>Принцип:</p>
+<blockquote>
+<p>игра выбирает технологию под свои нужды; не унифицировать движок только потому, что две команды принадлежат одной компании.</p>
+</blockquote>
+<p>Это организационно противоположно ошибке Ion Storm с общим tech для Invisible War / Thief.</p>
+<h3 id="194-talos-i">19.4 Talos I — станция как реальное место<a class="headerlink" href="#194-talos-i" title="Permanent link">¶</a></h3>
+<p>Arkane сначала долго строит:
+- alternate history;
+- назначение станции;
+- логические отделы;
+- архитектурные слои;
+- бытовую инфраструктуру.</p>
+<p>Станция должна отвечать на вопросы:
+- где люди живут;
+- где едят;
+- откуда воздух;
+- откуда энергия;
+- как доставляют грузы;
+- куда идут отходы;
+- где maintenance;
+- как физически связаны разные decks.</p>
+<p>Характерный пример:</p>
+<blockquote>
+<p>отходы перерабатываются через систему, включающую угрей, которых затем могут возвращать в пищевую цепочку.</p>
+</blockquote>
+<p>Даже гротескная деталь подчёркивает подход:</p>
+<blockquote>
+<p>station ecology должна быть понятна дизайнеру, даже если игрок увидит только часть логики.</p>
+</blockquote>
+<h3 id="195-neo-deco">19.5 Neo-Deco<a class="headerlink" href="#195-neo-deco" title="Permanent link">¶</a></h3>
+<p>Talos I строилась/перестраивалась десятилетиями.</p>
+<p>Поэтому визуально есть слои:
+- старые советско-американские технологические секции;
+- индустриальные пространства;
+- поздняя роскошная TranStar-архитектура;
+- Art Deco / Neo-Deco.</p>
+<p>Это не generic white sci-fi corridor.</p>
+<p>Архитектура рассказывает:
+- историю станции;
+- корпоративную иерархию;
+- возраст помещений.</p>
+<h3 id="196">19.6 Физическая связность<a class="headerlink" href="#196" title="Permanent link">¶</a></h3>
+<p>Ключ:</p>
+<blockquote>
+<p>станция реально является одним объектом.</p>
+</blockquote>
+<p>Игрок:
+- возвращается в старые зоны;
+- открывает shortcuts;
+- понимает связи;
+- выходит наружу в zero-G/космос;
+- физически видит разные части станции снаружи.</p>
+<p>Это прямой наследник Arx.</p>
+<h3 id="197-mimic">19.7 Mimic<a class="headerlink" href="#197-mimic" title="Permanent link">¶</a></h3>
+<p>Изначально идея была ближе к маленькому stealth/scout enemy.</p>
+<p>Вопрос:</p>
+<blockquote>
+<p>как он прячется?</p>
+</blockquote>
+<p>Ответ:</p>
+<blockquote>
+<p><strong>становится предметом.</strong></p>
+</blockquote>
+<p>Это меняет всю игру.</p>
+<p>Теперь обычный environmental prop:
+- кружка;
+- степлер;
+- стул;
+- коробка</p>
+<p>становится потенциальным врагом.</p>
+<p>Mimic заставляет игрока <strong>смотреть на окружение</strong>, а не просто идти по waypoint.</p>
+<h3 id="198-mimic-matter">19.8 Mimic Matter<a class="headerlink" href="#198-mimic-matter" title="Permanent link">¶</a></h3>
+<p>Классическая Arkane-эволюция:</p>
+<blockquote>
+<p>если враг делает интересную системную вещь, можно ли дать её игроку?</p>
+</blockquote>
+<p>Игрок превращается в маленький предмет и:
+- пролезает через отверстия;
+- обходит закрытые двери;
+- использует геометрию иначе.</p>
+<p>Не «unlock door level 2», а:</p>
+<blockquote>
+<p>изменить физические свойства самого player object.</p>
+</blockquote>
+<h3 id="199-gloo-cannon">19.9 GLOO Cannon<a class="headerlink" href="#199-gloo-cannon" title="Permanent link">¶</a></h3>
+<p>Один из лучших примеров Arkane tool design.</p>
+<p>Функции:
+- остановить Typhon;
+- перекрыть hazard;
+- закрыть утечку;
+- создать платформу;
+- построить импровизированную лестницу;
+- изменить traversal.</p>
+<p>Одна «пушка» меняет:
+- combat;
+- puzzle;
+- exploration;
+- level geometry.</p>
+<p>Прямая линия:
+Dark Messiah environment tool → Ravenholm Nail Gun → Dishonored verbs → GLOO.</p>
+<h3 id="1910-recycler-charge">19.10 Recycler Charge<a class="headerlink" href="#1910-recycler-charge" title="Permanent link">¶</a></h3>
+<p>Не обычная grenade.</p>
+<p>Она:
+- перерабатывает физические объекты в materials;
+- может уничтожить врагов;
+- может убрать тяжёлое препятствие, если у героя нет нужного Strength/Leverage.</p>
+<p>Пример systemic solution:</p>
+<blockquote>
+<p>нет способности поднять шкаф — не обязательно прокачивать её; можно изменить сам объект.</p>
+</blockquote>
+<h3 id="1911-neuromods">19.11 Neuromods<a class="headerlink" href="#1911-neuromods" title="Permanent link">¶</a></h3>
+<p>Progression встроена в fiction:
+- реальная TranStar technology;
+- способности приобретаются через физический процесс;
+- human и Typhon abilities.</p>
+<p>Чем больше Typhon-способностей использует Morgan, тем иначе некоторые системы мира воспринимают его/её — например turrets.</p>
+<p>Build меняет не только числа, но и <strong>отношение среды к персонажу</strong>.</p>
+<h3 id="1912-no-needles">19.12 No Needles<a class="headerlink" href="#1912-no-needles" title="Permanent link">¶</a></h3>
+<p>Игру можно пройти вообще без Neuromods.</p>
+<p>Это вынуждает level design оставаться проходимым:
+- abilities открывают возможности;
+- но не являются единственными ключами.</p>
+<p>Прямая рифма с Dishonored 2 No Powers.</p>
+<h3 id="1913">19.13 Вступление<a class="headerlink" href="#1913" title="Permanent link">¶</a></h3>
+<p>Morgan просыпается в квартире, едет на работу, проходит тесты.</p>
+<p>Потом выясняется:
+- квартира — декорация;
+- окно — экран;
+- «город» — постановка;
+- герой всё время внутри лабораторного комплекса.</p>
+<p>Тематическая формула Prey задаётся очень рано:</p>
+<blockquote>
+<p><strong>не доверяй пространству.</strong></p>
+</blockquote>
+<p>Mimic добавляет:</p>
+<blockquote>
+<p>не доверяй предметам.</p>
+</blockquote>
+<p>Сюжет с памятью Morgan:</p>
+<blockquote>
+<p>не доверяй даже собственной прошлой личности.</p>
+</blockquote>
+<p>Геймплей и тема работают вместе.</p>
+<h3 id="1914-morgan-yu">19.14 Morgan Yu<a class="headerlink" href="#1914-morgan-yu" title="Permanent link">¶</a></h3>
+<p>Можно выбрать мужскую/женскую версию.</p>
+<p>Главная narrative-конструкция:
+- Neuromod-experiments постоянно сбрасывали память;
+- разные прошлые версии Morgan оставили противоречивые инструкции;
+- игрок сам решает, кем является текущий Morgan.</p>
+<p>Это удобнейшая immersive-sim fiction:</p>
+<blockquote>
+<p>нет жёсткого «канонический Morgan так бы не сделал», потому что текущая личность реально формируется заново.</p>
+</blockquote>
+<h3 id="1915-narrative">19.15 Narrative через место<a class="headerlink" href="#1915-narrative" title="Permanent link">¶</a></h3>
+<p>Сценарий и level design развиваются вместе.</p>
+<p>Сайд-истории часто начинаются не с quest giver:
+- найден труп;
+- письмо;
+- workstation;
+- имя человека;
+- след;
+- физическая цепочка событий.</p>
+<p>Знание станции становится отдельной формой progression.</p>
+<h3 id="1916">19.16 «Баги», которые оставляют<a class="headerlink" href="#1916" title="Permanent link">¶</a></h3>
+<p>Arkane снова применяет правило:
+- если неожиданное interaction логично вытекает из систем;
+- не ломает progression;
+- создаёт интересную историю,</p>
+<p>то не обязательно его запрещать.</p>
+<p>Prey — одна из самых чистых реализаций mature Arkane philosophy.</p>
+<h3 id="1917-prey">19.17 Название Prey<a class="headerlink" href="#1917-prey" title="Permanent link">¶</a></h3>
+<p>Игра не проектировалась как продолжение Prey 2006 / отменённой Prey 2.</p>
+<p>Bethesda имела IP и навязала название уже существующему проекту.</p>
+<p>Публично в 2017 Colantonio дипломатично принимал решение.</p>
+<p>После ухода говорил жёстче:
+- не хотел названия;
+- команда не хотела;
+- считал это маркетинговой ошибкой;
+- приходилось изображать поддержку решения.</p>
+<p>Позднее бывший маркетинговый руководитель Bethesda Pete Hines тоже говорил, что был против названия.</p>
+<p>Почему название мешало:
+- фанаты старой Prey ждали другое;
+- люди, которым старая Prey не нравилась, могли проигнорировать;
+- аудитория immersive sim не сразу понимала, что перед ней System Shock-like Arkane game.</p>
+<h3 id="1918-2017">19.18 Релиз — май 2017<a class="headerlink" href="#1918-2017" title="Permanent link">¶</a></h3>
+<p>Критика в целом хорошая, но более смешанная, чем поздняя культовая репутация.</p>
+<p>Коммерческий старт:
+- не катастрофа;
+- но не массовый breakout hit.</p>
+<p>Важно:</p>
+<blockquote>
+<p>Prey со временем стала восприниматься значительно сильнее, чем в launch window.</p>
+</blockquote>
+<h3 id="1919-raphael-colantonio">19.19 Уход Raphaël Colantonio<a class="headerlink" href="#1919-raphael-colantonio" title="Permanent link">¶</a></h3>
+<p>Через несколько недель после релиза основатель Arkane объявляет об уходе.</p>
+<p>Официально:
+- семья;
+- усталость;
+- желание переосмыслить жизнь.</p>
+<p>Позже добавляет:
+- гигантский AAA production перестал приносить прежнюю радость;
+- слишком много энергии уходит на продукт/масштаб вместо чистого дизайна;
+- Bethesda/ZeniMax сильнее интересовалась live-service-направлением;
+- история с названием Prey тоже символизировала потерю части контроля.</p>
+<p>Исторически:</p>
+<blockquote>
+<p>Prey — последняя большая Arkane-игра с основателем студии внутри.</p>
+</blockquote>
+<h3 id="_87">Итог<a class="headerlink" href="#_87" title="Permanent link">¶</a></h3>
+<p>Prey — вероятно, самая «рафаэлевская» поздняя игра Arkane:
+- Arx structure;
+- System Shock fantasy;
+- системность;
+- физическое пространство;
+- инструменты с несколькими функциями;
+- знание мира как progression.</p>
+<hr/>
+<h2 id="20-prey-mooncrash-2018">20. Prey: Mooncrash — 2018<a class="headerlink" href="#20-prey-mooncrash-2018" title="Permanent link">¶</a></h2>
+<h3 id="_88">Офис<a class="headerlink" href="#_88" title="Permanent link">¶</a></h3>
+<p>Arkane Austin после ухода Colantonio.</p>
+<h3 id="_89">Ключевые люди<a class="headerlink" href="#_89" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Ricardo Bare — creative/design leadership;</p>
+</li>
+<li>
+<p>Susan Kath — production leadership;</p>
+</li>
+<li>
+<p>Richard Wilson и команда;</p>
+</li>
+<li>
+<p>Harvey Smith как studio leadership в Austin.</p>
+</li>
+</ul>
+<h3 id="_90">Исходный вопрос<a class="headerlink" href="#_90" title="Permanent link">¶</a></h3>
+<p>Prey даёт игроку огромное количество систем, но конкретный человек часто:
+- находит любимую пушку;
+- любимые три способности;
+- любимый способ вскрывать двери;
+- всю игру повторяет одну и ту же стратегию.</p>
+<p>Mooncrash хочет:</p>
+<blockquote>
+<p><strong>насильно заставить игрока использовать больше systemic possibility space.</strong></p>
+</blockquote>
+<h3 id="201-roguelite-immersive-sim">20.1 Roguelite поверх immersive sim<a class="headerlink" href="#201-roguelite-immersive-sim" title="Permanent link">¶</a></h3>
+<p>Команда вдохновляется:
+- Spelunky;
+- Rogue Legacy;
+- Risk of Rain;
+- другими roguelites.</p>
+<p>Но не хочет выбрасывать hand-crafted level design.</p>
+<p>Решение:</p>
+<blockquote>
+<p>геометрия остаётся сделанной вручную; процедурно меняется <strong>состояние пространства</strong>.</p>
+</blockquote>
+<h3 id="202-pytheas-moonbase">20.2 Pytheas Moonbase<a class="headerlink" href="#202-pytheas-moonbase" title="Permanent link">¶</a></h3>
+<p>Новая лунная база TranStar.</p>
+<p>Не procedural corridors.</p>
+<p>Игрок постепенно реально учит:
+- Labs;
+- Moonworks;
+- Crew areas;
+- exterior;
+- routes.</p>
+<p>Но каждый reset меняет:
+- врагов;
+- loot;
+- hazards;
+- сломанные/работающие системы;
+- доступность некоторых exit/paths.</p>
+<h3 id="203-fiction-simulation">20.3 Fiction: simulation<a class="headerlink" href="#203-fiction-simulation" title="Permanent link">¶</a></h3>
+<p>Главный внешний герой Peter работает на KASMA и исследует симуляцию последних событий Pytheas.</p>
+<p>Это естественно объясняет:
+- reset;
+- вариативность;
+- несовпадающие reconstruction;
+- повторные попытки.</p>
+<h3 id="204">20.4 Пять персонажей<a class="headerlink" href="#204" title="Permanent link">¶</a></h3>
+<p>Вместо универсального Morgan:
+- Engineer;
+- Security;
+- science/Typhon;
+- stealth/hacking;
+- другие специализированные роли.</p>
+<p>Каждый имеет ограниченный набор skills.</p>
+<p>Теперь одна дверь означает разную задачу в зависимости от того, <strong>кто именно сейчас жив</strong>.</p>
+<h3 id="205-simulation">20.5 Одна simulation на нескольких героев<a class="headerlink" href="#205-simulation" title="Permanent link">¶</a></h3>
+<p>Главная гениальная механика:</p>
+<p>Персонаж №1:
+- чинит;
+- убивает;
+- открывает;
+- забирает loot;
+- оставляет предметы.</p>
+<p>Персонаж №2 приходит в <strong>тот же изменённый мир</strong>.</p>
+<p>То есть один run — подготовка следующего.</p>
+<p>Игрок планирует:</p>
+<blockquote>
+<p>кем идти первым не потому, что он сильнее, а потому, что он создаёт лучший state для остальных.</p>
+</blockquote>
+<h3 id="206">20.6 Цель: вывести всех пятерых<a class="headerlink" href="#206" title="Permanent link">¶</a></h3>
+<p>Большой системный экзамен:
+- каждый способ эвакуации обычно ограничен;
+- надо распределить exit paths;
+- некоторые требуют действий разных специалистов.</p>
+<p>Это превращает Mooncrash почти в tactical immersive sim:</p>
+<blockquote>
+<p>ты управляешь не одним build, а последовательностью build-ов.</p>
+</blockquote>
+<h3 id="207-corruption-meter">20.7 Corruption Meter<a class="headerlink" href="#207-corruption-meter" title="Permanent link">¶</a></h3>
+<p>В отличие от медленного Prey:</p>
+<blockquote>
+<p>время давит.</p>
+</blockquote>
+<p>Чем дольше run:
+- сильнее враги;
+- выше опасность.</p>
+<p>Это спорно внутри самой Arkane, потому что противоречит традиционному:</p>
+<blockquote>
+<p>исследуй медленно.</p>
+</blockquote>
+<p>Но именно давление заставляет принимать неидеальные решения и не вычищать каждый шкаф.</p>
+<p>Delay_Loop.Time позволяет покупать себе время ресурсом.</p>
+<h3 id="208">20.8 Почему это важно<a class="headerlink" href="#208" title="Permanent link">¶</a></h3>
+<p>Mooncrash решает важный парадокс immersive sim:</p>
+<blockquote>
+<p>много решений обычно превращаются в одно любимое решение опытного игрока.</p>
+</blockquote>
+<p>Roguelite-состояние заставляет:
+- импровизировать;
+- менять build;
+- работать с другим loot;
+- использовать другой маршрут.</p>
+<h3 id="209-arkane">20.9 Влияние на будущую Arkane<a class="headerlink" href="#209-arkane" title="Permanent link">¶</a></h3>
+<p>Нельзя сводить Deathloop к «Mooncrash 2», но дизайнерское родство очевидно:</p>
+<p>Mooncrash:
+- повторное пространство;
+- знание;
+- изменяющееся состояние;
+- планирование последовательности;
+- идеальный финальный run.</p>
+<p>Deathloop:
+- повторные районы;
+- знание как permanent progression;
+- времена суток;
+- планирование идеального дня.</p>
+<hr/>
+<h2 id="21-typhon-hunter-transtar-vr-2018">21. Typhon Hunter и TranStar VR — 2018<a class="headerlink" href="#21-typhon-hunter-transtar-vr-2018" title="Permanent link">¶</a></h2>
+<h3 id="typhon-hunter">Typhon Hunter<a class="headerlink" href="#typhon-hunter" title="Permanent link">¶</a></h3>
+<p>Асимметричный multiplayer:
+- Morgan Yu;
+- до пяти Mimic-игроков;
+- Mimics превращаются в props;
+- смертельные прятки/Prop Hunt.</p>
+<p>Исторически важно как ещё один эксперимент Arkane:</p>
+<blockquote>
+<p>живой игрок занимает роль существа fiction, а не абстрактного красного солдата.</p>
+</blockquote>
+<p>Рифмуется с The Crossing и поздней Julianna в Deathloop.</p>
+<p>Как самостоятельный продукт режим не получил сильной долгосрочной репутации.</p>
+<h3 id="transtar-vr">TranStar VR<a class="headerlink" href="#transtar-vr" title="Permanent link">¶</a></h3>
+<p>Небольшие VR escape-room сценарии на Talos I до событий Prey.</p>
+<p>Значение:
+- эксперимент Austin с VR;
+- использование знакомых пространств как физического puzzle environment.</p>
+<hr/>
+<h2 id="22-prey-austin">22. Значение Prey-эпохи для Austin<a class="headerlink" href="#22-prey-austin" title="Permanent link">¶</a></h2>
+<p>Выпущенные форматы:
+- Prey — классический immersive sim;
+- Mooncrash — roguelite immersive sim;
+- Typhon Hunter — asymmetric multiplayer;
+- TranStar VR — VR escape room.</p>
+<p>То есть после одной большой игры Austin экспериментирует сразу в нескольких направлениях.</p>
+<p>Главный исторический вывод:</p>
+<blockquote>
+<p>после ухода Colantonio команда всё ещё полностью способна на оригинальный systemic design.</p>
+</blockquote>
+<p>Поэтому Redfall нельзя объяснить простой формулой:</p>
+<blockquote>
+<p>«Raph ушёл — студия сразу разучилась делать игры».</p>
+</blockquote>
+<p>Mooncrash является прямым опровержением.</p>
+<hr/>
+<h2 id="23-wolfenstein-youngblood-2019">23. Wolfenstein: Youngblood — 2019<a class="headerlink" href="#23-wolfenstein-youngblood-2019" title="Permanent link">¶</a></h2>
+<h3 id="_91">Офисы / студии<a class="headerlink" href="#_91" title="Permanent link">¶</a></h3>
+<p>Arkane Lyon + MachineGames.</p>
+<h3 id="arkane_4">Почему проект важен для Arkane<a class="headerlink" href="#arkane_4" title="Permanent link">¶</a></h3>
+<p>Это не просто support-credit.</p>
+<p>Lyon получает реальный опыт:
+- co-op;
+- более открытых районов;
+- repeatable mission structure;
+- сетевой синхронизации;
+- level design для двух человеческих игроков.</p>
+<p>Именно этот опыт потом становится одним из мостов к Deathloop.</p>
+<h3 id="231-machinegames-arkane">23.1 Почему MachineGames зовёт Arkane<a class="headerlink" href="#231-machinegames-arkane" title="Permanent link">¶</a></h3>
+<p>Wolfenstein до этого в основном:
+- линейный;
+- режиссированный;
+- одиночный.</p>
+<p>Youngblood должна:
+- работать в co-op;
+- позволять двум игрокам расходиться;
+- иметь более открытые районы;
+- поддерживать возвращение в знакомые зоны.</p>
+<p>Это ровно область, где Arkane сильнее:
+- verticality;
+- alternate routes;
+- systemic spaces.</p>
+<p>Особенно заметно участие Lyon в уличных районах Парижа.</p>
+<h3 id="232">23.2 Париж<a class="headerlink" href="#232" title="Permanent link">¶</a></h3>
+<p>Исторически красиво:
+- The Crossing — альтернативный Париж Arkane, отменён;
+- через ~12 лет Lyon всё-таки делает альтернативный Париж в Wolfenstein.</p>
+<p>Теперь:
+- 1980;
+- нацистская оккупация;
+- более открытая городская структура.</p>
+<h3 id="233-co-op">23.3 Co-op как новая производственная школа<a class="headerlink" href="#233-co-op" title="Permanent link">¶</a></h3>
+<p>Два игрока означают:
+- они могут быть в разных частях карты;
+- spawn system должна учитывать обоих;
+- checkpoint/gating должны быть безопасными;
+- encounter нельзя проектировать только вокруг одной камеры/позиции;
+- пространство должно быть шире и многомаршрутнее.</p>
+<p>Это не вопрос «добавить Player 2».</p>
+<p>Меняется архитектура уровня.</p>
+<h3 id="234">23.4 Что получилось хуже<a class="headerlink" href="#234" title="Permanent link">¶</a></h3>
+<p>Youngblood одновременно добавляет:
+- уровни персонажей;
+- enemy levels;
+- health bars;
+- weapon upgrades;
+- loot/economy;
+- currencies;
+- repeatable activities.</p>
+<p>Эти systems часто конфликтуют с классическим Wolfenstein:</p>
+<blockquote>
+<p>оружие перестаёт быть чисто физически мощным и начинает работать через числовую progression.</p>
+</blockquote>
+<p>Враги становятся bullet sponges, выбор оружия местами сводится к matching armor type.</p>
+<p>Это важный анти-урок:</p>
+<blockquote>
+<p>большое пространство и RPG-progression сами по себе не создают Arkane-depth.</p>
+</blockquote>
+<h3 id="235-service-ish-zeitgeist">23.5 Service-ish zeitgeist<a class="headerlink" href="#235-service-ish-zeitgeist" title="Permanent link">¶</a></h3>
+<p>Youngblood не полноценная live-service игра, но хорошо отражает конец 2010-х:
+- co-op retention;
+- повторяемые миссии;
+- currencies;
+- progression;
+- длительный engagement.</p>
+<p>В том же корпоративном климате ZeniMax позже будет развиваться Redfall.</p>
+<p>Не прямая причинность, но важный фон.</p>
+<h3 id="236-buddy-pass">23.6 Buddy Pass<a class="headerlink" href="#236-buddy-pass" title="Permanent link">¶</a></h3>
+<p>Хорошее решение:
+- один владелец Deluxe Edition может пригласить друга без полной покупки игры;
+- снижает барьер для co-op.</p>
+<hr/>
+<h2 id="24-wolfenstein-cyberpilot-2019">24. Wolfenstein: Cyberpilot — 2019<a class="headerlink" href="#24-wolfenstein-cyberpilot-2019" title="Permanent link">¶</a></h2>
+<h3 id="_92">Офисы<a class="headerlink" href="#_92" title="Permanent link">¶</a></h3>
+<p>Arkane Lyon + MachineGames; Lyon особенно значима в производстве.</p>
+<h3 id="_93">Ключевой человек<a class="headerlink" href="#_93" title="Permanent link">¶</a></h3>
+<p><strong>Dinga Bakaba — Game Director.</strong></p>
+<p>Это важная ступень его карьеры:
+- Dunwall City Trials — producer;
+- Dishonored 2 — lead designer;
+- Death of the Outsider — leadership;
+- Cyberpilot — полноценный game director;
+- затем Deathloop.</p>
+<h3 id="_94">Формат<a class="headerlink" href="#_94" title="Permanent link">¶</a></h3>
+<p>VR-only standalone side story.</p>
+<h3 id="_95">Идея<a class="headerlink" href="#_95" title="Permanent link">¶</a></h3>
+<p>Не переносить обычный Wolfenstein movement в VR буквально.</p>
+<p>Игрок — hacker/pilot French Resistance и захватывает нацистские машины:
+- Panzerhund;
+- Zitadelle;
+- drone.</p>
+<p>VR fantasy строится вокруг:</p>
+<blockquote>
+<p>быть внутри машины, а не пытаться повторить 60-fps акробатический Wolfenstein в шлеме.</p>
+</blockquote>
+<h3 id="_96">Значение<a class="headerlink" href="#_96" title="Permanent link">¶</a></h3>
+<p>Как игра Cyberpilot небольшая и не стала важным хитом.</p>
+<p>Для истории Lyon:
+- VR production;
+- spatial UI;
+- телесное присутствие;
+- ещё один самостоятельный проект Dinga;
+- тренировочная ступень перед Deathloop.</p>
+<hr/>
+<h2 id="25-deathloop-2021">25. Deathloop — 2021<a class="headerlink" href="#25-deathloop-2021" title="Permanent link">¶</a></h2>
+<h3 id="_97">Офис<a class="headerlink" href="#_97" title="Permanent link">¶</a></h3>
+<p>Arkane Lyon.</p>
+<h3 id="_98">Ключевые люди<a class="headerlink" href="#_98" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Dinga Bakaba — Game Director / Creative Director;</p>
+</li>
+<li>
+<p>Sébastien Mitton — Creative / Art Director;</p>
+</li>
+<li>
+<p>Dana Nightingale, Christophe Carrier и команда Lyon.</p>
+</li>
+</ul>
+<h3 id="_99">Историческая роль<a class="headerlink" href="#_99" title="Permanent link">¶</a></h3>
+<p>Первая большая оригинальная IP Lyon после Dishonored, уже без:
+- Raphaël Colantonio;
+- Harvey Smith как непосредственного директора проекта.</p>
+<p>Deathloop доказывает, что Lyon имеет собственное новое leadership.</p>
+<h3 id="251">25.1 Исходная задача<a class="headerlink" href="#251" title="Permanent link">¶</a></h3>
+<p>После примерно восьми лет Dishonored команда хочет:
+- более сфокусированный high concept;
+- меньше гигантского world bible;
+- одно место;
+- одну аномалию;
+- сильную пару персонажей.</p>
+<p>Ранние референсы:
+- John Carpenter;
+- The Thing;
+- Escape from New York;
+- The Running Man.</p>
+<h3 id="252-blackreef">25.2 Blackreef<a class="headerlink" href="#252-blackreef" title="Permanent link">¶</a></h3>
+<p>Изолированный остров:
+- старая военная/исследовательская инфраструктура;
+- Cold War architecture;
+- поверх неё яркая культура AEON / вечной вечеринки;
+- 60s/70s-inspired retro-future.</p>
+<p>Визуальная формула:</p>
+<blockquote>
+<p>холодный бетон военной базы + психоделическая поп-культура.</p>
+</blockquote>
+<h3 id="253-real-time">25.3 Временная петля без real-time таймера<a class="headerlink" href="#253-real-time" title="Permanent link">¶</a></h3>
+<p>Arkane понимает:</p>
+<blockquote>
+<p>настоящий тикающий таймер убьёт медленное исследование.</p>
+</blockquote>
+<p>Поэтому день делится на дискретные периоды:
+- утро;
+- полдень;
+- послеобеденное время;
+- вечер.</p>
+<p>Время продвигается, когда игрок сам покидает район.</p>
+<p>Это почти turn-based structure поверх immersive FPS.</p>
+<h3 id="254">25.4 Четыре района × четыре состояния<a class="headerlink" href="#254" title="Permanent link">¶</a></h3>
+<p>Основные районы:
+- Updaam;
+- The Complex;
+- Fristad Rock;
+- Karl’s Bay.</p>
+<p>Одна карта в разное время суток меняется:
+- NPC;
+- открытые здания;
+- события;
+- Visionaries;
+- routes;
+- последствия ранних действий.</p>
+<p>Дешёвая идея «всего четыре уровня» превращается в дорогую:</p>
+<blockquote>
+<p>каждый уровень должен оставаться интересным в нескольких состояниях.</p>
+</blockquote>
+<h3 id="255-knowledge-as-progression">25.5 Knowledge as progression<a class="headerlink" href="#255-knowledge-as-progression" title="Permanent link">¶</a></h3>
+<p>Самый настоящий permanent upgrade — информация:
+- код;
+- расписание;
+- shortcut;
+- причина события;
+- место цели.</p>
+<p>Colt может потерять день, но игрок уже знает больше.</p>
+<p>Позднее Residuum позволяет также сохранять любимое gear между loops.</p>
+<h3 id="256-f5f9-">25.6 Попытка уйти от F5/F9-перфекционизма<a class="headerlink" href="#256-f5f9-" title="Permanent link">¶</a></h3>
+<p>Классический immersive sim легко превращается:
+- quicksave;
+- эксперимент;
+- ошибка;
+- quickload;
+- идеальный ghost run.</p>
+<p>Deathloop:
+- нет ручного сохранения внутри района;
+- Reprise даёт несколько жизней;
+- смерть не является моральной катастрофой;
+- reset встроен в fiction.</p>
+<p>Цель:</p>
+<blockquote>
+<p>заставить игрока импровизировать, а не бояться «испортить» прохождение.</p>
+</blockquote>
+<h3 id="257-chaos">25.7 Нет Chaos<a class="headerlink" href="#257-chaos" title="Permanent link">¶</a></h3>
+<p>После Dishonored Arkane понимает, что интерфейс и финал фактически учили:</p>
+<blockquote>
+<p>stealth/low-chaos = правильная игра.</p>
+</blockquote>
+<p>Deathloop снимает моральное давление.</p>
+<p>Eternalists всё равно проснутся снова.</p>
+<p>Поэтому игра намного смелее говорит:</p>
+<blockquote>
+<p>используйте оружие, kicks, Slabs, хаос.</p>
+</blockquote>
+<p>Это самая «не стесняющаяся быть шутером» крупная игра Lyon.</p>
+<h3 id="258-powers">25.8 Powers<a class="headerlink" href="#258-powers" title="Permanent link">¶</a></h3>
+<p>Часть deliberately familiar:
+- Shift ~ Blink;
+- Nexus ~ Domino;
+- Aether ~ invisibility;
+- Karnesis ~ телекинетический контроль;
+- Havoc ~ боевой усилитель.</p>
+<p>Arkane сознательно не пытается изобрести всё одновременно.</p>
+<p>После The Crossing lesson:</p>
+<blockquote>
+<p>если loop structure и multiplayer новые, mobility/powers могут опираться на уже понятную дизайнерскую школу.</p>
+</blockquote>
+<h3 id="259">25.9 Возвращение ноги<a class="headerlink" href="#259" title="Permanent link">¶</a></h3>
+<p>Поначалу был Dishonored-like parry.</p>
+<p>PvP latency делает parry нечестным/неприятным.</p>
+<p>Защитная система упрощается, а затем появляется решение:</p>
+<blockquote>
+<p>меньше defense, больше offensive displacement.</p>
+</blockquote>
+<p>Возвращается <strong>kick</strong>, системный наследник Dark Messiah.</p>
+<p>Через 15 лет студия снова официально делает пинок важным глаголом.</p>
+<h3 id="2510-murder-puzzle">25.10 Murder puzzle<a class="headerlink" href="#2510-murder-puzzle" title="Permanent link">¶</a></h3>
+<p>Чтобы разорвать loop:
+- надо убить восемь Visionaries за один день.</p>
+<p>Но цели:
+- находятся в разных районах;
+- появляются в разное время;
+- их расписание можно изменить.</p>
+<p>Игрок не просто выбирает способ убийства:</p>
+<blockquote>
+<p>он меняет день так, чтобы нужные люди оказались в совместимых местах.</p>
+</blockquote>
+<h3 id="_100">Ограничение свободы<a class="headerlink" href="#_100" title="Permanent link">¶</a></h3>
+<p>Глобально существует в основном одна правильная конфигурация Golden Loop.</p>
+<p>То есть ощущение:</p>
+<blockquote>
+<p>«я сам сконструирую любой идеальный день»</p>
+</blockquote>
+<p>на практике ближе к:</p>
+<blockquote>
+<p>«я постепенно реконструирую решение большой authored puzzle».</p>
+</blockquote>
+<p>Это одна из главных границ Deathloop как immersive sim.</p>
+<h3 id="2511-julianna-the-crossing">25.11 Julianna — реализованная мечта The Crossing<a class="headerlink" href="#2511-julianna-the-crossing" title="Permanent link">¶</a></h3>
+<p>The Crossing:
+- множество живых игроков внутри кампании;
+- огромный scope;
+- не вышло.</p>
+<p>Deathloop:
+- один живой invader;
+- один понятный fictional character;
+- single-player остаётся главным.</p>
+<p>Julianna:
+- может быть AI или человеком;
+- органична сюжету;
+- Eternalists считают её союзником;
+- может использовать карту, traps, alerts, Masquerade.</p>
+<p>Colt имеет преимущество:
+- Reprise;
+- несколько жизней;
+- multiplayer можно выключить.</p>
+<p>Arkane наконец находит scope, в котором идея seamless multiplayer inside fiction работает.</p>
+<h3 id="2512-youngblood-production-">25.12 Youngblood как production-школа<a class="headerlink" href="#2512-youngblood-production-" title="Permanent link">¶</a></h3>
+<p>До Deathloop Lyon уже выпустила co-op game.</p>
+<p>Поэтому у команды есть реальный опыт:
+- сетевого first-person;
+- двух людей на системной карте;
+- spawn/AI/network constraints.</p>
+<p>Youngblood не породила Deathloop, но сделала технический/дизайнерский переход менее безумным.</p>
+<h3 id="2513">25.13 Корпоративная ирония<a class="headerlink" href="#2513" title="Permanent link">¶</a></h3>
+<p>Deathloop получает договор временной консольной эксклюзивности PS5.</p>
+<p>Потом Microsoft покупает ZeniMax.</p>
+<p>В результате:</p>
+<blockquote>
+<p>Arkane становится Xbox studio, но её новая игра год не может выйти на Xbox.</p>
+</blockquote>
+<p>Контракт Sony сохраняется.</p>
+<h3 id="2514-covid">25.14 COVID и переносы<a class="headerlink" href="#2514-covid" title="Permanent link">¶</a></h3>
+<p>Проект:
+- изначально задумывался более компактным;
+- разросся;
+- пережил пандемию;
+- переносы;
+- смену корпоративного владельца.</p>
+<p>Релиз: сентябрь 2021.</p>
+<h3 id="2515">25.15 Приём<a class="headerlink" href="#2515" title="Permanent link">¶</a></h3>
+<p>Критика очень сильная, множество GOTY/высоких оценок.</p>
+<p>Игроки реагируют холоднее:
+- AI проще, чем ждут фанаты Prey/Dishonored;
+- четыре района повторяются;
+- systemic depth воспринимается как более лёгкая;
+- Golden Loop менее свободен, чем кажется.</p>
+<p>Deathloop становится:
+- одной из самых доступных Arkane;
+- для части старых фанатов — одной из самых упрощённых.</p>
+<h3 id="2516-dishonored">25.16 Та же вселенная, что Dishonored<a class="headerlink" href="#2516-dishonored" title="Permanent link">¶</a></h3>
+<p>Позже Arkane официально подтверждает:</p>
+<blockquote>
+<p>Deathloop существует в мире Dishonored, далеко после Death of the Outsider.</p>
+</blockquote>
+<p>Это не просто easter egg.</p>
+<p>Линия Lyon:
+Dishonored → Dishonored 2 → Death of the Outsider → большой временной разрыв → Deathloop.</p>
+<h3 id="2517-dinga-lyon">25.17 Dinga становится лицом Lyon<a class="headerlink" href="#2517-dinga-lyon" title="Permanent link">¶</a></h3>
+<p>После Deathloop Dinga окончательно становится Studio Director / главным творческим лидером Lyon.</p>
+<p>Линия:
+- producer;
+- lead designer;
+- director;
+- studio director.</p>
+<p>Это важнейшее доказательство институциональной зрелости Arkane:</p>
+<blockquote>
+<p>студия переживает основателей и первых директоров.</p>
+</blockquote>
+<hr/>
+<h2 id="26-redfall-2023">26. Redfall — 2023<a class="headerlink" href="#26-redfall-2023" title="Permanent link">¶</a></h2>
+<h3 id="_101">Период<a class="headerlink" href="#_101" title="Permanent link">¶</a></h3>
+<p>Примерно 2018–2023.</p>
+<h3 id="_102">Офис<a class="headerlink" href="#_102" title="Permanent link">¶</a></h3>
+<p>Arkane Austin.</p>
+<h3 id="_103">Ключевые люди<a class="headerlink" href="#_103" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Harvey Smith — Studio Director;</p>
+</li>
+<li>
+<p>Ricardo Bare — Creative Director;</p>
+</li>
+<li>
+<p>Austin team;</p>
+</li>
+<li>
+<p>Roundhouse Studios и большой внешний support;</p>
+</li>
+<li>
+<p>ограниченная помощь Lyon.</p>
+</li>
+</ul>
+<h3 id="_104">Исторический контекст<a class="headerlink" href="#_104" title="Permanent link">¶</a></h3>
+<p>После Prey:
+- игра уважаема, но не массовый blockbuster;
+- Raph уходит;
+- ZeniMax сильнее интересуется долгосрочными/service-like продуктами.</p>
+<p>При этом внутри Austin реально есть собственный интерес:
+- Harvey/Ricardo любят Diablo/Borderlands/co-op;
+- возникает вопрос: можно ли сделать <strong>Arkane game, но с друзьями?</strong></p>
+<p>То есть Redfall нельзя честно описать только как насильственный приказ сверху.</p>
+<p>Правильнее:</p>
+<blockquote>
+<p>реальный творческий интерес к co-op совпал с корпоративным запросом на более массовую/долгоиграющую игру.</p>
+</blockquote>
+<h3 id="261-pitch">26.1 Исходный pitch<a class="headerlink" href="#261-pitch" title="Permanent link">¶</a></h3>
+<p>Не Left 4 Dead.</p>
+<p>Ближе:</p>
+<blockquote>
+<p>open-world Arkane + co-op + vampires.</p>
+</blockquote>
+<p>Сеттинг:
+- небольшой город в Massachusetts;
+- дома;
+- церкви;
+- магазины;
+- паром;
+- туристические зоны;
+- everyday Americana;
+- вампиры и культисты.</p>
+<p>Потенциально это могло быть:</p>
+<blockquote>
+<p>«Prey в маленьком американском городе».</p>
+</blockquote>
+<h3 id="262">26.2 Главная производственная ошибка: две неизвестности сразу<a class="headerlink" href="#262" title="Permanent link">¶</a></h3>
+<p>Harvey сам позднее формулировал риск:</p>
+<blockquote>
+<p>возможно, надо было выбрать либо open world, либо co-op.</p>
+</blockquote>
+<p>Но Redfall берёт сразу:
+- open world;
+- four-player co-op;
+- hero builds;
+- loot;
+- narrative campaign;
+- repeatable activities;
+- service roots.</p>
+<p>Для студии, традиционно сильной в плотных single-player пространствах, это гигантский скачок.</p>
+<h3 id="263">26.3 Плотность<a class="headerlink" href="#263" title="Permanent link">¶</a></h3>
+<p>Классическая Arkane:</p>
+<blockquote>
+<p>зачем существует этот метр пространства?</p>
+</blockquote>
+<p>Open world неизбежно добавляет:
+- дороги;
+- пустые промежутки;
+- traversal between points.</p>
+<p>Сделать весь остров с плотностью Talos I практически невозможно по бюджету.</p>
+<p>В Redfall периодически встречаются хорошие Arkane-дома/маленькие истории, но между ними появляется большое количество разреженного пространства.</p>
+<p>Это одна из фундаментальных причин, почему игра ощущается не как «большой Prey», а как более пустая структура.</p>
+<h3 id="264-loot-arkane-tool-philosophy">26.4 Loot против Arkane tool philosophy<a class="headerlink" href="#264-loot-arkane-tool-philosophy" title="Permanent link">¶</a></h3>
+<p>Prey reward:</p>
+<blockquote>
+<p>GLOO Cannon = новый способ взаимодействия.</p>
+</blockquote>
+<p>Redfall reward:</p>
+<blockquote>
+<p>часто новый экземпляр оружия с большей цифрой/редкостью.</p>
+</blockquote>
+<p>Это не плохая система сама по себе, но она принадлежит другой дизайнерской школе.</p>
+<p>Проблема:
+- недостаточно глубокая для идеального looter;
+- слишком числовая для традиционной Arkane.</p>
+<p>Получается конфликт идентичностей.</p>
+<h3 id="265">26.5 Неясность направления<a class="headerlink" href="#265" title="Permanent link">¶</a></h3>
+<p>По послерелизным расследованиям сотрудники не всегда понимали главный центр продукта:
+- Far Cry-like?
+- Borderlands-like?
+- multiplayer Arkane?
+- service?
+- single-player Arkane, который можно пройти вместе?</p>
+<p>Если после нескольких презентаций аудитории приходится постоянно объяснять, <strong>чем игра не является</strong>, это симптом слабой продуктовой идентичности.</p>
+<h3 id="266">26.6 Исход ветеранов<a class="headerlink" href="#266" title="Permanent link">¶</a></h3>
+<p>По поздним расследованиям к релизу около <strong>70% людей, работавших над Prey</strong>, уже не были в Austin.</p>
+<p>Это не значит «70% всей студии уволились одновременно», но показывает очень глубокую смену состава.</p>
+<p>Причина найма тоже очевидна:
+- человек идёт в Arkane из-за Prey;
+- получает open-world co-op loot/service-ish проект;
+- интерес может не совпасть.</p>
+<p>Изменение команды усиливает production risk.</p>
+<h3 id="267-live-service">26.7 Ранние live-service элементы<a class="headerlink" href="#267-live-service" title="Permanent link">¶</a></h3>
+<p>Проект начинался в корпоративном климате, где ZeniMax интересовалась long-tail monetization.</p>
+<p>Ранние версии предполагали больше service/microtransaction элементов.</p>
+<p>К релизу магазин/микротранзакции убрали.</p>
+<p>Но structural DNA:
+- герои;
+- loot;
+- repeatable world;
+- co-op;
+- post-launch heroes</p>
+<p>уже остаётся.</p>
+<h3 id="268">26.8 Герои<a class="headerlink" href="#268" title="Permanent link">¶</a></h3>
+<p>Layla, Jacob, Remi, Devinder.</p>
+<p>Здесь всё ещё видна старая Arkane:
+- разные способности;
+- mobility tools;
+- отвлечение;
+- teleporter;
+- разные ways of approach.</p>
+<p>Сами hero kits не являются главной проблемой Redfall.</p>
+<p>Проблема в том, что окружающий systemic world не даёт им той плотности interactions, как Prey/Dishonored.</p>
+<h3 id="269-co-op-progression">26.9 Co-op progression<a class="headerlink" href="#269-co-op-progression" title="Permanent link">¶</a></h3>
+<p>Сюжетный прогресс сохраняется только у host.</p>
+<p>Гость сохраняет:
+- XP;
+- gear;
+- character progression,</p>
+<p>но не campaign completion.</p>
+<p>Логика:</p>
+<blockquote>
+<p>избежать разрушения нелинейной narrative sequence.</p>
+</blockquote>
+<p>Минус:</p>
+<blockquote>
+<p>центральный co-op режим создаёт трение для группы друзей.</p>
+</blockquote>
+<p>Ещё один пример конфликта narrative Arkane и persistent co-op.</p>
+<h3 id="2610-microsoft-zenimax">26.10 Microsoft покупает ZeniMax<a class="headerlink" href="#2610-microsoft-zenimax" title="Permanent link">¶</a></h3>
+<p>Сделка объявлена 2020, закрыта 2021.</p>
+<p>Некоторые сотрудники Austin, по поздним источникам, надеялись:
+- на reboot проекта;
+- возврат к single-player;
+- либо даже cancellation.</p>
+<p>Microsoft сохраняет большую автономию Bethesda и почти не вмешивается в творческий курс.</p>
+<p>Крупное видимое изменение:
+- PS5-версия прекращается;
+- focus Xbox/PC.</p>
+<p>Phil Spencer после релиза признает:</p>
+<blockquote>
+<p>Xbox могла раньше и глубже работать со студией после приобретения.</p>
+</blockquote>
+<p>Урок:</p>
+<blockquote>
+<p><strong>невмешательство — тоже управленческое решение.</strong></p>
+</blockquote>
+<h3 id="2611">26.11 Перенос<a class="headerlink" href="#2611" title="Permanent link">¶</a></h3>
+<p>Summer 2022 → первая половина 2023.</p>
+<p>Значит Redfall уже получила заметное дополнительное время.</p>
+<p>Важно:</p>
+<blockquote>
+<p>проблема была не только в polish. Structural design за дополнительные несколько месяцев не превращается автоматически в Prey.</p>
+</blockquote>
+<h3 id="2612">26.12 Красные флаги до релиза<a class="headerlink" href="#2612" title="Permanent link">¶</a></h3>
+<p>На Xbox launch:
+- только 30 fps;
+- 60 fps promised later.</p>
+<p>Для big first-party co-op shooter это плохой сигнал.</p>
+<p>Также:
+- single-player требует online;
+- нельзя нормально поставить одиночную игру на паузу.</p>
+<p>Очень символично:</p>
+<blockquote>
+<p>production architecture multiplayer/service начинает диктовать поведение solo-mode.</p>
+</blockquote>
+<h3 id="2613-2-2023">26.13 Релиз — 2 мая 2023<a class="headerlink" href="#2613-2-2023" title="Permanent link">¶</a></h3>
+<p>Критический провал:
+- Metacritic около середины 50-х;
+- огромный разрыв с историческими оценками Arkane.</p>
+<p>Проблемы:
+- AI;
+- баги;
+- crashes;
+- performance;
+- пустые части мира;
+- повторяемые активности;
+- слабая loot-структура;
+- недостаточно глубокий stealth;
+- отсутствие pause;
+- presentation.</p>
+<p>Это уже не спор старых фанатов — игра объективно выходит недоделанной.</p>
+<h3 id="2614">26.14 Но технические баги не являются единственной проблемой<a class="headerlink" href="#2614" title="Permanent link">¶</a></h3>
+<p>Даже идеальный patch не меняет:
+- open-world density;
+- конфликт loot и systemic tools;
+- компромиссы solo/co-op;
+- service-shaped architecture;
+- общую неопределённость идентичности.</p>
+<p>Phil Spencer после релиза правильно отмечал:</p>
+<blockquote>
+<p>delay сам по себе не решает creative execution.</p>
+</blockquote>
+<h3 id="2615-redfall">26.15 Почему Redfall особенно больно видеть<a class="headerlink" href="#2615-redfall" title="Permanent link">¶</a></h3>
+<p>В отдельных зданиях периодически снова появляется Arkane:
+- маленькая история;
+- несколько входов;
+- environment storytelling;
+- нормальная verticality.</p>
+<p>И поэтому видно:</p>
+<blockquote>
+<p>внутри Redfall реально существует призрак более плотной игры, которую Austin могла бы сделать.</p>
+</blockquote>
+<p>Но он растворён в open-world масштабе.</p>
+<h3 id="2616">26.16 Пострелизные исправления<a class="headerlink" href="#2616" title="Permanent link">¶</a></h3>
+<p>Arkane продолжает работать примерно год.</p>
+<p>Добавляют/улучшают:
+- AI;
+- encounter frequency;
+- performance;
+- 60 fps mode;
+- stealth takedowns;
+- controller settings;
+- другие QoL.</p>
+<p>В 2024 Update 4:
+- offline mode;
+- настоящий single-player pause;
+- Community Standing;
+- Elder Nests;
+- новые encounters;
+- Story Mode;
+- другие улучшения.</p>
+<p>Последний патч специально делает игру более автономной, чтобы она не умерла вместе с онлайн-серверами.</p>
+<h3 id="2617-hero-pass">26.17 Hero Pass<a class="headerlink" href="#2617-hero-pass" title="Permanent link">¶</a></h3>
+<p>Дорогие издания обещали двух будущих playable heroes.</p>
+<p>На момент закрытия studio production ещё не был полностью заброшен.</p>
+<p>После закрытия:
+- heroes отменяются;
+- покупателям предлагают компенсационную программу.</p>
+<h3 id="2618-austin-7-2024">26.18 Закрытие Austin — 7 мая 2024<a class="headerlink" href="#2618-austin-7-2024" title="Permanent link">¶</a></h3>
+<p>Microsoft закрывает <strong>Arkane Austin</strong>.</p>
+<p>Не всю Arkane.</p>
+<p>Важно:
+- исходная Lyon продолжает существовать;
+- Austin существовала с 2006 по 2024.</p>
+<p>Harvey позднее говорил, что команда уже работала над неанонсированной следующей штукой и закрытие стало шоком.</p>
+<p>Colantonio резко критиковал решение:</p>
+<blockquote>
+<p>команды такого типа нельзя просто восстановить наймом новых людей; ценность была в конкретной сложившейся группе.</p>
+</blockquote>
+<h3 id="2619">26.19 Ответственность<a class="headerlink" href="#2619" title="Permanent link">¶</a></h3>
+<p>Нельзя сводить Redfall к:</p>
+<blockquote>
+<p>«злые корпораты заставили гениев».</p>
+</blockquote>
+<p>Harvey Smith и Ricardo Bare реально руководили проектом.</p>
+<p>Они:
+- хотели co-op experiment;
+- согласились на open world;
+- принимали дизайн-решения.</p>
+<p>Но контекст важен:
+- service push;
+- scope;
+- staff attrition;
+- смена владельца;
+- пандемия;
+- нехватка ясности;
+- большой внешний production.</p>
+<p>Redfall — одновременно:
+- управленческая;
+- дизайнерская;
+- организационная;
+- корпоративная неудача.</p>
+<h3 id="2620-redfall-prey">26.20 Redfall как анти-Prey<a class="headerlink" href="#2620-redfall-prey" title="Permanent link">¶</a></h3>
+<p><strong>Prey</strong>
+- маленькая площадь, огромная плотность;
+- reward = новый способ взаимодействия;
+- single-player dictates architecture;
+- каждая комната может быть задачей.</p>
+<p><strong>Redfall</strong>
+- большая площадь, меньше плотности;
+- reward часто = число/редкость;
+- мир обслуживает solo + co-op;
+- между задачами много traversal space.</p>
+<p>Именно поэтому игры одной студии ощущаются почти противоположностями.</p>
+<hr/>
+<h2 id="27-marvels-blade-lyon">27. Marvel’s Blade — текущая глава Lyon<a class="headerlink" href="#27-marvels-blade-lyon" title="Permanent link">¶</a></h2>
+<h3 id="2026-09-13">Статус на 2026-09-13<a class="headerlink" href="#2026-09-13" title="Permanent link">¶</a></h3>
+<p><strong>В разработке у Arkane Lyon.</strong></p>
+<p>Официальный сайт Arkane в сентябре 2026 по-прежнему называет Marvel’s Blade:
+- mature;
+- single-player;
+- third-person;
+- Paris;
+- collaboration with Marvel Games.</p>
+<p>На официальной странице Arkane сейчас указана Lyon как действующая площадка.</p>
+<p>Важно: в этой базе фиксируем <strong>официально подтверждённый текущий статус</strong> и не выдаём неподтверждённые слухи о внутренней дате релиза за факт.</p>
+<h3 id="_105">Ключевые люди<a class="headerlink" href="#_105" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Dinga Bakaba — Game Director / studio leadership;</p>
+</li>
+<li>
+<p>Sébastien Mitton — Co-Creative / Art Director;</p>
+</li>
+<li>
+<p>Arkane Lyon.</p>
+</li>
+</ul>
+<h3 id="271">27.1 Почему проект исторически странный<a class="headerlink" href="#271" title="Permanent link">¶</a></h3>
+<p>Arkane десятилетиями строила идентичность вокруг first-person:
+- Arx;
+- Dark Messiah;
+- Dishonored;
+- Prey;
+- Deathloop;
+- Redfall.</p>
+<p>Blade:</p>
+<blockquote>
+<p><strong>third-person.</strong></p>
+</blockquote>
+<p>Это не косметическая смена камеры.</p>
+<p>Меняется:
+- animation;
+- body readability;
+- locomotion;
+- melee silhouette;
+- camera design;
+- level visibility;
+- взаимодействие с углами/пространством.</p>
+<p>Blade проверяет:</p>
+<blockquote>
+<p>Arkane DNA — это first-person камера или способ проектировать системные задачи?</p>
+</blockquote>
+<h3 id="272-single-player-immersive-gameplay">27.2 Single-player immersive gameplay<a class="headerlink" href="#272-single-player-immersive-gameplay" title="Permanent link">¶</a></h3>
+<p>Официально Marvel/Bethesda подчёркивают:
+- оригинальная история;
+- signature immersive gameplay Arkane;
+- mature single-player third-person.</p>
+<p>То есть задача не выглядит как:</p>
+<blockquote>
+<p>сделать обычный Marvel action с логотипом Arkane.</p>
+</blockquote>
+<p>Студия явно хочет перенести свой метод дизайна в третье лицо.</p>
+<h3 id="273">27.3 Париж<a class="headerlink" href="#273" title="Permanent link">¶</a></h3>
+<p>Для Dinga проект личный:
+- Париж — его родной город;
+- Blade — персонаж двойного происхождения;
+- он публично говорил о личной связи с героем.</p>
+<p>Историческая рифма:
+- The Crossing — большой альтернативный Париж, не вышел;
+- Youngblood — Arkane всё-таки проектирует альтернативный Париж;
+- Blade — наконец собственная большая Arkane Lyon-игра про Париж.</p>
+<h3 id="274">27.4 Сеттинг<a class="headerlink" href="#274" title="Permanent link">¶</a></h3>
+<p>Официальная завязка:
+- quarantined section of Paris;
+- supernatural emergency;
+- vampires вышли наружу;
+- жители прячутся ночью.</p>
+<p>Очень аркейновская формула:</p>
+<blockquote>
+<p>конкретный город + системный кризис.</p>
+</blockquote>
+<p>Dunwall — plague.
+Karnaca — bloodflies/dust/political coup.
+Blackreef — timeloop.
+Blade Paris — vampire emergency.</p>
+<h3 id="275-third-person-challenge">27.5 Third-person challenge<a class="headerlink" href="#275-third-person-challenge" title="Permanent link">¶</a></h3>
+<p>Blade физически важен как персонаж:
+- меч;
+- тело;
+- стойка;
+- плащ;
+- movement;
+- combat silhouette.</p>
+<p>В third-person игрок должен видеть самого героя.</p>
+<p>Для Arkane это означает рост компетенций в:
+- character animation;
+- rigging;
+- locomotion;
+- third-person combat;
+- camera.</p>
+<h3 id="276-blade">27.6 Почему Blade важнее лицензии<a class="headerlink" href="#276-blade" title="Permanent link">¶</a></h3>
+<p>Если проект получится, он докажет:</p>
+<blockquote>
+<p>Arkane не равна «first-person immersive sim».</p>
+</blockquote>
+<p>Arkane = метод:
+- системные инструменты;
+- пространство;
+- взаимодействующие правила;
+- несколько решений;
+- сильная identity;
+- игрок создаёт собственную историю действиями.</p>
+<p>Blade — проверка переносимости этого метода в другую камеру и жанровую форму.</p>
+<hr/>
+<h2 id="28-arkane-dna">28. Arkane DNA — эволюция принципов<a class="headerlink" href="#28-arkane-dna" title="Permanent link">¶</a></h2>
+<h3 id="281">28.1 Мир как место, а не список уровней<a class="headerlink" href="#281" title="Permanent link">¶</a></h3>
+<p><strong>Arx Fatalis → Prey</strong></p>
+<p>Игрок должен понимать:
+- где находится;
+- что сверху/снизу;
+- как зоны связаны;
+- зачем пространство существует.</p>
+<h3 id="282-environment-as-weapontool">28.2 Environment as weapon/tool<a class="headerlink" href="#282-environment-as-weapontool" title="Permanent link">¶</a></h3>
+<p><strong>Dark Messiah → Ravenholm → Dishonored → Prey → Deathloop</strong></p>
+<p>Комната — не фон.</p>
+<p>Объекты:
+- толкаются;
+- горят;
+- проводят электричество;
+- питают системы;
+- становятся платформой;
+- меняют AI-state.</p>
+<h3 id="283-universal-verbs-scripted-solutions">28.3 Universal verbs лучше специальных scripted solutions<a class="headerlink" href="#283-universal-verbs-scripted-solutions" title="Permanent link">¶</a></h3>
+<p><strong>Technosaur / Deus Ex через Harvey → Dishonored → Prey</strong></p>
+<p>Хорошая способность:
+- не открывает один special door;
+- меняет правило мира.</p>
+<p>Примеры:
+- Blink;
+- Possession;
+- Domino;
+- Mimic Matter;
+- GLOO;
+- Recycler;
+- Timepiece.</p>
+<h3 id="284-problem-not-puzzle">28.4 Problem, not puzzle<a class="headerlink" href="#284-problem-not-puzzle" title="Permanent link">¶</a></h3>
+<p>Наследие Deus Ex/Harvey.</p>
+<p>Дизайнер ставит проблему:</p>
+<blockquote>
+<p>попасть внутрь, убрать цель, отключить систему.</p>
+</blockquote>
+<p>Не диктует:</p>
+<blockquote>
+<p>найди синий ключ и положи на синий алтарь.</p>
+</blockquote>
+<h3 id="285">28.5 Игрок должен чувствовать, что решение придумал он<a class="headerlink" href="#285" title="Permanent link">¶</a></h3>
+<p>Arkane часто заранее создаёт opportunities, но старается не выглядеть как:</p>
+<blockquote>
+<p>нажми дизайнерскую кнопку.</p>
+</blockquote>
+<p>Шипы Dark Messiah поставлены специально — но пинок должен ощущаться твоей идеей.</p>
+<h3 id="286-authored-architecture-generic-open-world">28.6 Сильная authored architecture вместо generic open world<a class="headerlink" href="#286-authored-architecture-generic-open-world" title="Permanent link">¶</a></h3>
+<p>Пик:
+- Dishonored;
+- Dishonored 2.</p>
+<p>Проблема Redfall показывает цену отхода от плотности.</p>
+<h3 id="287">28.7 Структура должна соответствовать игре<a class="headerlink" href="#287" title="Permanent link">¶</a></h3>
+<p>Урок Invisible War:</p>
+<blockquote>
+<p>неправильная технология/размер карты может убить саму дизайнерскую фантазию.</p>
+</blockquote>
+<p>Урок Prey vs Dishonored 2:</p>
+<blockquote>
+<p>две студии одной компании не обязаны использовать один движок.</p>
+</blockquote>
+<h3 id="288">28.8 Простота хороша, если увеличивает возможность действия<a class="headerlink" href="#288" title="Permanent link">¶</a></h3>
+<p>Хорошее упрощение:
+- Blink бесплатно/доступно → игрок чаще использует verticality.</p>
+<p>Плохое упрощение:
+- universal ammo → меньше запасных решений.</p>
+<h3 id="289-fiction-gameplay">28.9 Fiction и gameplay должны объяснять друг друга<a class="headerlink" href="#289-fiction-gameplay" title="Permanent link">¶</a></h3>
+<p>Примеры:
+- whale oil;
+- Neuromods;
+- simulation в Mooncrash;
+- loop в Deathloop;
+- Daud Favors;
+- Bloodflies;
+- TranStar station infrastructure.</p>
+<h3 id="2810">28.10 Не бояться дорогого контента, который игрок может пропустить<a class="headerlink" href="#2810" title="Permanent link">¶</a></h3>
+<p>Это почти манифест Arkane:
+- альтернативные маршруты;
+- комнаты;
+- entire faction branch;
+- состояние прошлого/настоящего;
+- non-lethal chains.</p>
+<p>С точки зрения Excel расточительно.
+С точки зрения player agency — фундамент жанра.</p>
+<h3 id="2811-interaction">28.11 Не каждый неожиданный interaction — баг<a class="headerlink" href="#2811-interaction" title="Permanent link">¶</a></h3>
+<p>Если system composition:
+- логична;
+- интересна;
+- не ломает progression,</p>
+<p>Arkane часто предпочитает оставить.</p>
+<h3 id="2812-progression">28.12 Знание как progression<a class="headerlink" href="#2812-progression" title="Permanent link">¶</a></h3>
+<p>Особенно:
+- Deus Ex;
+- Prey;
+- Mooncrash;
+- Deathloop.</p>
+<p>Игрок становится сильнее не только из-за цифр, а потому что:</p>
+<blockquote>
+<p>понимает место.</p>
+</blockquote>
+<h3 id="2813">28.13 Игровая идентичность важнее «больше контента»<a class="headerlink" href="#2813" title="Permanent link">¶</a></h3>
+<p>Лучшие Arkane:
+- имеют одну очень чёткую идею;
+- компактнее многих open-world AAA;
+- каждое пространство поддерживает эту идею.</p>
+<p>Redfall показывает, что большой scope без той же плотности разрушает идентичность.</p>
+<h3 id="2814-multiplayer-arkane-systemic-fiction">28.14 Multiplayer работает у Arkane, когда он подчинён systemic fiction<a class="headerlink" href="#2814-multiplayer-arkane-systemic-fiction" title="Permanent link">¶</a></h3>
+<p>Плохой/сложный ранний пример:
+- The Crossing — слишком огромный scope.</p>
+<p>Удачный ограниченный:
+- Julianna в Deathloop.</p>
+<p>Урок:</p>
+<blockquote>
+<p>не строить single-player вокруг нужд multiplayer; встроить multiplayer в уже работающую single-player fantasy.</p>
+</blockquote>
+<hr/>
+<h2 id="29-">29. Главные причинно-следственные цепочки<a class="headerlink" href="#29-" title="Permanent link">¶</a></h2>
+<h3 id="291-arx-prey">29.1 Arx → Prey<a class="headerlink" href="#291-arx-prey" title="Permanent link">¶</a></h3>
+<p>Arx:
+- один связанный dungeon;
+- возвращение;
+- physical world;
+- systems.</p>
+<p>Prey:
+- одна связанная станция;
+- возвращение;
+- physical world;
+- systems.</p>
+<p><strong>Вывод:</strong> Prey — духовно не только System Shock 3 от Arkane, но и возвращение к структурной мечте Arx Fatalis через 15 лет.</p>
+<h3 id="292-dark-messiah-dishonored">29.2 Dark Messiah → Dishonored<a class="headerlink" href="#292-dark-messiah-dishonored" title="Permanent link">¶</a></h3>
+<p>Dark Messiah:
+- first-person body;
+- физика;
+- environment kill;
+- room as toy.</p>
+<p>Dishonored:
+- системные powers;
+- вертикальность;
+- combat + stealth;
+- authored mini-open worlds.</p>
+<h3 id="293-ravenholm-dishonored">29.3 Ravenholm → Dishonored<a class="headerlink" href="#293-ravenholm-dishonored" title="Permanent link">¶</a></h3>
+<p>Ravenholm:
+- Valve production;
+- Viktor Antonov;
+- архитектура как культура;
+- system-tool design.</p>
+<p>Dishonored:
+- Antonov/Mitton;
+- Dunwall;
+- инструмент/инфраструктура/lore объединяются.</p>
+<h3 id="294-the-crossing-deathloop">29.4 The Crossing → Deathloop<a class="headerlink" href="#294-the-crossing-deathloop" title="Permanent link">¶</a></h3>
+<p>The Crossing:
+- seamless multiplayer inside campaign;
+- слишком большой scope.</p>
+<p>Deathloop:
+- тот же базовый вопрос;
+- резко ограничен до одной Julianna;
+- single-player остаётся главным.</p>
+<h3 id="295-lmno-artworld-workflow">29.5 LMNO → зрелый art/world workflow<a class="headerlink" href="#295-lmno-artworld-workflow" title="Permanent link">¶</a></h3>
+<p>LMNO:
+- field references;
+- real-world research;
+- character behavior.</p>
+<p>Поздняя Arkane:
+- поездки за референсами;
+- мир сначала понимают как реальное место, потом стилизуют.</p>
+<h3 id="296-invisible-war-arkane-">29.6 Invisible War → зрелая Arkane-технологическая осторожность<a class="headerlink" href="#296-invisible-war-arkane-" title="Permanent link">¶</a></h3>
+<p>Harvey получает болезненный опыт:
+- shared engine не подходит Deus Ex;
+- красивые технологии съедают пространство;
+- streamlining может уменьшить depth.</p>
+<p>Позже:
+- Dishonored берёт зрелый UE3;
+- Prey сознательно берёт CryEngine;
+- студии не унифицируют technology ради корпоративной красоты.</p>
+<h3 id="297-mooncrash-deathloop">29.7 Mooncrash → Deathloop<a class="headerlink" href="#297-mooncrash-deathloop" title="Permanent link">¶</a></h3>
+<p>Не прямое «копирование», но общая дизайнерская линия:
+- повторяемое пространство;
+- знания;
+- изменяемое состояние;
+- идеальный план;
+- игрок учится владеть картой.</p>
+<h3 id="298-youngblood-deathloop-production-competence">29.8 Youngblood → Deathloop production competence<a class="headerlink" href="#298-youngblood-deathloop-production-competence" title="Permanent link">¶</a></h3>
+<p>Youngblood даёт Lyon реальный shipped experience:
+- network;
+- two-player first-person spaces;
+- более открытые районы.</p>
+<p>Deathloop использует сетевого человека уже как противника/нарративного персонажа.</p>
+<h3 id="299-dishonored-2-deathloop-economicdesign-question">29.9 Dishonored 2 → Deathloop economic/design question<a class="headerlink" href="#299-dishonored-2-deathloop-economicdesign-question" title="Permanent link">¶</a></h3>
+<p>Dishonored 2:
+- невероятно дорогие hand-crafted levels;
+- игрок видит их один раз и может пропустить половину.</p>
+<p>Deathloop:
+- меньше районов;
+- повторное посещение встроено в core loop;
+- игрок учится использовать дорогой level design много раз.</p>
+<hr/>
+<h2 id="30-arkane">30. Главные люди Arkane в нашей хронологии<a class="headerlink" href="#30-arkane" title="Permanent link">¶</a></h2>
+<h3 id="raphael-colantonio">Raphaël Colantonio<a class="headerlink" href="#raphael-colantonio" title="Permanent link">¶</a></h3>
+<p>Роль в истории:
+- основатель Arkane;
+- Arx;
+- Dark Messiah;
+- ранние отменённые проекты;
+- продажа ZeniMax;
+- Dishonored co-director;
+- Prey;
+- уход после Prey.</p>
+<p>Главная линия:</p>
+<blockquote>
+<p>Ultima Underworld → Arx → Prey.</p>
+</blockquote>
+<h3 id="harvey-smith_1">Harvey Smith<a class="headerlink" href="#harvey-smith_1" title="Permanent link">¶</a></h3>
+<p>Приносит:
+- System Shock;
+- Deus Ex;
+- Thief-school;
+- problem-not-puzzle;
+- lessons Invisible War;
+- Dishonored.</p>
+<p>Главная линия:</p>
+<blockquote>
+<p>Looking Glass/Deus Ex discipline → Dishonored.</p>
+</blockquote>
+<h3 id="sebastien-mitton">Sébastien Mitton<a class="headerlink" href="#sebastien-mitton" title="Permanent link">¶</a></h3>
+<p>Эволюция:
+- приходит на Arx 2 / Dark Messiah;
+- недоволен generic fantasy;
+- The Crossing + Antonov;
+- Dishonored art;
+- Karnaca;
+- Blackreef;
+- Blade.</p>
+<p>Фактически один из главных хранителей visual identity Arkane Lyon.</p>
+<h3 id="viktor-antonov_1">Viktor Antonov<a class="headerlink" href="#viktor-antonov_1" title="Permanent link">¶</a></h3>
+<p>Не постоянный сотрудник всей истории, но критически важен:
+- Half-Life 2;
+- Ravenholm school;
+- The Crossing;
+- Dishonored world conception.</p>
+<p>Помог Arkane научиться строить не просто уровни, а <strong>цивилизации через архитектуру</strong>.</p>
+<h3 id="ricardo-bare">Ricardo Bare<a class="headerlink" href="#ricardo-bare" title="Permanent link">¶</a></h3>
+<p>Линия:
+- Deus Ex/Ion Storm;
+- Dishonored;
+- Daud DLC;
+- Prey lead design;
+- Mooncrash creative leadership;
+- Redfall creative director.</p>
+<p>Один из центральных системных дизайнеров Austin.</p>
+<h3 id="dinga-bakaba">Dinga Bakaba<a class="headerlink" href="#dinga-bakaba" title="Permanent link">¶</a></h3>
+<p>Линия:
+- Dunwall City Trials;
+- Dishonored 2 lead design;
+- Death of the Outsider;
+- Cyberpilot;
+- Deathloop;
+- Studio Director Arkane Lyon;
+- Marvel’s Blade.</p>
+<p>Олицетворяет переход Lyon к следующему поколению leadership.</p>
+<h3 id="susan-kath">Susan Kath<a class="headerlink" href="#susan-kath" title="Permanent link">¶</a></h3>
+<p>Ключевая production-фигура Austin:
+- Dishonored/Prey-era production;
+- помогает удерживать scope;
+- Mooncrash и Austin leadership.</p>
+<h3 id="christophe-carrier-dana-nightingale-level-designers">Christophe Carrier / Dana Nightingale / другие level designers<a class="headerlink" href="#christophe-carrier-dana-nightingale-level-designers" title="Permanent link">¶</a></h3>
+<p>Ключевые архитекторы того, что делает Lyon знаменитой:
+- пространства как системные задачи;
+- Clockwork Mansion;
+- mission-specific mechanics;
+- hand-crafted possibility spaces.</p>
+<hr/>
+<h2 id="31">31. Сводная временная шкала с выводом по каждому этапу<a class="headerlink" href="#31" title="Permanent link">¶</a></h2>
+<h3 id="1999">1999<a class="headerlink" href="#1999" title="Permanent link">¶</a></h3>
+<p><strong>Arkane основана в Lyon.</strong></p>
+<p>Причина:</p>
+<blockquote>
+<p>сделать игру типа Ultima Underworld, которую никто не давал сделать внутри крупной компании.</p>
+</blockquote>
+<h3 id="2002">2002<a class="headerlink" href="#2002" title="Permanent link">¶</a></h3>
+<p><strong>Arx Fatalis.</strong></p>
+<p>Открытие:</p>
+<blockquote>
+<p>мир должен существовать как место и набор правил.</p>
+</blockquote>
+<p>Проблема:</p>
+<blockquote>
+<p>великолепная нишевая игра не гарантирует бизнес.</p>
+</blockquote>
+<h3 id="20032004">2003–2004<a class="headerlink" href="#20032004" title="Permanent link">¶</a></h3>
+<p><strong>Arx Fatalis 2.</strong></p>
+<p>Не удаётся продать из-за слабых продаж оригинала.</p>
+<p>Превращается в Dark Messiah.</p>
+<h3 id="2006">2006<a class="headerlink" href="#2006" title="Permanent link">¶</a></h3>
+<p><strong>Dark Messiah.</strong></p>
+<p>Открытие:</p>
+<blockquote>
+<p>комната может быть оружием.</p>
+</blockquote>
+<p>Урок:</p>
+<blockquote>
+<p>core combat надо найти раньше level production.</p>
+</blockquote>
+<h3 id="2006_1">2006<a class="headerlink" href="#2006_1" title="Permanent link">¶</a></h3>
+<p><strong>Открывается Arkane Austin.</strong></p>
+<p>Компания становится трансатлантической.</p>
+<h3 id="20062007">2006–2007<a class="headerlink" href="#20062007" title="Permanent link">¶</a></h3>
+<p><strong>Ravenholm.</strong></p>
+<p>Открытие:</p>
+<blockquote>
+<p>system-tool может быть weapon + puzzle + infrastructure.</p>
+</blockquote>
+<p>Школа:</p>
+<blockquote>
+<p>Valve + Viktor Antonov.</p>
+</blockquote>
+<p>Отмена:</p>
+<blockquote>
+<p>первый большой удар новой эпохи.</p>
+</blockquote>
+<h3 id="20062009">2006–2009<a class="headerlink" href="#20062009" title="Permanent link">¶</a></h3>
+<p><strong>The Crossing.</strong></p>
+<p>Открытие:</p>
+<blockquote>
+<p>живые люди могут быть частью fiction/campaign.</p>
+</blockquote>
+<p>Проблема:</p>
+<blockquote>
+<p>слишком новый продукт, слишком дорого, слишком сложно объяснить/профинансировать.</p>
+</blockquote>
+<h3 id="20072008">2007–2008+<a class="headerlink" href="#20072008" title="Permanent link">¶</a></h3>
+<p><strong>LMNO.</strong></p>
+<p>Открытие:</p>
+<blockquote>
+<p>поведение companion/NPC можно сделать игровой системой.</p>
+</blockquote>
+<p>Проблема:</p>
+<blockquote>
+<p>даже EA + Spielberg не гарантируют, что экспериментальная AAA будет доведена.</p>
+</blockquote>
+<h3 id="20082010">2008–2010<a class="headerlink" href="#20082010" title="Permanent link">¶</a></h3>
+<p><strong>Work-for-hire survival.</strong></p>
+<p>Arkane почти перестаёт быть одной авторской командой.</p>
+<p>Урок:</p>
+<blockquote>
+<p>много контрактов платят зарплату, но не дают будущего.</p>
+</blockquote>
+<h3 id="2010">2010<a class="headerlink" href="#2010" title="Permanent link">¶</a></h3>
+<p><strong>ZeniMax покупает Arkane.</strong></p>
+<p>Главное:</p>
+<blockquote>
+<p>финансовая стабильность впервые позволяет несколько лет делать одну Arkane-игру.</p>
+</blockquote>
+<h3 id="2012">2012<a class="headerlink" href="#2012" title="Permanent link">¶</a></h3>
+<p><strong>Dishonored.</strong></p>
+<p>Синтез:
+Arx + Dark Messiah + Thief + Deus Ex + Antonov + Harvey/Raph.</p>
+<p>Впервые:</p>
+<blockquote>
+<p>оригинальная большая Arkane-игра одновременно критически и коммерчески срабатывает.</p>
+</blockquote>
+<h3 id="20122013_1">2012–2013<a class="headerlink" href="#20122013_1" title="Permanent link">¶</a></h3>
+<p><strong>Dunwall City Trials / Daud DLC.</strong></p>
+<p>Рост:
+- Ricardo Bare;
+- Dinga Bakaba;
+- Billie;
+- Delilah;
+- voiced protagonist;
+- прототипы будущей D2.</p>
+<h3 id="2013">2013<a class="headerlink" href="#2013" title="Permanent link">¶</a></h3>
+<p><strong>Arkane разделяет production lines.</strong></p>
+<p>Lyon → Dishonored 2.
+Austin → новая System Shock-like игра.</p>
+<h3 id="2016">2016<a class="headerlink" href="#2016" title="Permanent link">¶</a></h3>
+<p><strong>Dishonored 2.</strong></p>
+<p>Пик Lyon level design.</p>
+<p>Цена:</p>
+<blockquote>
+<p>дорогой engine + дорогие уникальные уровни + технически проблемный PC launch.</p>
+</blockquote>
+<h3 id="2017">2017<a class="headerlink" href="#2017" title="Permanent link">¶</a></h3>
+<p><strong>Prey.</strong></p>
+<p>Пик Austin systemic world design.</p>
+<p>Слабость:</p>
+<blockquote>
+<p>хорошая репутация не превращается автоматически в массовый рынок.</p>
+</blockquote>
+<p>Уходит Colantonio.</p>
+<h3 id="2017_1">2017<a class="headerlink" href="#2017_1" title="Permanent link">¶</a></h3>
+<p><strong>Death of the Outsider.</strong></p>
+<p>Закрывает большую эпоху Dishonored и передаёт Lyon новому leadership.</p>
+<h3 id="2018">2018<a class="headerlink" href="#2018" title="Permanent link">¶</a></h3>
+<p><strong>Mooncrash.</strong></p>
+<p>Эксперимент:</p>
+<blockquote>
+<p>roguelite может заставить игрока использовать весь possibility space immersive sim.</p>
+</blockquote>
+<h3 id="2018_1">2018<a class="headerlink" href="#2018_1" title="Permanent link">¶</a></h3>
+<p><strong>Typhon Hunter / TranStar VR.</strong></p>
+<p>Austin пробует multiplayer и VR.</p>
+<h3 id="2019">2019<a class="headerlink" href="#2019" title="Permanent link">¶</a></h3>
+<p><strong>Youngblood / Cyberpilot.</strong></p>
+<p>Lyon получает:
+- co-op/network production;
+- более открытые районы;
+- VR;
+- самостоятельный directing experience Dinga.</p>
+<h3 id="2021">2021<a class="headerlink" href="#2021" title="Permanent link">¶</a></h3>
+<p><strong>Deathloop.</strong></p>
+<p>Синтез:
+The Crossing + Dishonored + Mooncrash + Youngblood.</p>
+<p>Результат:</p>
+<blockquote>
+<p>новая IP Lyon, сильная критика, более доступный systemic shooter.</p>
+</blockquote>
+<h3 id="2023">2023<a class="headerlink" href="#2023" title="Permanent link">¶</a></h3>
+<p><strong>Redfall.</strong></p>
+<p>Попытка:</p>
+<blockquote>
+<p>open-world co-op Arkane.</p>
+</blockquote>
+<p>Ошибка:</p>
+<blockquote>
+<p>слишком много новых pillars, потеря плотности/идентичности, staff attrition, сырой релиз.</p>
+</blockquote>
+<h3 id="2024">2024<a class="headerlink" href="#2024" title="Permanent link">¶</a></h3>
+<p><strong>Arkane Austin закрыта Microsoft.</strong></p>
+<p>Последний патч Redfall добавляет offline/pause и помогает игре пережить студию.</p>
+<h3 id="20232026">2023–2026<a class="headerlink" href="#20232026" title="Permanent link">¶</a></h3>
+<p><strong>Marvel’s Blade.</strong></p>
+<p>Lyon впервые делает большую third-person игру.</p>
+<p>Главный вопрос:</p>
+<blockquote>
+<p>может ли Arkane перенести свою системную философию за пределы first-person формы?</p>
+</blockquote>
+<hr/>
+<h2 id="32-arkane">32. Итоговая формула Arkane<a class="headerlink" href="#32-arkane" title="Permanent link">¶</a></h2>
+<p>Если свести 25+ лет студии не к списку игр, а к одной эволюции:</p>
+<h4 id="arx-fatalis">Arx Fatalis<a class="headerlink" href="#arx-fatalis" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Мир должен работать.</strong></p>
+</blockquote>
+<h4 id="dark-messiah">Dark Messiah<a class="headerlink" href="#dark-messiah" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Комната должна быть оружием.</strong></p>
+</blockquote>
+<h4 id="ravenholm">Ravenholm<a class="headerlink" href="#ravenholm" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Инструмент должен иметь несколько системных функций.</strong></p>
+</blockquote>
+<h4 id="the-crossing">The Crossing<a class="headerlink" href="#the-crossing" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Даже другой человек может быть частью системы мира.</strong></p>
+</blockquote>
+<h4 id="lmno">LMNO<a class="headerlink" href="#lmno" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Поведение персонажа тоже можно превратить в gameplay.</strong></p>
+</blockquote>
+<h4 id="dishonored_1">Dishonored<a class="headerlink" href="#dishonored_1" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Дай игроку универсальные глаголы и большую authored-проблему.</strong></p>
+</blockquote>
+<h4 id="dishonored-2_1">Dishonored 2<a class="headerlink" href="#dishonored-2_1" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Каждый уровень может быть отдельным дизайнерским экспериментом.</strong></p>
+</blockquote>
+<h4 id="prey">Prey<a class="headerlink" href="#prey" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Само место может быть одной большой системной машиной.</strong></p>
+</blockquote>
+<h4 id="mooncrash">Mooncrash<a class="headerlink" href="#mooncrash" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Меняй обстоятельства, чтобы игрок не застревал в одной стратегии.</strong></p>
+</blockquote>
+<h4 id="deathloop">Deathloop<a class="headerlink" href="#deathloop" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Знание пространства может быть главным permanent upgrade.</strong></p>
+</blockquote>
+<h4 id="redfall">Redfall<a class="headerlink" href="#redfall" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Масштаб без прежней плотности разрушает сильнейшую сторону Arkane.</strong></p>
+</blockquote>
+<h4 id="marvels-blade">Marvel’s Blade<a class="headerlink" href="#marvels-blade" title="Permanent link">¶</a></h4>
+<blockquote>
+<p><strong>Теперь проверим, является ли эта философия независимой от first-person камеры.</strong></p>
+</blockquote>
+<hr/>
+<h2 id="33">33. Что считать ядром базы при будущих обновлениях<a class="headerlink" href="#33" title="Permanent link">¶</a></h2>
+<p>При добавлении новой информации по Arkane лучше обновлять в таком порядке:</p>
+<ol>
+<li>
+<p><strong>Текущий статус студии</strong></p>
+</li>
+<li>
+<p>существует ли Lyon;</p>
+</li>
+<li>
+<p>leadership;</p>
+</li>
+<li>
+<p>текущая игра.</p>
+</li>
+<li>
+<p><strong>Marvel’s Blade</strong></p>
+</li>
+<li>
+<p>gameplay reveal;</p>
+</li>
+<li>
+<p>engine;</p>
+</li>
+<li>
+<p>structure;</p>
+</li>
+<li>
+<p>systems;</p>
+</li>
+<li>
+<p>release window;</p>
+</li>
+<li>
+<p>commercial/critical result после релиза.</p>
+</li>
+<li>
+<p><strong>Новые интервью ветеранов</strong>
+       Особенно:</p>
+</li>
+<li>
+<p>Colantonio;</p>
+</li>
+<li>
+<p>Harvey Smith;</p>
+</li>
+<li>
+<p>Ricardo Bare;</p>
+</li>
+<li>
+<p>Dinga Bakaba;</p>
+</li>
+<li>
+<p>Sébastien Mitton;</p>
+</li>
+<li>
+<p>Dana Nightingale;</p>
+</li>
+<li>
+<p>Christophe Carrier;</p>
+</li>
+<li>
+<p>Susan Kath.</p>
+</li>
+<li>
+<p><strong>Неизвестные/отменённые проекты</strong></p>
+</li>
+<li>
+<p>The Crossing builds;</p>
+</li>
+<li>
+<p>Ravenholm footage/builds;</p>
+</li>
+<li>
+<p>LMNO footage;</p>
+</li>
+<li>
+<p>Thief 4 pitch;</p>
+</li>
+<li>
+<p>Blade Runner pitch;</p>
+</li>
+<li>
+<p>неанонсированный следующий проект Austin до закрытия.</p>
+</li>
+<li>
+<p><strong>Финансовые данные</strong>
+       Любые поздние заявления о бюджетах/продажах нужно хранить с пометкой:</p>
+</li>
+<li>
+<p>official;</p>
+</li>
+<li>
+<p>reported;</p>
+</li>
+<li>
+<p>former-developer recollection.</p>
+</li>
+</ol>
+<hr/>
+<h2 id="34">34. Короткий индекс проектов по статусу<a class="headerlink" href="#34" title="Permanent link">¶</a></h2>
+<h3 id="arkane_5">Выпущенные Arkane / основные<a class="headerlink" href="#arkane_5" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Arx Fatalis</p>
+</li>
+<li>
+<p>Dark Messiah of Might and Magic</p>
+</li>
+<li>
+<p>Dishonored</p>
+</li>
+<li>
+<p>Dishonored: Dunwall City Trials</p>
+</li>
+<li>
+<p>Dishonored: The Knife of Dunwall</p>
+</li>
+<li>
+<p>Dishonored: The Brigmore Witches</p>
+</li>
+<li>
+<p>Dishonored 2</p>
+</li>
+<li>
+<p>Prey</p>
+</li>
+<li>
+<p>Dishonored: Death of the Outsider</p>
+</li>
+<li>
+<p>Prey: Mooncrash</p>
+</li>
+<li>
+<p>Prey: Typhon Hunter</p>
+</li>
+<li>
+<p>TranStar VR</p>
+</li>
+<li>
+<p>Wolfenstein: Youngblood (co-development)</p>
+</li>
+<li>
+<p>Wolfenstein: Cyberpilot (co-development)</p>
+</li>
+<li>
+<p>Deathloop</p>
+</li>
+<li>
+<p>Redfall</p>
+</li>
+</ul>
+<h3 id="side">Малые / side<a class="headerlink" href="#side" title="Permanent link">¶</a></h3>
+<ul>
+<li>KarmaStar</li>
+</ul>
+<h3 id="support-work-for-hire">Значимый support / work-for-hire<a class="headerlink" href="#support-work-for-hire" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Call of Duty: World at War — ограниченная поддержка через Certain Affinity / level work</p>
+</li>
+<li>
+<p>BioShock 2 — substantial level/art/animation support</p>
+</li>
+<li>
+<p>Boom Blox — внешний контракт, точный scope в нашей базе пока не детализирован</p>
+</li>
+<li>
+<p>Ubisoft RPG consulting — проект не идентифицирован надёжно</p>
+</li>
+<li>
+<p>другие мелкие внешние контракты периода 2008–2010</p>
+</li>
+</ul>
+<h3 id="_106">Отменённые / не состоявшиеся<a class="headerlink" href="#_106" title="Permanent link">¶</a></h3>
+<ul>
+<li>
+<p>Ultima Underworld 3 pitch</p>
+</li>
+<li>
+<p>Arx Fatalis 2</p>
+</li>
+<li>
+<p>Return to Ravenholm</p>
+</li>
+<li>
+<p>The Crossing</p>
+</li>
+<li>
+<p>LMNO</p>
+</li>
+<li>
+<p>Thief 4 pitch</p>
+</li>
+<li>
+<p>Blade Runner pitch</p>
+</li>
+<li>
+<p>неизвестный zombie-shooter support</p>
+</li>
+<li>
+<p>неанонсированный следующий проект Arkane Austin, существовавший до закрытия</p>
+</li>
+</ul>
+<h3 id="_107">В разработке<a class="headerlink" href="#_107" title="Permanent link">¶</a></h3>
+<ul>
+<li>Marvel’s Blade</li>
+</ul>
+<hr/>
+<h2 id="35-13-2026">35. Текущее состояние на 13 сентября 2026<a class="headerlink" href="#35-13-2026" title="Permanent link">¶</a></h2>
+<ul>
+<li>
+<p><strong>Arkane Austin</strong> закрыта Microsoft в мае 2024 года.</p>
+</li>
+<li>
+<p>Исходная <strong>Arkane Lyon</strong> продолжает существовать.</p>
+</li>
+<li>
+<p>Официальный сайт Arkane по-прежнему указывает Lyon.</p>
+</li>
+<li>
+<p><strong>Marvel’s Blade</strong> официально находится в разработке у Arkane Lyon.</p>
+</li>
+<li>
+<p>Официально подтверждённые параметры Blade:</p>
+</li>
+<li>
+<p>mature;</p>
+</li>
+<li>
+<p>single-player;</p>
+</li>
+<li>
+<p>third-person;</p>
+</li>
+<li>
+<p>original story;</p>
+</li>
+<li>
+<p>Paris;</p>
+</li>
+<li>
+<p>signature immersive gameplay Arkane.</p>
+</li>
+<li>
+<p>Официальной даты релиза в этой базе не фиксируем, пока она не объявлена надёжным первичным источником.</p>
+</li>
+</ul>
+<hr/>
+<h2 id="36">36. Последний вывод<a class="headerlink" href="#36" title="Permanent link">¶</a></h2>
+<p>История Arkane — это не история «студии immersive sim».</p>
+<p>Точнее:</p>
+<blockquote>
+<p>immersive sim — следствие более глубокого принципа.</p>
+</blockquote>
+<p>Arkane снова и снова пытается создать <strong>пространство, которое не просто содержит контент, а отвечает на действия игрока через универсальные правила</strong>.</p>
+<p>Поэтому лучшие игры Arkane обычно имеют:
+- высокую плотность решений;
+- минимум filler;
+- сильную идентичность;
+- компактные пространства;
+- инструменты, которые меняют мир, а не только damage numbers;
+- возможность решить задачу неожиданным, но логичным способом.</p>
+<p>А худшие моменты появляются, когда production уводит студию от этого:
+- слишком большая площадь;
+- слишком много корпоративных pillars;
+- технология начинает диктовать дизайн;
+- gameplay reward заменяется числовой progression;
+- проект пытается быть слишком многими играми одновременно.</p>
+<p>Главная цепочка всей истории:</p>
+<blockquote>
+<p><strong>Ultima Underworld → Arx Fatalis → Dark Messiah → Dishonored / Prey → Deathloop → Blade.</strong></p>
+</blockquote>
+<p>Между ними лежит кладбище отменённых проектов, и почти каждый труп всё равно оставил в следующей игре какую-нибудь механику, человека, production-метод или идею.</p>
+<p>И именно поэтому история Arkane настолько связная:  </p>
+<p><strong>они двадцать пять лет не делают одну и ту же игру — они двадцать пять лет пытаются решить одну и ту же задачу разными способами.</strong></p>
+</article>
+</div>
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+</div>
+<button class="md-top md-icon" data-md-component="top" hidden="" type="button">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  К началу
+</button>
+</main>
+<footer class="md-footer">
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}, "version": null}</script>
+<script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+</body>
+</html>
