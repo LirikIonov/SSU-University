@@ -1,4 +1,4 @@
-# Лекция 1. Production backend и эволюция Go
+# 1. Production backend и эволюция Go
 
 ## Введение
 

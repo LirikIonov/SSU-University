@@ -1,4 +1,4 @@
-# Доп. Лекция 1. Глубокие internals Go runtime, synchronization и CPU
+# Доп. 1. Глубокие internals Go runtime, synchronization и CPU
 
 > Дополнительный блок к теме **«Go runtime, concurrency и synchronization internals»**.
 >

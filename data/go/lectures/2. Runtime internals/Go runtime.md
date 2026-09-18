@@ -1,4 +1,4 @@
-# Лекция 2.0. Go runtime internals — расширенная версия
+# 2. Go runtime internals — расширенная версия
 
 ## О чём эта лекция
 

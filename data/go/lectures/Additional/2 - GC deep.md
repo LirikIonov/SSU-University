@@ -1,4 +1,4 @@
-# Дополнительная лекция 2. Go GC internals и memory allocator
+# Доп. 2. Go GC internals и memory allocator
 
 ## 1. С чего начинается heap allocation
 
