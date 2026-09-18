@@ -1,93 +1,252 @@
-# Доп. 2. Go GC internals и memory allocator
+# Дополнительная лекция 2. Go GC internals и memory allocator
 
-## 1. С чего начинается heap allocation
+> Версионная привязка: материал ориентирован на Go 1.27.x.
+>
+> Здесь важно различать три уровня:
+>
+> - **устойчивая учебная модель** — идеи, которые полезно помнить между версиями Go;
+> - **публичное поведение runtime** — то, на что можно опираться при эксплуатации;
+> - **детали текущей реализации** — `mcache`, `mspan`, `mcentral`, Green Tea internals и конкретные функции runtime. Они могут меняться между версиями.
 
-В основной лекции мы остановились примерно здесь:
+Основная лекция про память отвечает на вопросы:
 
 ```text
-variable
-   ↓
-escape analysis
-   ↓
-stack или heap
+что такое stack и heap?
+почему значение escape'ится?
+что делает GC?
+как пользоваться pprof?
 ```
 
-Теперь интересует правая ветка.
+Эта лекция открывает следующий слой:
+
+```text
+компилятор решил:
+"нужна heap allocation"
+
+                    │
+                    ▼
+
+а что дальше физически делает runtime?
+```
+
+Нас будет интересовать вся цепочка:
+
+```text
+source code
+    ↓
+escape analysis
+    ↓
+heap allocation
+    ↓
+mcache / mspan / mcentral / mheap
+    ↓
+heap growth
+    ↓
+GC pacer
+    ↓
+concurrent marking
+    ↓
+write barriers
+    ↓
+mark workers + assists
+    ↓
+sweep
+    ↓
+scavenger
+    ↓
+OS
+```
+
+Главная идея лекции:
+
+> Memory management в Go — это не отдельный «сборщик мусора». Это работающая одновременно система allocator + GC + scheduler + virtual memory ОС.
+
+---
+
+# Блок 1. От `new(T)` до куска памяти
+
+## 1. Почему нельзя объяснить heap словами «runtime выделил память»
+
+Возьмём простой код:
 
 ```go
+type User struct {
+    ID   int64
+    Name string
+}
+
 func newUser() *User {
-    u := User{}
+    u := User{
+        ID:   42,
+        Name: "Alice",
+    }
     return &u
 }
 ```
 
-Компилятор решил:
+Компилятор видит, что адрес `u` покидает функцию.
+
+Упрощённо:
 
 ```text
-u escapes
+u
+↓
+escape analysis
+↓
+escapes to heap
 ```
 
-Прекрасно.
+На основной лекции этого было достаточно.
 
-Но фраза «объект попал в heap» почти ничего не объясняет.
+Теперь задаём следующий вопрос:
 
-Возникают вопросы:
+> Где runtime возьмёт память под `User`?
 
-- кто ищет свободную память;
-- нужен ли mutex на каждую allocation;
-- где runtime хранит миллионы маленьких объектов;
-- почему `new(User)` не вызывает `mmap`;
-- откуда GC знает границы объекта;
-- как GC узнаёт, содержит объект pointers или нет;
-- что происходит после смерти объекта;
-- почему память после GC может не исчезнуть из RSS;
-- зачем одновременно существуют GC и scavenger.
-
-Вот здесь начинается настоящий memory runtime Go.
-
----
-
-## 2. Общая архитектура allocator
-
-Главная цепочка:
+Самый наивный вариант:
 
 ```text
-goroutine
-    │
-    ▼
-current P
-    │
-    ▼
-mcache
-    │
-    ▼
-mspan
-    │
-    │ нет свободного места
-    ▼
-mcentral
-    │
-    │ нет подходящего span
-    ▼
-mheap
-    │
-    │ нужны новые страницы
-    ▼
+new(User)
+↓
+обращение в Linux
+↓
+дай мне 32 байта
+```
+
+Такой allocator был бы катастрофически дорогим.
+
+Почему?
+
+Потому что backend может выполнять миллионы allocations в секунду.
+
+Если каждая allocation превращается в системный вызов:
+
+```text
+application
+↓
+kernel
+↓
+VM subsystem
+↓
+application
+```
+
+стоимость memory management становится огромной.
+
+Поэтому runtime работает крупными блоками памяти и самостоятельно раздаёт из них маленькие объекты.
+
+Ментальная модель:
+
+```text
+ОС выдаёт Go большие области памяти
+               ↓
+Go runtime управляет ими сам
+               ↓
+приложение получает маленькие объекты
+```
+
+Это первая фундаментальная идея allocator.
+
+## 2. Масштабы памяти
+
+Очень полезно сразу разделить уровни.
+
+```text
+объект Go
+   ↓
+slot внутри span
+   ↓
+span
+   ↓
+runtime pages
+   ↓
+большие области virtual memory
+   ↓
+memory mappings ОС
+   ↓
+physical pages
+```
+
+Это разные сущности.
+
+Когда код делает:
+
+```go
+p := new(User)
+```
+
+мы говорим:
+
+> «выделился объект».
+
+Runtime внизу думает уже другими категориями:
+
+```text
+size class
+span class
+free bitmap
+runtime page
 page allocator
-    │
-    ▼
-OS
 ```
 
-Но очень важно:
+ОС вообще не знает, что существует `User`.
+
+Для ядра это просто страницы virtual memory процесса.
+
+## 3. Почему allocator построен иерархически
+
+Backend выполняется параллельно.
+
+Пусть:
 
 ```text
-allocation ≠ каждый раз mcache → mcentral → mheap → OS
+GOMAXPROCS = 8
 ```
 
-Это была бы ужасная система.
+и одновременно тысячи goroutines создают объекты.
 
-Обычный маленький allocation заканчивается уже здесь:
+Наивная схема:
+
+```text
+G1 ─┐
+G2 ─┤
+G3 ─┤
+... ├── global allocator lock
+Gn ─┘
+```
+
+Тогда быстрый код:
+
+```go
+x := new(RequestContext)
+```
+
+может упираться в общий mutex allocator.
+
+Получается:
+
+```text
+CPU cores растут
+↓
+goroutines растут
+↓
+конкуренция за один allocator lock растёт
+↓
+масштабирование ломается
+```
+
+Поэтому Go использует многоуровневый allocator:
+
+```text
+локальный быстрый путь
+        ↓
+общий более дорогой путь
+        ↓
+глобальный page allocator
+        ↓
+ОС
+```
+
+В текущем runtime учебная цепочка выглядит так:
 
 ```text
 P
@@ -96,28 +255,107 @@ mcache
 ↓
 mspan
 ↓
-free slot
+mcentral
+↓
+mheap
+↓
+page allocator
+↓
+OS
 ```
 
-без обращения к центральному heap allocator и без глобального mutex.
+Но важно читать её правильно.
 
-Именно поэтому hierarchy существует.
+Это не означает:
 
-Runtime исходно был вдохновлён TCMalloc, хотя современная реализация давно существенно от него разошлась. Маленькие allocations обслуживаются через size-segregated per-P structures; объекты до 32 KiB относятся к small allocations.
+> каждая allocation проходит через все уровни.
+
+Наоборот.
+
+Цель архитектуры состоит именно в том, чтобы **обычная allocation закончилась как можно выше**.
+
+## 4. Fast path маленькой allocation
+
+Для большинства небольших объектов идеальный путь:
+
+```text
+goroutine выполняется на P
+        ↓
+у P уже есть подходящий mspan
+        ↓
+в span есть свободный slot
+        ↓
+runtime забирает slot
+        ↓
+готово
+```
+
+То есть:
+
+```text
+P
+↓
+mcache
+↓
+cached mspan
+↓
+free bitmap
+↓
+slot
+```
+
+Без:
+
+```text
+mcentral
+mheap
+mmap
+глобального allocator lock
+```
+
+Именно это делает частую маленькую allocation достаточно дешёвой.
+
+Но позже мы увидим важную вещь:
+
+> Дешёвая allocation сейчас ещё не означает дешёвый объект за весь его жизненный цикл.
+
+## Что важно запомнить
+
+1. ОС не обслуживает каждый `new(T)` отдельно.
+2. Runtime получает память крупными блоками и сам делит её на объекты.
+3. Allocator специально имеет локальный fast path.
+4. Иерархия существует, чтобы редкие дорогие операции амортизировать на множество дешёвых allocations.
+5. Объект Go, span, runtime page и physical page ОС — разные уровни.
 
 ---
 
-## 3. Почему allocator связан с P
+# Блок 2. Почему allocator привязан к P
 
-Вот здесь хорошо вернуть scheduler:
+## 5. Возвращаем G / M / P
+
+Из лекции про scheduler:
 
 ```text
-G → M → P
+G = goroutine
+M = OS thread
+P = scheduler resource
 ```
 
-У каждого `P` есть свой `mcache`.
+Для выполнения Go-кода `M` обычно нужен `P`.
 
-То есть:
+Упрощённо:
+
+```text
+G
+↓
+M + P
+↓
+CPU
+```
+
+И вот allocator тоже привязан к `P`.
+
+У каждого `P` есть свой allocator cache:
 
 ```text
 P0 → mcache0
@@ -126,393 +364,482 @@ P2 → mcache2
 P3 → mcache3
 ```
 
-`mcache` принадлежит именно P, а не goroutine.
+Почему это хороший дизайн?
 
-Это принципиально.
-
-Представим 100 000 goroutines.
-
-Мы же не хотим:
+Потому что количество goroutines может быть огромным:
 
 ```text
-100 000 goroutines
-→
-100 000 allocator caches
+100
+10 000
+1 000 000
 ```
 
-И не хотим один:
+А количество реально параллельно выполняемого Go-кода ограничено количеством `P`.
+
+Если сделать allocator cache на goroutine:
 
 ```text
-global allocator lock
+1 000 000 goroutines
+↓
+1 000 000 allocator caches
 ```
 
-на все allocations.
+Получаем чудовищный объём metadata.
 
-Получаем промежуточную модель:
+Если сделать один общий cache:
 
 ```text
-тысячи G
-    ↓
-несколько P
-    ↓
-несколько mcache
+все P
+↓
+один lock
 ```
 
-Количество allocator hot paths приблизительно связано с реальной параллельностью выполнения.
+получаем contention.
 
-`mcache` в runtime является per-P cache и поэтому на основном пути маленького allocation не требует locking.
-
----
-
-## 4. Java-мост: mcache — это не совсем TLAB
-
-Java-разработчик здесь сразу вспоминает:
+Per-P cache даёт компромисс:
 
 ```text
-Thread Local Allocation Buffer
+число caches ≈ число единиц параллельного выполнения
 ```
 
-И аналогия полезная, но неполная.
+## 6. Почему именно P, а не M
 
-Упрощённо:
+Можно спросить:
+
+> Почему allocator cache не привязан к OS thread `M`?
+
+Потому что `M` — исполнитель, который может:
+
+- блокироваться в syscall;
+- появляться;
+- исчезать;
+- менять P.
+
+`P` лучше отражает именно право выполнять Go-код.
+
+Для runtime удобно хранить hot state рядом с P:
 
 ```text
-JVM:
-Thread
-  ↓
-TLAB
-  ↓
-bump pointer allocation
+scheduler local run queue
+allocator cache
+GC local work
 ```
 
-В Go:
+Это общий архитектурный паттерн Go runtime:
 
 ```text
-P
- ↓
+сначала работай локально
+↓
+как можно реже координируйся глобально
+```
+
+Мы увидим его ещё несколько раз.
+
+## 7. Что такое mcache на человеческом языке
+
+Название `mcache` легко понять неправильно.
+
+Это не:
+
+```text
+один большой кусок свободной памяти
+```
+
+Гораздо точнее:
+
+> `mcache` — набор подготовленных allocator resources, которые конкретный P может использовать без общего lock.
+
+Внутри концептуально есть ссылки на spans разных классов:
+
+```text
 mcache
- ↓
-mspan нужного size class
- ↓
-free slot
-```
-
-Главная разница:
-
-`mcache` — это не просто непрерывный кусок памяти, по которому двигается один allocation pointer.
-
-Он кеширует подходящие `mspan` для разных классов размеров.
-
-То есть внутри условно:
-
-```text
-mcache
- ├─ span for 16-byte objects
- ├─ span for 24-byte objects
- ├─ span for 32-byte objects
- ├─ span for 48-byte objects
- ├─ ...
-```
-
----
-
-## 5. Что такое mspan
-
-Вот центральная сущность allocator.
-
-Упрощение:
-
-> `mspan` — кусок heap.
-
-Точнее:
-
-**`mspan` — metadata, описывающая непрерывный run runtime pages, используемый allocator определённым образом.**
-
-Go runtime работает с heap pages размером 8192 байт. Это именно **runtime page**, а не обещание, что physical page ОС тоже 8 KiB. В Go 1.27 `PageShift=13`, то есть runtime page = 8 KiB.
-
-Например:
-
-```text
-mspan
 │
-├── page
-├── page
-├── page
-└── page
+├── spanClass A → mspan
+├── spanClass B → mspan
+├── spanClass C → mspan
+├── spanClass D → mspan
+└── ...
 ```
-
-Для маленьких объектов span обычно предназначен под объекты одного size class.
 
 Например условно:
 
 ```text
-span
-┌──────┬──────┬──────┬──────┬──────┐
-│ 64 B │ 64 B │ 64 B │ 64 B │ ...  │
-└──────┴──────┴──────┴──────┴──────┘
+mcache P0
+
+8-byte noscan      → span #101
+16-byte scan       → span #533
+24-byte noscan     → span #401
+32-byte scan       → span #829
+48-byte noscan     → span #711
+...
 ```
 
-Runtime не хранит внутри одного такого span случайную смесь:
+Когда нужно выделить объект:
 
 ```text
-User 37 B
-Order 913 B
-[]byte 4 KB
-Widget 71 B
-```
-
-Это сильно усложнило бы поиск свободной памяти и усилило fragmentation.
-
----
-
-## 6. Что хранится в mspan
-
-Нам не нужно читать весь `struct mspan`, но несколько полей дают почти всю модель allocator.
-
-У него есть примерно такие концепции:
-
-```text
-startAddr
-npages
-elemsize
-nelems
-
-allocBits
-gcmarkBits
-
-freeindex
-allocCount
-
-spanclass
-sweepgen
-```
-
-`allocBits` отвечает на вопрос:
-
-> Какие object slots сейчас заняты?
-
-`gcmarkBits`:
-
-> Какие объекты GC отметил живыми в текущем цикле?
-
-`freeindex`:
-
-> Откуда начинать искать следующий свободный slot?
-
-`elemsize`:
-
-> Какого размера slot?
-
-`nelems`:
-
-> Сколько slots помещается в span?
-
-Текущий runtime действительно хранит для span allocation bitmap и GC mark bitmap; allocator ищет свободный slot через bitmap начиная с `freeindex`.
-
-Получается:
-
-```text
-mspan
-
-slot:      0 1 2 3 4 5 6 7
-allocBits: 1 1 0 1 0 1 1 0
-                 ↑
-              свободно
-```
-
-Allocation:
-
-```text
-найти 0
+размер + contains pointers?
 ↓
-поставить 1
+spanClass
 ↓
-вернуть address slot
+нужный mspan
 ```
 
-Никакого `malloc()` ОС на каждый объект.
+## 8. Почему fast path не требует общего lock
+
+Представим:
+
+```text
+P0 использует mcache0
+P1 использует mcache1
+```
+
+В нормальной ситуации P0 не пытается одновременно выделять из allocator cache P1.
+
+Поэтому:
+
+```text
+P-local state
+↓
+нет конкурентного доступа в common case
+↓
+нет необходимости брать глобальный lock
+```
+
+Это важный момент.
+
+Go allocator быстрый не потому, что:
+
+> «malloc написан очень оптимизированно».
+
+Главная архитектурная причина:
+
+> Частый путь специально построен так, чтобы избегать глобальной синхронизации.
 
 ---
 
-## 7. Size classes
+# Блок 3. mspan — центральная единица allocator
 
-Теперь вопрос:
+## 9. Проблема маленьких объектов
 
-> Что значит «span для объектов одного размера»?
-
-Если объект занимает:
-
-```text
-37 bytes
-```
-
-runtime не обязан создавать отдельную категорию ровно на 37 байт.
-
-Размер округляется до size class.
-
-В Go 1.27 small allocator имеет 68 записей size classes, включая нулевой class; реальные классы идут от 8 байт до 32 KiB. Например присутствуют 32, 48, 64, 80, 96 байт и так далее.
-
-Условно:
-
-```text
-requested = 37 B
-       ↓
-size class = 48 B
-       ↓
-slot = 48 B
-```
-
-Мы выиграли простоту allocator.
-
-Но получили:
-
-```text
-48 - 37 = 11 B
-```
-
-внутренней fragmentation.
-
-Вот первый trade-off:
-
-```text
-больше size classes
-→ меньше waste
-→ больше allocator metadata / complexity
-
-меньше size classes
-→ allocator проще
-→ больше internal fragmentation
-```
-
-Go выбирает набор classes как компромисс.
-
----
-
-## 8. Size class — это ещё не весь spanClass
-
-А вот здесь интересная деталь.
-
-Runtime различает:
-
-```text
-pointer-containing objects
-```
-
-и
-
-```text
-pointer-free objects
-```
-
-Для этого `spanClass` кодирует:
-
-```text
-size class
-+
-noscan bit
-```
-
-Фактически runtime вычисляет его примерно как:
-
-```text
-sizeClass << 1 | noscan
-```
-
-`noscan` span содержит объекты без pointers, поэтому GC не должен сканировать их содержимое в поисках следующих heap references.
-
-Сравним:
+Пусть мы постоянно создаём структуру размером около 40 байт.
 
 ```go
-type A struct {
-    X int64
-    Y int64
+type Entry struct {
+    A uint64
+    B uint64
+    C uint64
+    D uint64
+    E uint32
 }
 ```
 
-и:
+Реальные программы создают объекты сотен разных размеров. Если без системы смешивать их в памяти:
+
+```text
+13 B
+840 B
+39 B
+5 B
+2048 B
+61 B
+...
+```
+
+очень быстро появляется сложная fragmentation problem.
+
+Runtime использует size classes.
+
+## 10. Size class
+
+Идея:
+
+> Не поддерживать отдельный allocator для каждого возможного размера.
+
+Вместо этого диапазоны размеров округляются до фиксированных классов.
+
+Для маленьких размеров:
+
+```text
+1–8 B   → slot 8 B
+9–16 B  → slot 16 B
+17–24 B → slot 24 B
+25–32 B → slot 32 B
+33–48 B → slot 48 B
+49–64 B → slot 64 B
+65–80 B → slot 80 B
+...
+```
+
+Пусть объект требует:
+
+```text
+37 B
+```
+
+Он попадает в:
+
+```text
+48 B size class
+```
+
+и получает slot:
+
+```text
+48 B
+```
+
+Внутри:
+
+```text
+37 B полезные данные
+11 B внутренний waste
+```
+
+Это internal fragmentation.
+
+## 11. Зачем платить за internal fragmentation
+
+Потому что мы резко упрощаем allocator.
+
+Вместо:
+
+```text
+найди мне случайный непрерывный кусок ≥37 B
+```
+
+можно делать:
+
+```text
+дай следующий свободный 48-byte slot
+```
+
+Trade-off:
+
+```text
+фиксированные size classes
+↓
+быстрый allocator
++
+предсказуемое размещение
+-
+немного потерянной памяти
+```
+
+## 12. Что такое mspan
+
+`mspan` — структура runtime, которая описывает непрерывный набор runtime pages.
+
+Для small objects span обычно используется под один span class.
+
+```text
+mspan для 48-byte objects
+
+┌──────┬──────┬──────┬──────┬──────┬──────┐
+│ 48 B │ 48 B │ 48 B │ 48 B │ 48 B │ ...  │
+└──────┴──────┴──────┴──────┴──────┴──────┘
+```
+
+Каждый прямоугольник — потенциальный object slot.
+
+```text
+mspan
+≠
+один объект
+```
+
+Один span обычно содержит множество slots.
+
+## 13. Runtime page
+
+`mheap` управляет памятью с granularity runtime page.
+
+В Go 1.27 runtime page:
+
+```text
+8192 bytes = 8 KiB
+```
+
+Span может занимать одну или несколько таких pages:
+
+```text
+mspan
+│
+├── runtime page 0
+├── runtime page 1
+├── runtime page 2
+└── runtime page 3
+```
+
+Это implementation detail Go runtime.
+
+```text
+runtime page
+≠
+physical page Linux
+```
+
+## 14. Пример span в цифрах
+
+Предположим учебно:
+
+```text
+span size = 8192 B
+slot size = 64 B
+```
+
+Тогда:
+
+```text
+8192 / 64 = 128 slots
+```
+
+Когда приложение делает 100 allocations по 64 байта, runtime может обслужить их из одного уже подготовленного span.
+
+```text
+100 allocations
+≠
+100 обращений к OS
+```
+
+## 15. allocBits
+
+Runtime должен знать, какие slots заняты.
+
+```text
+slot:      0 1 2 3 4 5 6 7
+allocBits: 1 1 0 1 1 0 0 1
+```
+
+Где:
+
+```text
+1 = allocated
+0 = free
+```
+
+Нужно выделить следующий объект:
+
+```text
+найти подходящий 0
+↓
+зарезервировать slot
+↓
+вернуть address
+```
+
+## 16. freeindex
+
+Если каждый allocation начинать с slot 0, runtime будет снова и снова пересматривать занятые места.
+
+Поэтому span хранит информацию, откуда продолжать поиск свободного slot.
+
+```text
+slot:       0 1 2 3 4 5 6 7
+allocBits:  1 1 1 1 0 0 1 0
+freeindex:          ↑
+```
+
+## 17. Почему mspan важен не только allocator
+
+Позже GC тоже будет работать с этими же spans.
+
+```text
+allocator:
+какие slots заняты?
+
+GC:
+какие objects живы?
+
+sweeper:
+какие slots можно снова считать свободными?
+```
+
+`mspan` — место встречи:
+
+```text
+allocation
+GC marking
+sweeping
+```
+
+## Что важно запомнить
+
+1. Size class — обмен небольшой internal fragmentation на быстрый allocator.
+2. `mspan` — metadata для run runtime pages, разбитого на slots одного класса.
+3. Один span содержит много объектов.
+4. Allocator хранит bitmap состояния slots.
+5. `mspan` используется и allocator, и GC.
+
+---
+
+# Блок 4. scan и noscan
+
+## 18. Одинаковый размер ещё не означает одинаковую стоимость
+
+```go
+type A struct {
+    X uint64
+    Y uint64
+}
+```
 
 ```go
 type B struct {
     X *User
-    Y int64
+    Y uint64
 }
 ```
 
-Пусть оба объекта близки по размеру.
+У `A` нет heap pointers. После того как GC установил, что A reachable, внутрь объекта можно не идти.
 
-Для GC они принципиально разные.
-
-`A`:
+У `B`:
 
 ```text
-16 bytes
-no pointers
-↓
-GC:
-"внутри смотреть нечего"
+X → другой heap object
 ```
 
-`B`:
+значит GC должен проверить эту ссылку.
+
+## 19. spanClass
+
+Runtime различает:
 
 ```text
-pointer
+size class
 +
-integer
-↓
-GC:
-"надо проверить pointer"
+scan / noscan
 ```
 
-Это очень важный инженерный вывод:
+В текущем runtime `spanClass` кодирует size class и `noscan` bit.
 
-**стоимость heap определяется не только количеством байтов, но и структурой pointer graph.**
+Поэтому два объекта одного размера могут обслуживаться разными spans:
 
-Два heap по 1 GB могут иметь очень разную стоимость GC.
+```text
+32-byte noscan
+32-byte scan
+```
 
----
+## 20. Почему `[]byte` и `[]*Node` — разные heap objects
 
-## 9. Почему GC любит pointer-free данные
-
-Представим:
+### Вариант A
 
 ```go
-[]byte
+buf := make([]byte, 100<<20)
 ```
 
-размером 100 MB.
+Внутри нет pointers.
 
-И:
+### Вариант B
 
 ```go
-[]*Node
+nodes := make([]*Node, ...)
 ```
 
-размером 100 MB.
+Пусть backing array тоже занимает около 100 MiB.
 
-Количество памяти одинаковое.
-
-Но GC workload совершенно разный.
-
-Для:
+Теперь внутри:
 
 ```text
-[]byte
-```
-
-GC нужно понять, что объект жив.
-
-Содержимое не содержит heap pointers.
-
-Для:
-
-```text
-[]*Node
-```
-
-нужно пройти pointer slots:
-
-```text
-ptr
 ptr
 ptr
 ptr
@@ -520,546 +847,438 @@ ptr
 ...
 ```
 
-и продолжить graph traversal.
-
-Поэтому:
+Каждый pointer потенциально ведёт к следующему объекту графа.
 
 ```text
-heap bytes
+одинаковые heap bytes
+≠
+одинаковая GC work
 ```
 
-и:
+## 21. Scannable heap
+
+Heap size сам по себе недостаточен.
+
+Нас интересует:
 
 ```text
-scannable heap bytes
+сколько memory GC должен реально просматривать в поисках pointers
 ```
 
-— разные величины.
-
-В `runtime/metrics` существует отдельный показатель:
+В `runtime/metrics` есть:
 
 ```text
 /gc/scan/heap:bytes
 ```
 
-для scannable heap.
+Если Heap A в основном large byte buffers, а Heap B — pointer-rich graph, одинаковый объём памяти даст разную collector work.
 
 ---
 
-## 10. mcache
+# Блок 5. Что происходит при маленькой allocation
 
-Теперь раскручиваем hierarchy.
+## 22. Конкретный путь
 
-`mcache` — быстрый per-P уровень.
-
-```text
-P
-│
-└── mcache
-      │
-      ├── mspan class X
-      ├── mspan class Y
-      ├── mspan class Z
-      └── ...
+```go
+u := &User{}
 ```
 
-При allocation маленького объекта:
+Учебный алгоритм:
 
 ```text
-1. определить size class
-2. определить scan/noscan
-3. получить span из mcache
-4. найти free slot
-5. пометить slot allocated
-6. вернуть pointer
+1. определить размер
+2. определить содержит ли объект pointers
+3. выбрать spanClass
+4. взять mspan из mcache текущего P
+5. найти free slot
+6. при необходимости очистить memory
+7. пометить slot allocated
+8. вернуть pointer
 ```
 
-Это hot path.
+Если span содержит место — готово.
 
-Главная инженерная идея:
+## 23. Почему память надо zero'ить
+
+Go гарантирует zero value.
+
+Если allocator повторно использует slot, там физически могут оставаться байты прошлого объекта.
+
+Новый object должен получить корректное zeroed состояние там, где это требуется.
+
+Zeroing — тоже часть стоимости allocation.
+
+## 24. Go 1.27: size-specialized allocation
+
+Generic allocator получает:
 
 ```text
-common case
-=
-локальные данные P
-+
-без глобальной блокировки
+size
+contains pointers?
 ```
+
+и вычисляет дальнейшую ветку.
+
+Но compiler часто уже знает всё заранее.
+
+```go
+type Pair struct {
+    A uint64
+    B uint64
+}
+
+p := new(Pair)
+```
+
+Здесь известны:
+
+```text
+size = 16 B
+noscan
+```
+
+Go 1.27 для ряда объектов меньше 80 байт использует size-specialized allocation routines.
+
+```text
+generic path:
+определи class
+проверь branch
+определи scan
+...
+
+specialized path:
+class уже известен
+↓
+сразу выполняем нужную работу
+```
+
+Это деталь Go 1.27, а не гарантия языка.
 
 ---
 
-## 11. Что происходит, когда mspan заполнен
+# Блок 6. Когда локальный span закончился
 
-Допустим:
+## 25. mcache исчерпан
 
 ```text
+P0
+↓
 mcache
- ↓
-span for 64 B objects
+↓
+64-byte span
 ```
 
-оказался полностью занят.
-
-Теперь нужно refill.
+В какой-то момент:
 
 ```text
-mcache
-   ↓
+free slots = 0
+```
+
+Следующий уровень:
+
+```text
 mcentral
 ```
 
+## 26. Что делает mcentral
+
+Для каждого span class существует центральное управление spans.
+
+```text
+mcentral[64-byte noscan]
+
+partial spans:
+    span A
+    span B
+
+full spans:
+    span C
+    span D
+```
+
+`mcentral` не является мешком отдельных free objects. Свободные object slots находятся внутри `mspan`.
+
+## 27. Почему mcache получает span, а не один object
+
+Плохой вариант:
+
+```text
+lock mcentral
+↓
+выдать один object
+↓
+unlock
+```
+
+Миллионы allocations → миллионы lock/unlock.
+
+Правильнее:
+
+```text
+редко:
+mcache получает span
+
+часто:
+mcache раздаёт из него много objects
+```
+
+Это амортизация дорогой refill operation.
+
+## 28. Contention переносится с hot path
+
+Performance pattern:
+
+```text
+не обязательно удалить synchronization полностью
+↓
+нужно убрать её с каждого hot-path operation
+```
+
 ---
 
-## 12. mcentral
+# Блок 7. mheap и page allocator
 
-Упрощение:
-
-> `mcentral` — центральный список свободной памяти.
-
-Точнее:
-
-**каждый `mcentral` управляет spans конкретного spanClass.**
-
-Причём сами free objects находятся внутри `mspan`; `mcentral` управляет наборами spans.
-
-Современная реализация отдельно отслеживает partially/full spans и swept/unswept состояния.
-
-Условно:
-
-```text
-mcentral[class 64 noscan]
-
-partial:
-  span A
-  span B
-  span C
-
-full:
-  span D
-  span E
-```
-
-`mcache` не просит:
-
-> Дай мне один объект.
-
-Он получает:
-
-> Дай мне span.
-
-Почему?
-
-Потому что lock acquisition тогда амортизируется сразу на множество будущих allocations.
-
----
-
-## 13. Почему mcentral нельзя использовать на каждый allocation
-
-Представим:
-
-```text
-P0 ─┐
-P1 ─┼──→ mcentral lock
-P2 ─┤
-P3 ─┘
-```
-
-При высокой allocation rate:
-
-```text
-10 000 000 allocations/sec
-```
-
-мы получили бы великолепный глобальный synchronization bottleneck.
-
-Поэтому:
+## 29. Если mcentral тоже не может дать span
 
 ```text
 mcentral
 ↓
-редкий refill
-
-mcache
-↓
-тысячи быстрых allocations
-```
-
-Это тот же общий паттерн, который мы уже видели в runtime:
-
-```text
-local fast path
-+
-shared slow path
-```
-
----
-
-## 14. mheap
-
-Если `mcentral` не может найти подходящий span:
-
-```text
-mcentral
-   ↓
 mheap
 ```
 
-`mheap` управляет heap на уровне runs of pages.
+На этом уровне runtime думает страницами:
 
 ```text
-objects
-   ↓
-mspan
-   ↓
-runtime pages
-   ↓
-mheap/page allocator
+дай N contiguous runtime pages
 ```
 
-То есть уровни абстракции:
+## 30. Что такое mheap
+
+Полезная модель:
+
+> `mheap` — глобальная структура runtime, координирующая heap memory на уровне spans/pages и связанную metadata.
+
+Для маленьких объектов:
 
 ```text
-object
-↓
-slot
+mheap
 ↓
 span
 ↓
-page
+mcentral
 ↓
-OS memory
+mcache
+↓
+object
 ```
 
-Не надо воспринимать `mheap` как аналог Java heap в смысле «место, где просто лежат все объекты».
+## 31. Page allocator
 
-Это ещё и управляющая структура runtime для page-level allocation.
+Runtime должен найти contiguous run свободных runtime pages.
+
+```text
+used used free free free used free ...
+          └───────┘
+             ↑
+        будущий span
+```
+
+## 32. Когда появляется ОС
+
+Если у runtime недостаточно доступной memory:
+
+```text
+page allocator
+↓
+runtime OS abstraction
+↓
+mmap / platform mechanism
+```
+
+Поэтому маленький allocation обычно не означает syscall.
 
 ---
 
-## 15. Small и large allocation
+# Блок 8. Small, large и tiny allocations
 
-Go делит allocations по размеру.
+## 33. Small objects
 
-Текущая граница small allocation:
+В текущем runtime small objects:
 
 ```text
 ≤ 32 KiB
 ```
 
-Large objects:
+Для них работают size classes.
 
-```text
-> 32 KiB
-```
-
-идут непосредственно через heap-level allocation, минуя обычный `mcache → mcentral` small-object path.
-
-Ментальная модель:
-
-```text
-small:
-
-malloc
- ↓
-mcache
- ↓
-mspan
-```
-
-и:
-
-```text
-large:
-
-malloc
- ↓
-mheap
- ↓
-pages
-```
-
-Почему?
-
-Нет смысла делать size classes:
-
-```text
-33 KB
-34 KB
-35 KB
-...
-7 MB
-```
-
-Для больших объектов проще выдавать необходимое количество pages.
-
----
-
-## 16. Tiny allocator
-
-А теперь другой конец шкалы.
-
-Представим много escaping объектов:
+## 34. Large objects
 
 ```go
-new(byte)
-new(uint16)
-new(uint32)
+buf := make([]byte, 10<<20)
 ```
 
-Выделять под каждый отдельный крошечный объект полноценный allocator slot может быть дорого.
-
-Поэтому есть tiny allocator.
-
-Для pointer-free объектов меньше 16 байт runtime может объединять несколько allocations внутри одного 16-byte block.
-
-Например:
+10 MiB не обслуживаются обычным small-object size class.
 
 ```text
-16-byte tiny block
-
-┌────┬────┬────────┬──────┐
-│ 1B │ 2B │   4B   │ ...  │
-└────┴────┴────────┴──────┘
+large object
+↓
+mheap / page allocator
+↓
+достаточное количество pages
 ```
 
-Но только:
+Large object получает span подходящего размера.
+
+## 35. Почему large allocations чувствительны
 
 ```text
-noscan objects
+большая allocation
+↓
+heapLive резко растёт
+↓
+GC goal приближается
 ```
 
-Почему?
+Большие blocks также влияют на fragmentation, RSS и scavenging.
 
-Потому что совместное размещение pointer-containing объектов резко усложнило бы tracing и metadata.
+## 36. Tiny allocator
+
+Для очень маленьких pointer-free allocations текущий runtime использует tiny allocator.
+
+Tiny block:
+
+```text
+16 B
+```
+
+может содержать несколько tiny objects.
+
+```text
+┌─────┬──────┬──────────┬────────┐
+│ 1 B │ 2 B  │   4 B    │ ...    │
+└─────┴──────┴──────────┴────────┘
+```
+
+## 37. Почему только noscan
+
+Pointer-containing tiny objects потребовали бы сложной индивидуальной GC metadata внутри совместно размещённого block.
+
+Поэтому tiny allocator применяется к objects без pointers.
+
+## 38. Цена tiny allocator
+
+```text
+A dead
+B alive
+```
+
+может означать, что весь tiny block пока нельзя освободить.
+
+Trade-off:
+
+```text
+немного retention
+↔
+меньше allocator overhead
+```
+
+## Что важно запомнить
+
+1. Small objects обслуживаются size classes.
+2. Large objects идут ближе к page allocator.
+3. Tiny pointer-free objects могут делить 16-byte block.
+4. Чем дальше путь уходит от mcache, тем он дороже.
+5. Allocator decisions тесно связаны с GC.
 
 ---
 
-## 17. Цена tiny allocator
+# Блок 9. Теперь появляется GC
 
-У него тоже есть trade-off.
-
-Несколько объектов разделяют один block.
-
-Следовательно:
+## 39. Allocator умеет занять slot. Но кто его освободит?
 
 ```text
-object A dead
-object B alive
+A reachable
+B unreachable
+C reachable
+D unreachable
 ```
 
-может означать:
+Allocator знает только:
 
 ```text
-whole tiny block still retained
+slot занят
 ```
 
-Runtime учитывает это: block освобождается, когда его subobjects больше недостижимы. Текущий размер tiny block — 16 байт.
-
-Мы сэкономили:
+Чтобы переиспользовать B, runtime должен доказать:
 
 ```text
-allocation metadata
-+
-allocator work
+B больше недостижим
 ```
 
-но потенциально удерживаем несколько лишних байт.
+## 40. Reachability
+
+GC не понимает бизнес-смысл.
+
+Он знает graph reachability:
+
+```text
+roots
+↓
+A
+↓
+C
+```
+
+Есть путь от roots → object live.
+
+Нет пути → garbage candidate.
+
+## 41. Roots
+
+Основные источники tracing:
+
+```text
+goroutine stacks
+globals
+runtime-managed roots
+```
+
+```text
+goroutine stack
+      │
+      ▼
+ Request
+      │
+      ▼
+ Session
+      │
+      ▼
+ []Token
+```
+
+## 42. Goroutine leak → memory retention
+
+Leaked goroutine может удерживать references на stack.
+
+```text
+leaked goroutine
+↓
+stack
+↓
+heap pointer
+↓
+large object graph
+```
+
+Concurrency bug превращается в memory problem.
 
 ---
 
-## 18. mallocgc
+# Блок 10. Архитектура Go GC
 
-Исторически центральная функция heap allocation:
+## 43. Основные свойства
 
-```text
-runtime.mallocgc
-```
-
-Упрощённая сигнатура:
-
-```go
-mallocgc(size, type, needzero)
-```
-
-Ей важно знать:
-
-```text
-сколько байт?
-есть ли pointers?
-нужно ли zeroing?
-```
-
-Через эту информацию runtime выбирает:
-
-- tiny;
-- small scan;
-- small noscan;
-- large;
-- соответствующий size/span class.
-
-`newobject`, например, передаёт тип дальше в allocator.
-
----
-
-## 19. Но в Go 1.27 allocator уже стал хитрее
-
-Здесь обязательно сделать version note.
-
-Раньше многие compiler-generated heap allocations в итоге проходили через generic `mallocgc`, которому приходилось выполнять проверки:
-
-```text
-какой размер?
-scan?
-noscan?
-tiny?
-какой class?
-```
-
-В Go 1.27 compiler для некоторых маленьких объектов размером менее 80 байт генерирует вызовы size-specialized allocation routines.
-
-Идея:
-
-```text
-compiler уже знает:
-size = 32
-contains pointers = false
-```
-
-Зачем снова выяснять это внутри generic allocator?
-
-Специализированный path может пропустить часть branches и indirect work.
-
-Главный вывод студентам:
-
-**runtime internals — движущаяся реализация. Ментальная модель стабильнее имён конкретных функций.**
-
----
-
-## 20. Полный small-allocation path
-
-Теперь собираем всё:
-
-```text
-source code
-   ↓
-escape analysis
-   ↓
-compiler generates allocation
-   ↓
-size / type information
-   ↓
-small?
-   ↓ yes
-size class
-   ↓
-scan / noscan
-   ↓
-spanClass
-   ↓
-current P
-   ↓
-mcache
-   ↓
-cached mspan
-   ↓
-free slot?
-   ├── yes → allocate
-   │
-   └── no
-        ↓
-     mcentral
-        ↓
-     suitable span?
-        ├── yes → return span to mcache
-        │
-        └── no
-             ↓
-            mheap
-             ↓
-          allocate pages
-             ↓
-         initialize mspan
-```
-
-И только если runtime действительно требует больше memory:
-
-```text
-mheap
- ↓
-OS abstraction
- ↓
-mmap / platform mechanism
-```
-
----
-
-## 21. allocator и OS живут на разных масштабах
-
-Вот заблуждение:
-
-> Я выделил 64 байта — Go попросил у Linux 64 байта.
-
-Нет.
-
-ОС выдаёт memory крупнее.
-
-Allocator потом дробит её:
-
-```text
-OS memory
-   ↓
-pages
-   ↓
-spans
-   ↓
-slots
-   ↓
-objects
-```
-
-`sysAlloc` обычно получает крупные zeroed regions размером порядка сотен KiB или MiB, а не обслуживает каждый language-level allocation отдельно.
-
----
-
-## 22. Где allocator встречается с GC
-
-До этого allocator просто отмечал slots занятыми.
-
-Но теперь объект умер.
-
-```text
-slot allocated
-```
-
-ещё не означает:
-
-```text
-slot reusable
-```
-
-Сначала GC должен доказать, что объект unreachable.
-
-И тут `mspan` оказывается общей точкой двух подсистем:
-
-```text
-allocator
-  ↓
-allocBits
-
-GC
-  ↓
-gcmarkBits
-
-        mspan
-```
-
-Очень красивый момент архитектуры runtime.
-
----
-
-## 23. Текущий GC Go
-
-На уровне общей архитектуры Go GC остаётся:
+Go 1.27 collector на высоком уровне:
 
 - tracing;
 - precise;
@@ -1068,373 +1287,91 @@ gcmarkBits
 - mark-and-sweep;
 - non-generational;
 - non-compacting;
-- с write barrier.
+- использует write barrier.
 
-Разберём слова.
-
-### precise
-
-Runtime знает:
-
-```text
-вот это pointer
-вот это int
-```
-
-а не рассматривает любое похожее число как возможный address.
-
-### concurrent
-
-Основная GC work выполняется одновременно с application goroutines.
-
-### parallel
-
-GC work могут выполнять несколько workers.
-
-### non-generational
-
-Нет привычного JVM-разделения:
-
-```text
-young
-old
-```
-
-### non-compacting
-
-GC обычно не перемещает живые heap objects только ради уплотнения памяти.
-
-Следствие:
-
-```text
-pointer stability
-```
-
-проще, но fragmentation приходится решать allocator design, size classes и page management.
-
----
-
-## 24. Но с Go 1.26 появился Green Tea
-
-Вот здесь старые статьи по Go GC начинают устаревать.
-
-Классическая модель tracing collector:
-
-```text
-нашли object A
-↓
-просканировали A
-↓
-нашли B
-↓
-просканировали B
-↓
-нашли C
-```
-
-Объекты могут лежать где угодно:
-
-```text
-A → heap page 17
-B → heap page 900
-C → heap page 41
-D → heap page 3000
-```
-
-CPU получает:
-
-```text
-pointer chasing
-+
-cache miss
-+
-cache miss
-+
-cache miss
-```
-
-Green Tea меняет организацию mark work.
-
----
-
-## 25. Главная идея Green Tea
-
-Вместо стратегии:
-
-```text
-увидели объект
-→ сразу сканируем
-```
-
-идея примерно такая:
-
-```text
-увидели объекты одного span
-        ↓
-накапливаем mark work
-        ↓
-сканируем их пачкой
-```
-
-Условно было:
-
-```text
-scan A on span 1
-scan B on span 923
-scan C on span 1
-scan D on span 311
-scan E on span 1
-```
-
-Хотим:
-
-```text
-span 1:
-  scan A
-  scan C
-  scan E
-
-span 311:
-  scan D
-
-span 923:
-  scan B
-```
-
-CPU cache говорит спасибо.
-
----
-
-## 26. marks и scans
-
-Для Green Tea одной информации:
-
-```text
-object marked
-```
-
-недостаточно.
-
-Нужно различать:
-
-```text
-объект обнаружен
-```
-
-и:
-
-```text
-объект уже просканирован
-```
-
-Поэтому алгоритм использует две концепции:
-
-```text
-marks
-scans
-```
-
-В simplified форме:
-
-```text
-mark bit = объект reachable обнаружен
-scan bit = pointers объекта уже просканированы
-```
-
-Когда впервые обнаруживается pointer на object:
-
-```text
-set mark
-↓
-queue span
-```
-
-Позже span обрабатывается пачкой.
-
----
-
-## 27. Теперь GC тоже имеет локальные очереди P
-
-Мы уже видели:
-
-```text
-P → mcache
-```
-
-в allocator.
-
-В Green Tea появляется похожая идея локальности GC work:
-
-```text
-P
-├── gcWork
-│
-├── work buffers
-└── span queue
-```
-
-Span queue P-local, но work может быть опубликован и украден другими P.
-
-То есть снова знакомый runtime design:
-
-```text
-локальность сначала
-↓
-sharing позже
-```
-
-Мы уже видели это в scheduler:
-
-```text
-local run queue
-↓
-global queue / steal
-```
-
-Allocator:
-
-```text
-mcache
-↓
-mcentral
-```
-
-GC:
-
-```text
-local gc work
-↓
-shared / stealing
-```
-
-Один архитектурный паттерн повторяется по всему runtime.
-
----
-
-## 28. GC cycle
-
-Теперь весь lifecycle.
-
-Упрощённо:
-
-```text
-GC off / sweep
-      │
-      ▼
-GC trigger
-      │
-      ▼
-STW
-      │
-      ├── prepare marking
-      ├── enable write barrier
-      └── prepare roots
-      │
-      ▼
-start world
-      │
-      ▼
-concurrent mark
-      │
-      ├── GC workers
-      ├── mutator assists
-      ├── stack scanning
-      └── write barriers
-      │
-      ▼
-mark termination
-      │
-      ▼
-short STW
-      │
-      ▼
-sweep
-      │
-      ├── background
-      └── allocation-driven
-```
-
----
-
-## 29. GC roots
-
-Graph traversal откуда-то должен начаться.
-
-Roots включают:
-
-```text
-goroutine stacks
-globals
-runtime structures containing heap pointers
-```
-
-Дальше:
+## 44. Tracing
 
 ```text
 roots
- ↓
-heap object
- ↓
-heap object
- ↓
-heap object
+↓
+object
+↓
+object
+↓
+object
 ```
 
-При concurrent marking runtime сканирует stack конкретной goroutine, временно останавливая её на время scan, после чего она продолжает выполнение.
+Это не reference counting.
 
-Обратите внимание:
+## 45. Precise
+
+```go
+type User struct {
+    ID      uint64
+    Session *Session
+    Active  bool
+}
+```
+
+GC знает:
 
 ```text
-stack scan
-≠
-остановить весь процесс на время scanning всех stacks
+ID      → не pointer
+Session → pointer
+Active  → не pointer
 ```
 
-Это важная причина низких STW pauses.
+## 46. Parallel и concurrent
+
+Parallel:
+
+```text
+CPU0 → GC
+CPU1 → GC
+CPU2 → GC
+```
+
+Concurrent:
+
+```text
+CPU0 → application
+CPU1 → application
+CPU2 → GC
+CPU3 → GC
+```
+
+## 47. Non-generational
+
+Нет базовой архитектуры:
+
+```text
+young generation
+old generation
+```
+
+## 48. Non-compacting
+
+После GC heap может выглядеть:
+
+```text
+[A][free][C][free][E][free][G]
+```
+
+а не обязательно быть физически уплотнён.
 
 ---
 
-## 30. Что происходит с объектами, созданными во время GC
+# Блок 11. Зачем write barrier
 
-Парадокс:
+## 49. Concurrent graph mutation
 
-GC уже начался.
-
-Программа продолжает работать.
-
-Она создаёт:
-
-```text
-new objects
-```
-
-Что с ними делать?
-
-Если считать их белыми:
-
-```text
-allocate
-↓
-GC ещё не знает объект
-↓
-можно ошибочно reclaim
-```
-
-Поэтому во время mark phase newly allocated heap objects считаются уже marked — условно сразу «black».
-
----
-
-## 31. Write barrier: зачем он вообще нужен
-
-Теперь классическая проблема concurrent GC.
-
-Пусть:
+Было:
 
 ```text
 A → B
 ```
 
-GC уже просканировал `A`.
+GC уже просмотрел A.
 
 Application делает:
 
@@ -1442,454 +1379,956 @@ Application делает:
 A → C
 ```
 
-пока collector работает.
+Heap graph изменился прямо во время tracing.
 
-Heap graph изменился прямо во время graph traversal.
+Без дополнительного механизма collector может потерять reachable object.
 
-Получается гонка смыслов:
+## 50. STW было бы проще
 
 ```text
-GC видит одну версию graph
-mutator создаёт другую
+application stopped
+↓
+heap graph frozen
+↓
+GC спокойно обходит graph
 ```
 
-Если ничего не делать, reachable object можно потерять.
+Но это даёт большие pauses.
+
+Concurrent GC выбирает более сложный путь: application продолжает работать, а runtime поддерживает correctness специальными barriers.
 
 ---
 
-## 32. Hybrid write barrier
+# Блок 12. Write barrier
 
-Go использует hybrid write barrier, сочетающий идеи Yuasa deletion barrier и Dijkstra insertion barrier.
+## 51. Что это
 
-Учебно можно представить:
+Упрощённо:
+
+```text
+обычный store:
+slot = newPointer
+```
+
+во время mark phase становится концептуально:
+
+```text
+GC bookkeeping
++
+slot = newPointer
+```
+
+Компилятор/runtime оптимизируют этот path, но смысл такой: pointer mutation должна быть видима collector.
+
+## 52. Old и new pointers
 
 ```text
 before:
-
 slot → old
 
-write:
-
+after:
 slot → new
 ```
 
-Barrier делает дополнительную GC bookkeeping работу вокруг pointer write, чтобы concurrent collector не потерял ни `old`, ни `new` object из tracing invariant.
+Hybrid write barrier сохраняет tracing invariant так, чтобы collector не потерял важные references при concurrent mutation.
 
-Важно:
+## 53. Почему barrier стоит CPU
 
 ```text
-pointer assignment
+check
+bookkeeping
+buffer/shade
+store
 ```
 
-во время mark phase может стоить дороже обычного store.
+GC cost распределяется не только по background workers. Часть цены платит mutator.
+
+## 54. Barrier работает по фазам
+
+Упрощённо:
+
+```text
+GC off
+↓
+barrier mostly off
+
+concurrent mark
+↓
+barrier on
+```
 
 ---
 
-## 33. Почему нельзя просто смотреть на цвет destination object
+# Блок 13. Green Tea GC
 
-Наивная идея:
+## 55. Старая проблема: pointer chasing
 
-```text
-если объект уже black
-    barrier
-иначе
-    обычный store
-```
-
-Но тогда mutator и collector одновременно читают/пишут:
+Классическая учебная картина:
 
 ```text
-pointer slot
-mark state
+найди A
+↓
+scan A
+↓
+найди B
+↓
+scan B
 ```
 
-и возникает memory-ordering проблема.
-
-Чтобы условная проверка была гарантированно корректна на современном CPU, потребовались бы дополнительные synchronization/barrier costs.
-
-И вот здесь наш блок:
+Но физически:
 
 ```text
-CAS
-memory barriers
-MESI
+A → page 100
+B → page 8000
+C → page 42
+D → page 900
 ```
 
-из предыдущей дополнительной лекции внезапно встречается с GC.
+CPU часто получает cache misses.
+
+## 56. Почему locality важна
+
+```text
+L1 hit → очень быстро
+L1 miss → L2
+L2 miss → LLC
+LLC miss → DRAM
+```
+
+Heap tracing может упираться в memory subsystem CPU, а не в арифметику.
+
+## 57. Идея Green Tea
+
+Вместо беспорядочного object-at-a-time scan runtime старается группировать работу по spans/pages.
+
+```text
+span 1:
+    A
+    C
+    E
+
+span 40:
+    B
+
+span 900:
+    D
+```
+
+Цель:
+
+```text
+лучше reuse cache lines
+меньше повторной metadata work
+лучше locality
+```
+
+## 58. Что для разработчика не изменилось
+
+```text
+heap object
+↓
+unreachable
+↓
+runtime eventually reclaims it
+```
+
+Green Tea — implementation detail current runtime.
+
+## 59. Mark и scan — не одно и то же
+
+```text
+marked = object обнаружен reachable
+scanned = outgoing pointers обработаны
+```
+
+Возможное состояние:
+
+```text
+marked = yes
+scanned = no
+```
+
+## 60. Снова per-P locality
+
+Scheduler:
+
+```text
+P → local run queue → steal/global
+```
+
+Allocator:
+
+```text
+P → mcache → mcentral
+```
+
+GC:
+
+```text
+P → local work → share/steal
+```
+
+Общий runtime pattern:
+
+> Горячую работу держим локально, глобальную координацию делаем реже.
+
+## Что важно запомнить
+
+1. Concurrent GC обязан учитывать изменения heap graph.
+2. Write barrier сохраняет correctness tracing.
+3. Barrier добавляет runtime cost к части pointer writes.
+4. Green Tea оптимизирует locality marking/scanning work.
+5. Green Tea — detail current runtime, не гарантия спецификации.
 
 ---
 
-## 34. Write barrier работает не всегда
+# Блок 14. GC cycle как timeline
 
-Barrier включается во время:
+## 61. Полный цикл
 
 ```text
-_GCmark
-_GCmarktermination
+application running
+        │
+        ▼
+GC trigger
+        │
+        ▼
+short STW preparation
+        │
+        ├── switch phase
+        ├── enable write barrier
+        └── prepare roots/work
+        │
+        ▼
+world resumed
+        │
+        ▼
+concurrent mark
+        │
+        ├── background workers
+        ├── stack scans
+        ├── write barriers
+        └── mutator assists
+        │
+        ▼
+mark termination
+        │
+        ▼
+short STW
+        │
+        ▼
+sweep
+        │
+        ├── background
+        └── allocation-driven
 ```
 
-и выключается вне marking phase.
+```text
+GC cycle
+≠
+одна длинная pause
+```
 
-То есть цена concurrent correctness платится преимущественно тогда, когда GC действительно маркирует heap.
+## 62. Зачем остаётся STW
 
-Компилятор также может опускать barriers для некоторых writes в текущий stack frame, поскольку stack имеет другие invariants.
+Есть моменты, когда runtime выгоднее кратко получить глобально согласованное состояние.
+
+Низкие STW pauses — лишь одна часть стоимости GC.
 
 ---
 
-## 35. Mark workers
+# Блок 15. Mark workers
 
-Кто физически выполняет marking?
-
-Не существует отдельного волшебного:
+## 63. Кто выполняет GC
 
 ```text
-GC thread
-```
-
-который делает всё.
-
-Runtime использует несколько механизмов:
-
-```text
-dedicated mark workers
-fractional mark workers
-idle mark workers
+dedicated workers
+fractional workers
+idle workers
 mutator assists
 ```
 
----
+Нет одного волшебного «GC thread».
 
-## 36. Dedicated workers
-
-GC pacer стремится выделять marking примерно:
+## 64. Dedicated workers
 
 ```text
-25% × GOMAXPROCS
+P0 → request
+P1 → request
+P2 → GC worker
+P3 → request
 ```
 
-CPU capacity.
+GC получает гарантированный CPU budget.
 
-Например очень грубо:
+## 65. Background utilization
 
-```text
-GOMAXPROCS = 8
-
-GC background target ≈ 2 CPUs
-```
-
-Но это не означает:
-
-> GC всегда съедает строго 25% CPU.
-
-Это pacing goal для background marking.
-
----
-
-## 37. Idle workers
-
-Допустим:
+Current pacer target для background marking ориентируется примерно на 25% `GOMAXPROCS`.
 
 ```text
 GOMAXPROCS=8
+≈ 2 CPU worth background mark target
 ```
 
-а application реально использует только:
+Это control target, не строгая гарантия.
+
+## 66. Fractional workers
+
+Если нельзя выделить целое количество P для нужной доли:
 
 ```text
-2 CPU
+worker работает часть времени
+↓
+остальное время P выполняет mutator work
 ```
 
-Оставшиеся CPU idle.
+## 67. Idle workers
 
-Runtime может дать GC дополнительную работу.
+Если P иначе простаивал бы, runtime может использовать его для GC.
 
-То есть CPU profile иногда показывает:
-
-```text
-runtime.gcBgMarkWorker
-```
-
-с заметной долей CPU.
-
-Это не обязательно означает:
-
-> GC украл всё это CPU у requests.
-
-Часть работы могла выполняться idle-priority workers на CPU, который application всё равно не использовала.
+Поэтому высокий процент `gcBgMarkWorker` в CPU profile не всегда означает, что GC отнял всю эту CPU capacity у requests.
 
 ---
 
-## 38. GC pacer
+# Блок 16. GC pacer
 
-Теперь самое интересное.
-
-У нас есть:
-
-```text
-allocation rate
-```
-
-и:
-
-```text
-mark throughput
-```
-
-GC должен закончить работу вовремя.
-
-Нельзя просто сказать:
-
-```text
-heap достиг 2 GB
-→ начинаем GC
-```
-
-если 2 GB — это уже максимальный target.
-
-Тогда поздно.
-
----
-
-## 39. Heap goal ≠ GC trigger
-
-Это одна из самых важных вещей во всей дополнительной лекции.
-
-Допустим:
+## 68. Почему нельзя стартовать на heap goal
 
 ```text
 heap goal = 2 GB
 ```
 
-Это означает примерно:
-
-> Желательно закончить GC до достижения этого размера.
-
-Следовательно GC должен стартовать раньше:
+Если GC начался только на 2 GB, application продолжит allocation во время marking:
 
 ```text
-trigger < heap goal
+2.0
+2.1
+2.2
+2.3 GB
 ```
 
-Насколько раньше?
+Мы уже опоздали.
 
-Зависит от того:
+## 69. Goal и trigger
 
 ```text
-как быстро приложение аллоцирует
+trigger = стартовая линия
+
+goal = желательная финишная граница heap
+```
+
+GC должен стартовать раньше goal.
+
+## 70. От чего зависит trigger
+
+```text
+allocation rate
+scan throughput
+root work
+CPU availability
+heap goal
+memory limit
+```
+
+Это control problem.
+
+## 71. Почему pacer
+
+Не таймер:
+
+```text
+GC раз в N секунд
+```
+
+А feedback loop:
+
+```text
+наблюдаем workload
+↓
+оцениваем будущую collector work
+↓
+подбираем trigger и assist pressure
+```
+
+---
+
+# Блок 17. GOGC глубже
+
+## 72. Смысл
+
+Упрощённо:
+
+```text
+heap goal
+≈
+live memory
++
+growth budget controlled by GOGC
+```
+
+Roots/scannable work тоже участвуют в современной pacing model.
+
+## 73. GOGC=100
+
+Если после GC:
+
+```text
+live ≈ 1 GB
+```
+
+runtime получает примерно ещё один сопоставимый growth budget до target с поправками на roots и memory limit.
+
+## 74. GOGC ниже
+
+```text
+GOGC ↓
+↓
+heap goal ↓
+↓
+GC frequency ↑
+↓
+GC CPU ↑
+↓
+memory ↓
+```
+
+## 75. GOGC выше
+
+```text
+GOGC ↑
+↓
+heap goal ↑
+↓
+GC frequency ↓
+↓
+GC CPU ↓
+↓
+memory ↑
+```
+
+Пока не вмешается `GOMEMLIMIT`.
+
+---
+
+# Блок 18. Mutator assists
+
+## 76. Что такое mutator
+
+Mutator — application, изменяющая heap:
+
+```text
+allocates objects
+writes pointers
+changes graph
+```
+
+## 77. Application быстрее collector
+
+```text
+collector scans 1 GB/s
+application allocates 8 GB/s
+```
+
+Если application не ограничивать:
+
+```text
+heap goal exceeded
+↓
+memory blow-up
+```
+
+## 78. GC debt
+
+Концептуально:
+
+```text
+ты аллоцировал N bytes
+↓
+создал дополнительную GC work
+↓
+если collector отстаёт — помоги
+```
+
+```text
+request goroutine
+↓
+malloc
+↓
+assist debt
+↓
+GC marking
+↓
+return to handler
+```
+
+## 79. Почему это влияет на p99
+
+```text
+RPS ↑
+↓
+allocation rate ↑
+↓
+collector отстаёт
+↓
+assists ↑
+↓
+request goroutine выполняет GC work
+↓
+handler wall time ↑
+↓
+p95/p99 ↑
+```
+
+Никакой огромной STW pause не требуется.
+
+## 80. `gcAssistAlloc` в CPU profile
+
+Если cumulative profile показывает заметный:
+
+```text
+runtime.gcAssistAlloc
+```
+
+это сильный сигнал allocation pressure или tight memory budget.
+
+---
+
+# Блок 19. Sweep
+
+## 81. Mark ещё не освобождает slot
+
+```text
+A live
+B dead
+C live
+D dead
+```
+
+Mark ответил:
+
+```text
+кто reachable?
+```
+
+Sweep отвечает:
+
+```text
+что allocator снова может использовать?
+```
+
+## 82. Bitmap переход
+
+Учебно:
+
+```text
+allocBits:   1 1 1 1
+gcmarkBits:  1 0 1 0
+```
+
+После sweep:
+
+```text
+A occupied
+B free
+C occupied
+D free
+```
+
+## 83. Sweep может быть concurrent
+
+```text
+background sweep
 ```
 
 и:
 
 ```text
-как быстро collector сканирует
+allocation-driven sweep
 ```
 
-Очень хорошая формулировка студентам:
+Allocator может sweep'ить span, когда хочет его использовать.
+
+## 84. sweepgen
+
+Runtime использует generation state, чтобы понимать lifecycle span без полного глобального обхода только ради проверки «уже swept или ещё нет?».
+
+---
+
+# Блок 20. Sweep ≠ scavenging
+
+## 85. GC освободил объект — RAM ещё не обязана вернуться Linux
+
+После sweep:
 
 ```text
-heap goal = финишная черта
-GC trigger = точка старта
-pacer = тот, кто рассчитывает, когда надо стартовать
+dead object
+↓
+free slot
+```
+
+Memory свободна **для Go allocator**.
+
+## 86. Уровни reclaim
+
+```text
+object unreachable
+↓
+not marked
+↓
+sweep
+↓
+slot/page reusable by Go
+↓
+scavenger
+↓
+OS may reclaim physical pages
+```
+
+## 87. Почему runtime не отдаёт всё сразу
+
+Если traffic скоро вернётся, повторное использование уже mapped pages дешевле, чем постоянно отдавать и снова получать их от kernel.
+
+Trade-off:
+
+```text
+reuse speed
+↔
+low RSS
 ```
 
 ---
 
-## 40. Уточняем формулу GOGC
+# Блок 21. Scavenger
 
-В основной лекции можно использовать упрощение:
+## 88. Задача
 
 ```text
-goal ≈ live + live × GOGC / 100
+GC → dead objects
+sweep → free Go pages
+scavenger → release physical backing to OS
 ```
 
-Но здесь уже пора дать более точную учебную формулу:
+## 89. Linux
+
+Runtime использует platform-specific VM primitives, включая `madvise` modes вроде `MADV_FREE` и `MADV_DONTNEED` в зависимости от условий.
+
+Учебный вывод:
+
+> Runtime управляет virtual memory через механизмы ОС; «free memory» — не одна универсальная операция.
+
+## 90. Virtual ≠ physical
+
+Большой virtual address reservation не означает такой же объём resident RAM.
+
+Поэтому VSS часто мало полезен сам по себе.
+
+Для production важнее:
 
 ```text
-Target heap =
-Live heap
-+
-(Live heap + GC roots) × GOGC / 100
-```
-
-Roots учитываются в этой модели начиная с Go 1.18.
-
-Например:
-
-```text
-live heap = 800 MB
-scannable roots = 100 MB
-GOGC = 100
-```
-
-Условный target:
-
-```text
-800
-+
-(800 + 100)
-=
-1700 MB
-```
-
-И снова:
-
-**это goal, а не команда начать GC ровно на 1700 MB.**
-
----
-
-## 41. Почему roots входят в pacing
-
-Представим два приложения.
-
-### Application A
-
-```text
-heap = 1 GB
-100 goroutines
-```
-
-### Application B
-
-```text
-heap = 1 GB
-500 000 goroutines
-```
-
-У B значительно больше stack roots.
-
-GC должен их сканировать.
-
-Если pacer учитывал бы только heap:
-
-```text
-A и B
-```
-
-выглядели бы одинаковыми.
-
-Но workload GC разный.
-
-Поэтому root scan work тоже входит в pacing model.
-
----
-
-## 42. Mutator assists
-
-Теперь pacer ошибся.
-
-Или allocation rate неожиданно вырос.
-
-Например:
-
-```text
-GC успевает scan:
-1 GB/s
-
-application внезапно allocates:
-10 GB/s
-```
-
-Если дать application продолжать без ограничения:
-
-```text
-heap goal
-```
-
-будет пробит раньше, чем collector закончит.
-
-Поэтому allocating goroutines получают GC debt.
-
-Условно:
-
-```text
-ты выделил N bytes
-↓
-ты создал дополнительную GC work
-↓
-помоги выполнить часть mark work
-```
-
-Это mutator assist.
-
----
-
-## 43. Assist ratio
-
-Runtime рассчитывает примерно:
-
-```text
-сколько scan work
-должно соответствовать
-каждому allocated byte
-```
-
-В runtime это отражено через:
-
-```text
-assistWorkPerByte
-```
-
-и обратное отношение.
-
-Получаем:
-
-```text
-allocation
-↓
-GC debt
-↓
-goroutine выполняет marking
-↓
-debt погашен
-↓
-goroutine продолжает user work
+RSS
+heap classes
+released memory
+cgroup memory
 ```
 
 ---
 
-## 44. Почему GC pressure превращается в latency
+# Блок 22. HeapAlloc и RSS
 
-Вот production chain:
+## 91. Пример
+
+До GC:
 
 ```text
-HTTP request
-↓
-JSON parsing
-↓
-DTO
-↓
-temporary slices
-↓
-allocations
-↓
-GC debt
-↓
-mark assist
-↓
-request goroutine выполняет GC
-↓
-handler выполняется дольше
-↓
-p99 растёт
+HeapAlloc = 4 GB
+RSS       = 4.5 GB
 ```
 
-Никакого большого STW.
+После:
 
-Никакой секундной GC pause.
+```text
+HeapAlloc = 1 GB
+RSS       = 4.0 GB
+```
 
-Но latency ухудшается.
+Это ещё не доказательство leak.
 
-Поэтому утверждение:
+## 92. Четыре разные величины
 
-> «GC pause всего 200 µs — GC точно ни при чём»
+```text
+live/object memory
+free heap memory
+released heap memory
+RSS
+```
 
-неверно.
+Они отвечают на разные вопросы.
+
+## 93. Почему RSS не обязан падать мгновенно
+
+Даже если runtime сообщил kernel, что pages можно reclaim, фактический reclaim может зависеть от kernel policy и memory pressure.
 
 ---
 
-## 45. Как увидеть assists
+# Блок 23. GOMEMLIMIT глубже
 
-В современном `runtime/metrics` есть:
+## 94. Почему GOGC недостаточно
+
+GOGC задаёт относительный trade-off.
+
+Container даёт абсолютный budget:
+
+```text
+memory limit = 1 GiB
+```
+
+Runtime нужен отдельный сигнал о допустимом memory footprint — `GOMEMLIMIT`.
+
+## 95. GOMEMLIMIT ≠ max heap
+
+Он относится к memory, которой управляет Go runtime, и учитывает больше, чем live heap.
+
+Удобная модель:
+
+```text
+controlled Go memory
+≈
+/memory/classes/total:bytes
+-
+/memory/classes/heap/released:bytes
+```
+
+## 96. Почему limit soft
+
+```text
+GOMEMLIMIT = 500 MiB
+live ≈ 480 MiB
+```
+
+Если требовать абсолютного соблюдения:
+
+```text
+GC
+↓
+чуть allocation
+↓
+GC
+↓
+чуть allocation
+↓
+GC
+...
+```
+
+можно почти полностью сжечь CPU.
+
+## 97. GC CPU limiter
+
+Runtime ограничивает степень, до которой GC может душить application ради memory limit.
+
+Иногда временно превысить soft limit лучше, чем потерять progress из-за бесконечного GC.
+
+---
+
+# Блок 24. Kubernetes и cgroup
+
+## 98. Два лимита
+
+```text
+GOMEMLIMIT
+→ soft runtime budget
+
+cgroup memory limit
+→ kernel-enforced hard boundary
+```
+
+## 99. Почему нужен headroom
+
+Плохо:
+
+```text
+container limit = 1 GiB
+GOMEMLIMIT      = 1 GiB
+```
+
+У процесса есть memory outside the simple managed-heap picture:
+
+```text
+cgo/native allocations
+some mmap
+thread/platform overhead
+other external memory
+```
+
+Практический подход:
+
+```text
+hard container limit
+↓
+safety margin
+↓
+GOMEMLIMIT
+↓
+load test
+```
+
+---
+
+# Блок 25. Memory pressure → CPU pressure
+
+## 100. Главная production-цепочка
+
+```text
+memory budget ↓
+↓
+heap goal ↓
+↓
+GC frequency ↑
+↓
+background mark CPU ↑
+↓
+assist CPU ↑
+↓
+CPU for requests ↓
+↓
+latency ↑
+↓
+throughput ↓
+```
+
+## 101. Типичный инцидент
+
+Было:
+
+```text
+pod limit = 2 GiB
+GOMEMLIMIT = 1.8 GiB
+live set ≈ 750 MiB
+```
+
+Стало:
+
+```text
+pod limit = 1 GiB
+GOMEMLIMIT = 900 MiB
+```
+
+Теперь у collector гораздо меньше runway между live set и goal.
+
+Внешне:
+
+```text
+RAM уменьшили
+CPU вырос
+p99 вырос
+```
+
+На самом деле это одна runtime-цепочка.
+
+---
+
+# Блок 26. Allocation pressure и live heap
+
+## 102. Сервис A: churn
+
+```text
+live heap = 200 MB
+allocation rate = 8 GB/s
+```
+
+Heap не растёт, но collector постоянно перерабатывает новый мусор.
+
+Симптом:
+
+```text
+RSS стабилен
+GC CPU высокий
+cycles frequent
+```
+
+## 103. Сервис B: retention
+
+```text
+allocation rate = 200 MB/s
+live heap:
+500 MB
+700 MB
+1 GB
+1.5 GB
+```
+
+Здесь objects остаются reachable.
+
+Причины:
+
+```text
+unbounded cache
+queue backlog
+goroutine leak
+slice/map retention
+```
+
+## 104. Heap profile modes
+
+```text
+alloc_space → allocation churn / hotspots
+inuse_space → retained live memory
+```
+
+---
+
+# Блок 27. Как это видно в pprof
+
+## 105. `runtime.mallocgc`
+
+Большое cumulative время может означать большой allocation volume.
+
+Но внутри call tree могут быть assists, поэтому одного symbol мало.
+
+## 106. `runtime.gcAssistAlloc`
+
+Сильный сигнал:
+
+```text
+allocating goroutines помогают GC
+```
+
+Проверяем allocation rate и memory budget.
+
+## 107. `runtime.gcBgMarkWorker`
+
+Смотрим:
+
+```text
+GC frequency
+scannable heap
+object graph
+idle vs dedicated workers
+```
+
+Не делаем вывод «GC сломан» только по имени функции.
+
+---
+
+# Блок 28. runtime/metrics
+
+## 108. Heap state
+
+```text
+/gc/heap/live:bytes
+/gc/heap/goal:bytes
+/gc/heap/allocs:bytes
+/gc/heap/frees:bytes
+```
+
+## 109. Scan work
+
+```text
+/gc/scan/heap:bytes
+/gc/scan/stack:bytes
+```
+
+## 110. GC CPU
 
 ```text
 /cpu/classes/gc/mark/assist:cpu-seconds
@@ -1898,475 +2337,7 @@ p99 растёт
 /cpu/classes/gc/total:cpu-seconds
 ```
 
-То есть можно отдельно увидеть:
-
-```text
-сколько CPU ушло в assists
-```
-
-и:
-
-```text
-сколько отработали background workers
-```
-
-Это уже намного полезнее фразы:
-
-```text
-GC CPU = 20%
-```
-
----
-
-## 46. Mark termination
-
-Когда runtime считает, что work queues опустели:
-
-```text
-roots processed
-+
-grey work processed
-```
-
-нужно убедиться:
-
-```text
-новой mark work действительно больше нет
-```
-
-Поскольку work распределён между локальными GC structures разных P, используется distributed termination detection.
-
-После этого:
-
-```text
-STW
-↓
-mark termination
-```
-
-Workers и assists выключаются, runtime выполняет финальную bookkeeping работу.
-
----
-
-## 47. Sweep
-
-Mark ответил:
-
-```text
-кто жив?
-```
-
-Но memory ещё надо сделать reusable.
-
-Допустим:
-
-```text
-span slots:
-
-A alive
-B dead
-C alive
-D dead
-```
-
-После marking:
-
-```text
-mark bits:
-
-1 0 1 0
-```
-
-Sweep превращает это в allocator state следующего поколения:
-
-```text
-allocated/free:
-
-1 0 1 0
-```
-
-То есть B и D теперь можно снова выдавать allocator.
-
-Runtime переиспользует GC mark bitmap как будущий allocation bitmap и создаёт свежие mark bits для следующего GC cycle.
-
-Красивое переиспользование metadata.
-
----
-
-## 48. Sweep тоже concurrent
-
-Не обязательно:
-
-```text
-mark done
-↓
-STOP WORLD
-↓
-sweep entire heap
-↓
-start
-```
-
-Sweeping выполняется:
-
-```text
-background
-```
-
-и:
-
-```text
-в ответ на allocation
-```
-
-Runtime может sweep'ить span тогда, когда allocator хочет его использовать.
-
-Отсюда ещё одна форма amortization:
-
-```text
-часть cleanup cost
-распределяется по дальнейшим allocations
-```
-
----
-
-## 49. sweepgen
-
-Как runtime понимает:
-
-> Этот span уже sweep'нули после текущего GC или ещё нет?
-
-Для этого существует `sweepgen`.
-
-Упрощённо:
-
-```text
-heap sweep generation
-```
-
-увеличивается каждый GC cycle.
-
-Span хранит свою generation.
-
-По разнице runtime понимает состояния:
-
-```text
-needs sweep
-being swept
-already swept
-cached
-```
-
-Студентам число конкретной прибавки помнить не надо.
-
-Нужно понять сам механизм:
-
-**span lifecycle не требует обходить весь heap каждый раз только ради вопроса «этот span уже обработан?»**
-
----
-
-## 50. Что происходит с полностью пустым span
-
-Если после sweep:
-
-```text
-span:
-0 live objects
-```
-
-его object slots больше не нужны.
-
-Страницы span возвращаются:
-
-```text
-mspan
-↓
-mheap
-```
-
-То есть allocator получает свободные pages.
-
-Но внимание.
-
-Это ещё не обязательно:
-
-```text
-memory returned to OS
-```
-
-Вот здесь появляется один из самых важных терминов лекции.
-
----
-
-## 51. Sweep ≠ scavenging
-
-Очень частое заблуждение:
-
-> GC освободил память → Linux сразу получил RAM назад.
-
-Нет.
-
-Есть минимум два этапа.
-
-### Sweep
-
-```text
-dead Go objects
-↓
-free allocator slots/pages
-```
-
-Memory снова доступна **Go runtime**.
-
-### Scavenger
-
-```text
-free runtime pages
-↓
-OS informed that physical memory may be reclaimed
-```
-
-То есть:
-
-```text
-GC reclaim
-≠
-OS reclaim
-```
-
----
-
-## 52. Зачем вообще оставлять память у runtime
-
-Представим сервис:
-
-```text
-09:00 peak
-heap = 4 GB
-
-09:05
-heap live = 1 GB
-
-09:06
-новый traffic peak
-heap снова нужно 4 GB
-```
-
-Если runtime немедленно всё отдаст OS:
-
-```text
-release pages
-↓
-через минуту снова ask OS
-↓
-page faults / kernel work
-```
-
-Если runtime удержит всё:
-
-```text
-быстрый reuse
-```
-
-но:
-
-```text
-RSS высокий
-```
-
-Получаем очередной trade-off:
-
-```text
-reuse speed
-↔
-memory footprint
-```
-
-Именно им занимается scavenger.
-
----
-
-## 53. Background scavenger
-
-В runtime существует отдельная system goroutine scavenger.
-
-Она ищет свободные heap pages, которые можно вернуть underlying platform.
-
-Получаем:
-
-```text
-GC
-↓
-dead objects
-
-sweep
-↓
-free Go pages
-
-scavenger
-↓
-released physical pages
-```
-
----
-
-## 54. Как это выглядит на Linux
-
-Runtime вызывает abstraction:
-
-```text
-sysUnused
-```
-
-На Linux основной mechanism — `madvise`.
-
-Текущая реализация использует механизмы вроде:
-
-```text
-MADV_FREE
-```
-
-и:
-
-```text
-MADV_DONTNEED
-```
-
-в зависимости от платформенных условий.
-
-Это уже настоящий переход:
-
-```text
-Go runtime
-↓
-kernel VM subsystem
-```
-
----
-
-## 55. Runtime page ≠ physical page
-
-Runtime page:
-
-```text
-8 KiB
-```
-
-Но OS physical page может иметь другой размер.
-
-Например на разных архитектурах:
-
-```text
-4 KiB
-16 KiB
-...
-```
-
-Scavenger может освобождать только целые physical pages, поэтому runtime учитывает размер страницы ОС и выравнивает release operations соответствующим образом.
-
-Это особенно хороший пример того, где language/runtime abstraction начинает протекать в OS.
-
----
-
-## 56. OS memory states
-
-У runtime есть собственная abstraction над virtual memory.
-
-Регион может быть концептуально:
-
-```text
-None
-Reserved
-Prepared
-Ready
-```
-
-`Ready`:
-
-```text
-memory безопасно доступна runtime
-```
-
-`Prepared`:
-
-```text
-address space остаётся,
-но physical backing runtime сейчас не требует
-```
-
-`Reserved`:
-
-```text
-address range принадлежит runtime,
-но memory нельзя использовать как обычную
-```
-
-Такая модель позволяет runtime резервировать virtual address space отдельно от фактического physical memory usage.
-
----
-
-## 57. Почему heap упал, а RSS не упал
-
-Представим Grafana:
-
-```text
-HeapAlloc:
-
-4 GB
-↓
-1 GB
-```
-
-а:
-
-```text
-RSS:
-
-4.6 GB
-↓
-4.2 GB
-```
-
-Инженер говорит:
-
-> GC не освободил память.
-
-Возможно освободил.
-
-Но разные метрики отвечают на разные вопросы.
-
-```text
-live objects
-```
-
-может резко уменьшиться.
-
-Allocator может получить:
-
-```text
-free spans/pages
-```
-
-Scavenger ещё не вернул их OS.
-
-Или OS получил `MADV_FREE`, но физически ещё не reclaimed страницы.
-
-Поэтому:
-
-```text
-heap live
-heap free
-heap released
-RSS
-```
-
-нельзя считать синонимами.
-
----
-
-## 58. runtime/metrics для allocator
-
-Для нормальной диагностики полезны:
+## 111. Memory classes
 
 ```text
 /memory/classes/heap/objects:bytes
@@ -2375,797 +2346,307 @@ RSS
 /memory/classes/heap/unused:bytes
 ```
 
-Отдельно runtime exposes metadata:
+## 112. Allocator metadata
 
 ```text
 /memory/classes/metadata/mcache/inuse:bytes
 /memory/classes/metadata/mspan/inuse:bytes
 ```
 
-То есть модель:
-
-```text
-heap objects
-+
-heap free
-+
-heap released
-+
-allocator metadata
-+
-stacks
-+
-other runtime memory
-```
-
-намного ближе к реальной памяти процесса, чем одно число `HeapAlloc`.
+Memory manager сам тоже занимает memory.
 
 ---
 
-## 59. GOMEMLIMIT входит в ту же систему
+# Блок 29. Один объект: полный lifecycle
 
-Memory limit влияет не только на:
+## 113. Исходный код
 
-```text
-когда запускать GC
+```go
+func loadUser() *User {
+    u := &User{ID: 42, Name: "Alice"}
+    return u
+}
 ```
 
-Он влияет на общую runtime memory-management policy.
-
-Runtime считает controlled memory примерно как:
+## 114. Compiler
 
 ```text
-runtime mapped memory
--
-released heap memory
+pointer переживает frame
+↓
+heap allocation
 ```
 
-В терминах metrics:
+## 115. Allocator class
+
+Пусть учебно:
 
 ```text
-/memory/classes/total:bytes
--
-/memory/classes/heap/released:bytes
+size = 32 B
+contains pointers = yes
+↓
+32-byte scan spanClass
 ```
 
-То есть ограничение касается больше, чем одного live heap.
+## 116. P-local allocation
+
+```text
+G
+↓
+P2
+↓
+mcache2
+↓
+32-byte scan mspan
+↓
+free slot
+↓
+object
+```
+
+## 117. Span заполнен
+
+```text
+mcache2
+↓
+mcentral
+↓
+partially-free span
+```
+
+## 118. Central не хватает span
+
+```text
+mcentral
+↓
+mheap
+↓
+page allocator
+↓
+возможно OS
+```
+
+## 119. Heap растёт
+
+Pacer следит за:
+
+```text
+heap live
+heap goal
+allocation rate
+scan work
+```
+
+Достигается trigger → начинается GC.
+
+## 120. Object live
+
+```text
+root/cache
+↓
+User
+```
+
+GC marks User и сканирует pointer fields.
+
+## 121. Object dead
+
+Reference исчезла.
+
+Следующий GC не находит User.
+
+Sweep:
+
+```text
+slot reusable
+```
+
+## 122. Но RSS может остаться
+
+```text
+slot free for Go
+↓
+span/page may remain mapped
+↓
+scavenger later releases pages
+↓
+OS may reclaim RAM
+```
 
 ---
 
-## 60. Что делает pacer при memory pressure
+# Блок 30. Что меняется под нагрузкой
 
-Допустим:
-
-```text
-container limit = 1 GiB
-GOMEMLIMIT = 900 MiB
-```
-
-Runtime видит:
+## 123. Один request
 
 ```text
-memory usage approaching limit
+20 allocations
+10 KB
 ```
 
-и уменьшает допустимый heap goal.
+Почти незаметно.
 
-Следствие:
+## 124. 50 000 RPS
 
 ```text
-GC starts earlier
-↓
-cycles become more frequent
-↓
-scavenger becomes more relevant
+20 alloc/request × 50 000
+=
+1 000 000 allocations/sec
 ```
-
-Если live set сам уже близок к memory limit:
 
 ```text
-live = 850 MB
-limit = 900 MB
+10 KB/request × 50 000
+≈
+500 MB/s allocation rate
 ```
 
-runtime почти не получает пространства:
+## 125. Добавили временные objects
 
 ```text
-для новых allocations
-+
-для завершения GC
+string ↔ []byte
+fmt.Sprintf
+temporary maps
+JSON copies
+reflection
 ```
 
-Начинается тяжёлый режим.
+Allocation rate может вырасти в разы при почти прежнем live heap.
+
+## 126. Tail latency
+
+Assists не обязаны распределяться идеально равномерно.
+
+```text
+average +5%
+p99 +50%
+```
+
+GC pressure часто сначала проявляется в tail latency.
 
 ---
 
-## 61. GC thrashing
+# Блок 31. Что оптимизировать
 
-Цепочка:
+## 127. Не начинать с GOGC
+
+Сначала спросить:
 
 ```text
-limit too low
-↓
-heap goal tiny
-↓
-GC frequently triggered
-↓
-GC CPU rises
-↓
-allocating goroutines assist
-↓
-application CPU falls
-↓
-latency rises
-↓
-GC finishes
-↓
-почти сразу следующий GC
+почему приложение столько аллоцирует?
 ```
 
-Это GC thrashing.
+Tuning GC перераспределяет цену, но не уничтожает ненужный мусор.
 
-`GOMEMLIMIT` soft именно потому, что runtime должен сохранять progress даже при плохой конфигурации.
+## 128. Идём до allocation site
 
-Это критический production-вывод:
+```text
+symptom
+↓
+CPU pprof
+↓
+alloc profile
+↓
+benchmark -benchmem
+↓
+escape diagnostics
+↓
+конкретная строка кода
+```
 
-**soft memory limit иногда нарушается специально, потому что бесконечный GC хуже кратковременного превышения лимита.**
+## 129. Один removed allocation даёт несколько выигрышей
+
+```text
+allocator work ↓
+GC work ↓
+cache pressure ↓
+```
 
 ---
 
-## 62. А Kubernetes всё равно может убить pod
+# Блок 32. `sync.Pool`
 
-Go говорит:
+## 130. Идея
 
 ```text
-GOMEMLIMIT is soft
+allocate → use → garbage
 ```
 
-Kernel/cgroup говорит:
+заменяем на:
 
 ```text
-memory limit is not philosophical
+get → use → reset → put
 ```
 
-Кроме того, GOMEMLIMIT не контролирует абсолютно всю память процесса:
-
-- некоторые mmap;
-- cgo/native allocations;
-- kernel-side memory;
-- прочие external sources.
-
-Поэтому:
+## 131. Цена
 
 ```text
-container limit = 1 GiB
-GOMEMLIMIT = 1 GiB
+allocation rate ↓
 ```
 
-— плохая идея.
-
-Нужен headroom.
-
----
-
-## 63. Полная связь allocator и GC
-
-Теперь соберём обе подсистемы.
+но возможно:
 
 ```text
-APPLICATION
-    │
-    │ allocation
-    ▼
-escape analysis
-    │
-    ▼
-allocator
-    │
-    ├── mcache
-    ├── mspan
-    ├── mcentral
-    └── mheap
-    │
-    ▼
-heap grows
-    │
-    ▼
-GC pacer
-    │
-    ▼
-GC trigger
-    │
-    ▼
-mark
-    │
-    ├── roots
-    ├── Green Tea span work
-    ├── workers
-    ├── write barrier
-    └── assists
-    │
-    ▼
-sweep
-    │
-    ▼
-free slots / free pages
-    │
-    ├── reused by allocator
-    │
-    └── scavenger
-           │
-           ▼
-          OS
+retained memory ↑
+complexity ↑
+stale state risk ↑
 ```
 
-Это одна система.
+## 132. Correctness
 
-Нельзя отдельно понимать:
+Нужно:
 
 ```text
-allocator
+reset object
+не использовать after Put
+не протащить request-specific data
 ```
 
-и отдельно:
+## 133. Когда использовать
 
 ```text
-GC
-```
-
-Они постоянно обмениваются state.
-
----
-
-## 64. Что происходит под нагрузкой
-
-Теперь типичный Go backend.
-
-Normal load:
-
-```text
-5k RPS
-allocation rate = 500 MB/s
-GC CPU = 5%
-```
-
-При traffic spike:
-
-```text
-25k RPS
-allocation rate = 3 GB/s
-```
-
-Сначала:
-
-```text
-mcache fast allocations
-```
-
-работают отлично.
-
-Но дальше:
-
-```text
-heap grows faster
-↓
-GC cycles become more frequent
-↓
-background mark CPU grows
-↓
-assist ratio grows
-↓
-request goroutines perform GC work
-↓
-CPU contention
-↓
-p99 increases
-```
-
-Allocator сам по себе мог оставаться быстрым.
-
-Цена проявилась позже в collector.
-
----
-
-## 65. «Allocation дешёвая» — опасное упрощение
-
-Да.
-
-Fast-path allocation может быть очень дешёвой:
-
-```text
-local P
-+
-mcache
-+
-bitmap
-```
-
-Но lifetime cost allocation:
-
-```text
-allocation
-+
-zeroing
-+
-heap growth
-+
-future marking
-+
-future sweeping
-+
-possible scavenging
-+
-cache pressure
-```
-
-Поэтому правильная модель:
-
-> Heap allocation может быть дешёвой сейчас и дорогой позже.
-
----
-
-## 66. Почему object pooling тоже не бесплатный подарок
-
-После этой лекции студенты могут сделать вывод:
-
-```text
-allocations bad
-↓
-sync.Pool everything
-```
-
-Тоже ошибка.
-
-Pooling:
-
-```text
-↓ allocation rate
-```
-
-но может:
-
-```text
-↑ retained memory
-↑ object lifetime
-↑ complexity
-↑ stale-data risks
-```
-
-А очень долгоживущие pointer-rich objects всё равно участвуют в scan work.
-
-Поэтому:
-
-```text
-measure
-↓
-find hotspot
-↓
-optimize
+profile → hotspot → reuse possible → benchmark → pool
 ```
 
 а не:
 
 ```text
-pool everything
+allocation exists → pool everything
 ```
 
 ---
 
-## 67. Java-мост: allocator
+# Блок 33. Практическая диагностика
 
-Java:
+## 134. CPU высокий, memory нормальная
 
 ```text
-Thread
+CPU profile
 ↓
-TLAB
+mallocgc / gcAssistAlloc / gcBgMarkWorker?
 ↓
-Eden
+alloc profile
 ```
 
-Go:
+## 135. Memory растёт
+
+Снимать `inuse_space` во времени:
 
 ```text
-P
-↓
-mcache
-↓
-mspan
-↓
-mcentral
-↓
-mheap
+t0
+t1
+t2
 ```
 
-Главное различие:
+Искать call sites, удерживающие всё больше live memory.
 
-Go allocator тесно встроен в scheduler через P.
+## 136. Goroutines растут
 
-Goroutine не владеет allocator cache.
+Смотреть goroutine profile.
 
----
+В Go 1.27 есть отдельный `goroutineleak` profile для класса permanently blocked goroutines, которые runtime способен определить через reachability. Он не может обнаружить все виды leaks.
 
-## 68. Java-мост: GC
+## 137. HeapAlloc упал, RSS нет
 
-Современный JVM разработчик привык видеть:
-
-```text
-young generation
-old generation
-regions
-evacuation
-compaction
-```
-
-Go GC другая архитектура:
-
-```text
-non-generational
-non-compacting
-concurrent mark-and-sweep
-```
-
-А Green Tea оптимизирует прежде всего locality самого tracing/marking, вместо перехода к классической generational moving architecture.
-
-Поэтому нельзя переводить напрямую:
-
-```text
-Go mspan = G1 region
-```
-
-Модели разные.
-
----
-
-## 69. Production-расследование №1: CPU
-
-Симптом:
-
-```text
-CPU 95%
-RSS 800 MB
-heap live 300 MB
-p99 900 ms
-```
-
-CPU pprof:
-
-```text
-runtime.gcBgMarkWorker
-runtime.scanobject
-runtime.mallocgc
-```
-
-Metrics:
-
-```text
-mark assist CPU ↑
-alloc rate ↑
-GC cycles/sec ↑
-```
-
-Что произошло?
-
-Не обязательно:
-
-```text
-слишком большой heap
-```
-
-а возможно:
-
-```text
-огромная churn rate
-```
-
-Например:
-
-```text
-JSON
-↓
-temporary DTO
-↓
-strings
-↓
-[]byte conversions
-↓
-millions of short-lived objects
-```
-
-Live heap маленький.
-
-GC work огромный.
-
----
-
-## 70. Production-расследование №2: RSS
-
-Симптом:
-
-```text
-traffic spike закончился
-
-heap live:
-3 GB → 700 MB
-
-RSS:
-3.8 GB → 3.4 GB
-```
-
-Плохой вывод:
-
-> memory leak.
-
-Правильное расследование:
-
-```text
-heap objects?
-heap free?
-heap released?
-RSS?
-```
-
-Если:
-
-```text
-heap free high
-```
-
-значит allocator уже имеет свободные pages.
-
-Если позже:
-
-```text
-heap released ↑
-```
-
-значит scavenger начал возвращать память platform.
-
-Это может быть normal allocator/scavenger behaviour.
-
----
-
-## 71. Production-расследование №3: GOMEMLIMIT
-
-Симптом:
-
-```text
-pod memory limit = 512 MiB
-GOMEMLIMIT = 450 MiB
-live heap = 410 MiB
-```
-
-Под нагрузкой:
-
-```text
-CPU ↑
-latency ↑
-memory почти не растёт
-```
-
-Heap profile leak не показывает.
-
-Смотрим:
-
-```text
-GC cycles ↑
-mark assist CPU ↑
-GC limiter activity
-```
-
-Причина:
-
-```text
-слишком мало GC runway
-```
-
-Runtime пытается жить внутри слишком тесного memory budget.
-
-Проблема памяти стала проблемой CPU.
-
----
-
-## 72. Что смотреть руками
-
-Для дополнительной лекции я бы обязательно показал `runtime/metrics`:
-
-```text
-/gc/heap/live:bytes
-/gc/heap/goal:bytes
-/gc/heap/allocs:bytes
-/gc/cycles/total:gc-cycles
-
-/gc/scan/heap:bytes
-/gc/scan/stack:bytes
-
-/cpu/classes/gc/mark/assist:cpu-seconds
-/cpu/classes/gc/mark/dedicated:cpu-seconds
-/cpu/classes/gc/mark/idle:cpu-seconds
-
-/memory/classes/heap/free:bytes
-/memory/classes/heap/released:bytes
-
-/cpu/classes/scavenge/assist:cpu-seconds
-/cpu/classes/scavenge/background:cpu-seconds
-```
-
----
-
-## 73. Практический эксперимент: увидеть allocator
-
-Сделать benchmark:
-
-```go
-type Small struct {
-    A int64
-    B int64
-}
-
-func BenchmarkAlloc(b *testing.B) {
-    for b.Loop() {
-        x := new(Small)
-        sink = x
-    }
-}
-```
-
-Запустить:
-
-```bash
-go test -bench=. -benchmem
-```
-
-Дальше изменить размер структуры:
-
-```text
-16 B
-24 B
-32 B
-40 B
-48 B
-...
-```
-
-И посмотреть:
-
-```text
-B/op
-allocs/op
-```
-
-Обсудить:
-
-```text
-requested object size
-↓
-size class
-↓
-real allocator footprint
-```
-
----
-
-## 74. Практический эксперимент: scan vs noscan
-
-Сравнить:
-
-```go
-type NoPointers struct {
-    A uint64
-    B uint64
-    C uint64
-    D uint64
-}
-```
-
-и:
-
-```go
-type WithPointers struct {
-    A *int
-    B *int
-    C *int
-    D *int
-}
-```
-
-Создать большой live heap обоих вариантов.
-
-Сравнить:
-
-```text
-heap size
-GC CPU
-/gc/scan/heap:bytes
-```
-
-Главный тезис:
-
-```text
-same bytes
-≠
-same GC cost
-```
-
----
-
-## 75. Практический эксперимент: allocation pressure
-
-Создать HTTP handler:
-
-```go
-func handler(w http.ResponseWriter, r *http.Request) {
-    for range 1000 {
-        _ = make([]byte, 1024)
-    }
-}
-```
-
-Специально добиться escape.
-
-Нагрузить.
-
-Смотреть:
-
-```text
-alloc rate
-GC cycles
-mark assists
-CPU
-latency
-```
-
-Потом убрать лишние allocations.
-
-Повторить.
-
----
-
-## 76. Практический эксперимент: GOMEMLIMIT
-
-Запустить один и тот же workload:
-
-```text
-GOMEMLIMIT=2GiB
-GOMEMLIMIT=1GiB
-GOMEMLIMIT=500MiB
-```
-
-И сравнить:
-
-```text
-heap goal
-GC cycles/sec
-GC CPU
-assist CPU
-latency
-```
-
-Студент должен увидеть руками:
-
-```text
-memory budget ↓
-→
-GC frequency ↑
-→
-CPU cost ↑
-```
-
----
-
-## 77. Практический эксперимент: scavenger
-
-Сценарий:
-
-```text
-allocate several GB
-↓
-drop references
-↓
-force GC / wait
-```
-
-Снимать:
+Смотреть вместе:
 
 ```text
 heap objects
@@ -3174,114 +2655,350 @@ heap released
 RSS
 ```
 
-И увидеть четыре разные линии.
+## 138. После уменьшения RAM вырос CPU
 
-Это лучший способ убить навсегда заблуждение:
+Проверять:
 
 ```text
-GC = вернуть RAM Linux
+GOMEMLIMIT
+heap goal
+GC cycles
+assist CPU
+GC total CPU
 ```
 
 ---
 
-## 78. Вопросы студентам
+# Блок 34. Практика к лекции
 
-1. Почему `mcache` принадлежит P, а не goroutine?
+## 139. Эксперимент: size classes
 
-2. Почему runtime выдаёт `mcache` целый span, а не один free object из `mcentral`?
+```go
+type S16 struct { A, B uint64 }
+type S24 struct { A, B, C uint64 }
+type S40 struct { A, B, C, D, E uint64 }
+```
 
-3. Почему два объекта одинакового размера могут попасть в разные span classes?
+Forced escape benchmark:
 
-4. Почему heap из `[]byte` потенциально дешевле для GC, чем heap того же размера из `[]*Node`?
+```go
+var sink any
 
-5. Что произойдёт, если allocation rate внезапно станет выше scan throughput?
+func BenchmarkS16(b *testing.B) {
+    for b.Loop() {
+        sink = new(S16)
+    }
+}
+```
 
-6. Почему маленькая STW pause не доказывает, что GC не влияет на p99?
+```bash
+go test -bench=. -benchmem
+```
 
-7. В чём разница между sweep и scavenging?
-
-8. Почему после успешного GC RSS может практически не уменьшиться?
-
-9. Почему слишком низкий `GOMEMLIMIT` может увеличить CPU usage?
-
-10. Почему collector стартует раньше heap goal?
-
-11. Что Green Tea пытается исправить на уровне CPU cache?
-
-12. Почему обычный graph traversal heap может быть microarchitecturally дорогим?
-
-13. Почему Go использует write barrier во время concurrent marking?
-
-14. Почему проверка «destination object уже black?» сама по себе может потребовать дорогой memory ordering?
-
-15. Почему `sync.Pool` не является универсальным лечением allocation pressure?
-
----
-
-## 79. Что важно запомнить
-
-1. **Fast path маленькой allocation идёт через per-P `mcache` и `mspan`; `mcentral`, `mheap` и OS — более редкие slow paths.**
-
-2. **`mspan` связывает allocator и GC: allocator использует allocation bits, collector — mark state.**
-
-3. **Size classes уменьшают allocator complexity ценой internal fragmentation.**
-
-4. **`spanClass` учитывает не только размер, но и `scan/noscan`; наличие pointers влияет на стоимость GC.**
-
-5. **Large allocations идут page-level path, а tiny pointer-free allocations могут упаковываться вместе.**
-
-6. **Go GC — concurrent, precise, non-generational, non-compacting mark-and-sweep collector.**
-
-7. **Начиная с Go 1.26 default GC — Green Tea; его ключевая идея — группировать marking/scanning work ради лучшей memory locality.**
-
-8. **Heap goal — финиш GC cycle, trigger — точка старта. Pacer пытается подобрать trigger по allocation и scan rates.**
-
-9. **Если GC отстаёт, allocating goroutines сами выполняют marking через mutator assists. Это напрямую может увеличивать request latency.**
-
-10. **Sweep освобождает память для Go allocator. Scavenger возвращает свободные physical pages underlying OS. Это разные процессы.**
-
-11. **Heap, free heap, released heap и RSS — разные метрики.**
-
-12. **Memory pressure часто проявляется как CPU pressure: tighter memory budget → more GC → more assists → less CPU for backend.**
-
----
-
-# Главная инженерная цепочка лекции
+Смотреть:
 
 ```text
-escape
+object size
+B/op
+allocs/op
+size-class effects
+```
+
+## 140. Эксперимент: scan vs noscan
+
+```go
+type Raw struct {
+    A, B, C, D uint64
+}
+
+type Refs struct {
+    A, B, C, D *int
+}
+```
+
+Создать большие live heaps.
+
+Сравнить:
+
+```text
+heap bytes
+/gc/scan/heap:bytes
+GC CPU
+```
+
+## 141. Эксперимент: allocation churn
+
+```go
+func handler(w http.ResponseWriter, r *http.Request) {
+    chunks := make([][]byte, 0, 1000)
+    for range 1000 {
+        chunks = append(chunks, make([]byte, 1024))
+    }
+    fmt.Fprintln(w, len(chunks))
+}
+```
+
+Нагрузить и измерить:
+
+```text
+alloc rate
+GC cycles
+GC CPU
+assist CPU
+latency
+```
+
+Потом уменьшить allocations и повторить.
+
+## 142. Эксперимент: GOMEMLIMIT
+
+```bash
+GOMEMLIMIT=2GiB ./app
+GOMEMLIMIT=1GiB ./app
+GOMEMLIMIT=600MiB ./app
+```
+
+Сравнить:
+
+```text
+heap goal
+GC cycles/sec
+GC CPU
+assist CPU
+p95/p99
+RSS
+```
+
+## 143. Эксперимент: scavenger
+
+```text
+allocate several GB
+↓
+hold
+↓
+drop references
+↓
+GC
+↓
+observe
+```
+
+Смотреть:
+
+```text
+heap objects
+heap free
+heap released
+RSS
+```
+
+---
+
+# Блок 35. Версионные границы
+
+## 144. Устойчивая модель
+
+Полезно преподавать как долговечные принципы:
+
+```text
+stack vs heap
+escape analysis
+size-segregated allocator
+per-P allocation fast path
+tracing GC
+concurrent marking
+write barriers
+GC pacing
+mutator assists
+sweep
+scavenging
+GOGC
+GOMEMLIMIT
+```
+
+## 145. Current implementation details
+
+Явно помечать как версионно-зависимые:
+
+```text
+конкретные поля mspan
+внутренние mallocgc paths
+Green Tea queues
+точные specialization thresholds
+madvise policy
+pacer constants
+```
+
+Исходники Go 1.27 — не спецификация языка.
+
+---
+
+# Блок 36. Полная причинно-следственная модель
+
+## 146. От allocation до latency
+
+```text
+source code
+↓
+value escapes
 ↓
 heap allocation
 ↓
+size/span class
+↓
 mcache
 ↓
-mspan
-↓
-mcentral
-↓
-mheap
+mspan slot
 ↓
 heap growth
 ↓
-GC pacer
+pacer sees pressure
 ↓
-concurrent mark
+GC cycle
 ↓
-Green Tea
+background mark
 ↓
 write barriers
 ↓
-mark workers + assists
+mutator assist
+↓
+request goroutine spends CPU in GC
+↓
+handler finishes later
+↓
+p99 ↑
+```
+
+## 147. От dead object до RSS
+
+```text
+object unreachable
+↓
+not marked
 ↓
 sweep
 ↓
-free pages
+slot reusable
+↓
+possibly whole span/pages free
 ↓
 scavenger
 ↓
-OS
+OS can reclaim physical pages
+↓
+RSS may decrease
 ```
 
-И финальная мысль:
+## 148. От memory limit до CPU
 
-**Go memory runtime — это не «GC иногда очищает heap». Это непрерывно работающая система allocator + collector + scheduler + OS memory manager. Любая интенсивная allocation проходит через эту систему сейчас, а её реальную цену backend может заплатить позже CPU, latency или RSS.**
+```text
+container memory reduced
+↓
+GOMEMLIMIT reduced
+↓
+heap goal reduced
+↓
+GC starts more frequently
+↓
+mark CPU ↑
+↓
+assist CPU ↑
+↓
+less CPU for handlers
+↓
+latency ↑
+```
+
+---
+
+# Что важно запомнить
+
+1. **Small heap allocation в common case обслуживается локально через per-P allocator state.** Дорогие глобальные уровни нужны в основном для refill и роста heap.
+2. **`mspan` — ключевая единица, связывающая allocator и GC.** Span описывает run runtime pages и для small objects разбит на slots одного span class.
+3. **Размер объекта — только половина истории.** Наличие pointers определяет scan/noscan и напрямую влияет на работу collector.
+4. **GC cost определяется не только live heap.** Важны allocation rate, scannable heap, roots, shape pointer graph и memory budget.
+5. **Concurrent GC не бесплатный.** Цена распределена между background workers, write barriers и mutator assists.
+6. **Green Tea с Go 1.26 — текущая реализация default collector.** Его ключевая идея — улучшить locality marking/scanning work.
+7. **Heap goal и GC trigger — разные понятия.** Pacer должен начать collector заранее.
+8. **Mutator assist напрямую связывает allocations с request latency.** Allocating goroutine может сама выполнять GC work.
+9. **Sweep и scavenger решают разные задачи.** Sweep возвращает memory allocator'у Go; scavenger помогает вернуть physical backing ОС.
+10. **HeapAlloc, free heap, released heap и RSS нельзя смешивать.** Они описывают разные слои memory management.
+11. **`GOMEMLIMIT` — soft runtime budget, cgroup limit — внешний hard constraint.** Между ними нужен запас.
+12. **Главная optimization strategy — уменьшать ненужные allocations и pointer-rich live data после измерений, а не механически крутить GC knobs.**
+
+---
+
+# Итоговая схема
+
+```text
+                    SOURCE CODE
+                        │
+                        ▼
+                 escape analysis
+                        │
+                        ▼
+                 heap allocation
+                        │
+                        ▼
+              size + pointer layout
+                        │
+                        ▼
+                    spanClass
+                        │
+                        ▼
+                     mcache
+                        │
+                        ▼
+                     mspan
+                  free slot?
+                  │       │
+                yes       no
+                  │       ▼
+                  │    mcentral
+                  │       │
+                  │       ▼
+                  │     mheap
+                  │       │
+                  │       ▼
+                  │  page allocator
+                  │       │
+                  │       ▼
+                  │      OS
+                  │
+                  ▼
+               object live
+                  │
+                  ▼
+              heap growth
+                  │
+                  ▼
+                pacer
+                  │
+                  ▼
+              GC trigger
+                  │
+                  ▼
+        concurrent Green Tea mark
+          │        │         │
+          │        │         │
+       workers   barrier   assists
+          │        │         │
+          └────────┴─────────┘
+                  │
+                  ▼
+                 sweep
+                  │
+          ┌───────┴────────┐
+          ▼                ▼
+     reuse by Go       free pages
+                           │
+                           ▼
+                       scavenger
+                           │
+                           ▼
+                           OS
+```
+
+Финальный инженерный вывод:
+
+> В Go heap allocation — не просто операция «взяли память». Это вход в целую runtime-систему. Fast path может быть очень дешёвым, но объект способен позже породить mark work, write-barrier work, assists, sweep work, RSS pressure и kernel memory-management work. Поэтому настоящая цена allocation проявляется не только в момент её выполнения, а на всём жизненном цикле объекта.

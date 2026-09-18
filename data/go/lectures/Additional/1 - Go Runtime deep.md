@@ -1,8 +1,6 @@
-# Доп. 1. Глубокие internals Go runtime, synchronization и CPU
+# 1. Глубокие internals Go runtime, synchronization и CPU
 
 > Дополнительный блок к теме **«Go runtime, concurrency и synchronization internals»**.
->
-> Эта версия расширена до уровня технического расследования: для каждого слоя рассматриваются не только названия структур и функций, но и причины дизайна, state transitions, contention, стоимость под нагрузкой и связь с диагностикой backend.
 >
 > Здесь мы спускаемся ниже обычного прикладного Go: от scheduler lifecycle и `sudog`
 > до `sync.Mutex.state`, CAS, cache coherence, false sharing и NUMA.
