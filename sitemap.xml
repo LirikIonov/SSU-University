@@ -2,30 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://lirikonov.github.io/SSU-University/</loc>
-         <lastmod>2026-09-18</lastmod>
+         <lastmod>2026-09-19</lastmod>
     </url>
     <url>
          <loc>https://lirikonov.github.io/SSU-University/go/lectures/1.%20Prod/Production%20backend/</loc>
-         <lastmod>2026-09-18</lastmod>
+         <lastmod>2026-09-19</lastmod>
     </url>
     <url>
-         <loc>https://lirikonov.github.io/SSU-University/go/lectures/2.%20Runtime%20internals/Go%20runtime/</loc>
-         <lastmod>2026-09-18</lastmod>
+         <loc>https://lirikonov.github.io/SSU-University/go/lectures/2.%20Runtime/Go%20runtime/</loc>
+         <lastmod>2026-09-19</lastmod>
+    </url>
+    <url>
+         <loc>https://lirikonov.github.io/SSU-University/go/lectures/3.%20Memory/Memory/</loc>
+         <lastmod>2026-09-19</lastmod>
     </url>
     <url>
          <loc>https://lirikonov.github.io/SSU-University/go/lectures/Additional/1%20-%20Go%20Runtime%20deep/</loc>
-         <lastmod>2026-09-18</lastmod>
+         <lastmod>2026-09-19</lastmod>
     </url>
     <url>
          <loc>https://lirikonov.github.io/SSU-University/go/lectures/Additional/2%20-%20GC%20deep/</loc>
-         <lastmod>2026-09-18</lastmod>
+         <lastmod>2026-09-19</lastmod>
     </url>
     <url>
          <loc>https://lirikonov.github.io/SSU-University/lectures/</loc>
-         <lastmod>2026-09-18</lastmod>
+         <lastmod>2026-09-19</lastmod>
     </url>
     <url>
          <loc>https://lirikonov.github.io/SSU-University/slides/</loc>
-         <lastmod>2026-09-18</lastmod>
+         <lastmod>2026-09-19</lastmod>
     </url>
 </urlset>

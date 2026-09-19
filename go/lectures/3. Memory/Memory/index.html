@@ -1,0 +1,2978 @@
+<!DOCTYPE html>
+<html class="no-js" lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<link href="https://lirikonov.github.io/SSU-University/go/lectures/3.%20Memory/Memory/" rel="canonical"/>
+<link href="../../2.%20Runtime/Go%20runtime/" rel="prev"/>
+<link href="../../Additional/1%20-%20Go%20Runtime%20deep/" rel="next"/>
+<link href="../../../../assets/images/favicon.png" rel="icon"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.7.7" name="generator"/>
+<title>3. Go memory, GC и pprof - Go</title>
+<link href="../../../../assets/stylesheets/main.ec1eaa64.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+<script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+</head>
+<body data-md-color-accent="indigo" data-md-color-primary="indigo" data-md-color-scheme="default" dir="ltr">
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#3-go-memory-gc-pprof">
+          Перейти к содержанию
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header md-header--shadow" data-md-component="header">
+<nav aria-label="Верхний колонтитул" class="md-header__inner md-grid">
+<a aria-label="Go" class="md-header__button md-logo" data-md-component="logo" href="../../../.." title="Go">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            Go
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              3. Go memory, GC и pprof
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Тёмная тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: light)" data-md-color-primary="indigo" data-md-color-scheme="default" id="__palette_0" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Тёмная тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+<input aria-label="Светлая тема" class="md-option" data-md-color-accent="indigo" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-primary="indigo" data-md-color-scheme="slate" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_0" hidden="" title="Светлая тема">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+</form>
+<script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Поиск" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Поиск" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</label>
+<nav aria-label="Поиск" class="md-search__options">
+<button aria-label="Очистить" class="md-search__icon md-icon" tabindex="-1" title="Очистить" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+</nav>
+<div class="md-search__suggest" data-md-component="search-suggest"></div>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="" tabindex="0">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Инициализация поиска
+          </div>
+<ol class="md-search-result__list" role="presentation"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Навигация" class="md-nav md-nav--primary" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="Go" class="md-nav__button md-logo" data-md-component="logo" href="../../../.." title="Go">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+    Go
+  </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--active md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Go
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_1_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Go
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--active md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_1_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1_1" id="__nav_1_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Lectures
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_1_1_label" class="md-nav" data-md-level="2">
+<label class="md-nav__title" for="__nav_1_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Lectures
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_1_1_1" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1_1_1" id="__nav_1_1_1_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    1. Prod
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_1_1_1_label" class="md-nav" data-md-level="3">
+<label class="md-nav__title" for="__nav_1_1_1">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    1. Prod
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../1.%20Prod/Production%20backend/">
+<span class="md-ellipsis">
+    
+  
+    1. Production backend и эволюция Go
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_1_1_2" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1_1_2" id="__nav_1_1_2_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    2. Runtime
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_1_1_2_label" class="md-nav" data-md-level="3">
+<label class="md-nav__title" for="__nav_1_1_2">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    2. Runtime
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../2.%20Runtime/Go%20runtime/">
+<span class="md-ellipsis">
+    
+  
+    2. Go runtime internals — расширенная версия
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--active md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_1_1_3" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1_1_3" id="__nav_1_1_3_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    3. Memory
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_1_1_3_label" class="md-nav" data-md-level="3">
+<label class="md-nav__title" for="__nav_1_1_3">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    3. Memory
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--active">
+<input class="md-nav__toggle md-toggle" id="__toc" type="checkbox"/>
+<a class="md-nav__link md-nav__link--active" href="./">
+<span class="md-ellipsis">
+    
+  
+    3. Go memory, GC и pprof
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_1_1_4" type="checkbox"/>
+<label class="md-nav__link" for="__nav_1_1_4" id="__nav_1_1_4_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Additional
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_1_1_4_label" class="md-nav" data-md-level="3">
+<label class="md-nav__title" for="__nav_1_1_4">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Additional
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../Additional/1%20-%20Go%20Runtime%20deep/">
+<span class="md-ellipsis">
+    
+  
+    1. Глубокие internals Go runtime, synchronization и CPU
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../Additional/2%20-%20GC%20deep/">
+<span class="md-ellipsis">
+    
+  
+    Дополнительная лекция 2. Go GC internals и memory allocator
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Содержание" class="md-nav md-nav--secondary">
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<h1 id="3-go-memory-gc-pprof">3. Go memory, GC и pprof<a class="headerlink" href="#3-go-memory-gc-pprof" title="Permanent link">¶</a></h1>
+<blockquote>
+<p>Версионная привязка: материал ориентирован на стандартный Go toolchain версии 1.27.x.</p>
+<p>В этой лекции важно постоянно разделять:</p>
+<ul>
+<li><strong>гарантии языка</strong> — что обещает спецификация;</li>
+<li><strong>решения compiler/runtime</strong> — stack/heap placement, GC и конкретные оптимизации;</li>
+<li><strong>production-поведение</strong> — allocations, GC CPU, RSS, latency, goroutine leaks.</li>
+</ul>
+<p>Детали <code>mcache</code>, <code>mspan</code>, <code>mcentral</code>, Green Tea queues, sweep generations и scavenger internals разбираются в отдельной дополнительной лекции.</p>
+</blockquote>
+<p>Главная цепочка лекции:</p>
+<div class="highlight"><pre><span></span><code>значение в коде
+      ↓
+lifetime
+      ↓
+escape analysis
+      ↓
+stack или heap
+      ↓
+allocations
+      ↓
+heap growth
+      ↓
+GC
+      ↓
+CPU / memory pressure
+      ↓
+pprof
+      ↓
+конкретная строка кода
+</code></pre></div>
+<p>Цель лекции — чтобы студент после неё не говорил:</p>
+<blockquote>
+<p>«GC съел память»<br/>
+«указатель значит heap»<br/>
+«маленькая GC pause значит GC дешёвый»<br/>
+«RSS растёт — значит leak»</p>
+</blockquote>
+<p>Вместо этого он должен уметь построить причинно-следственную цепочку.</p>
+<hr/>
+<h1 id="1">Блок 1. С чего вообще начинается разговор о памяти<a class="headerlink" href="#1" title="Permanent link">¶</a></h1>
+<h2 id="1-backend">1. Backend живёт не в абстрактной памяти<a class="headerlink" href="#1-backend" title="Permanent link">¶</a></h2>
+<p>Возьмём HTTP-сервис:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">handler</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">user</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">User</span><span class="p">{</span>
+<span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">   </span><span class="mi">42</span><span class="p">,</span>
+<span class="w">        </span><span class="nx">Name</span><span class="p">:</span><span class="w"> </span><span class="s">"Alice"</span><span class="p">,</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">json</span><span class="p">.</span><span class="nx">Marshal</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span>
+<span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">Write</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>На уровне бизнес-кода всё просто.</p>
+<p>Но процессу физически нужны ресурсы:</p>
+<div class="highlight"><pre><span></span><code>код программы
+goroutine stacks
+heap objects
+runtime metadata
+OS thread stacks
+network buffers
+memory mappings
+</code></pre></div>
+<p>И в какой-то момент production говорит:</p>
+<div class="highlight"><pre><span></span><code>CPU = 95%
+RSS = 1.8 GB
+p99 = 900 ms
+GC CPU высокий
+goroutines = 40 000
+</code></pre></div>
+<p>Чтобы понять, почему это произошло, одной синтаксической модели Go недостаточно.</p>
+<p>Нужно понимать <strong>lifetime данных</strong>.</p>
+<hr/>
+<h2 id="2">2. Главный вопрос — не «где объявлена переменная»<a class="headerlink" href="#2" title="Permanent link">¶</a></h2>
+<p>Плохое упрощение:</p>
+<div class="highlight"><pre><span></span><code>локальная переменная → stack
+new() → heap
+указатель → heap
+</code></pre></div>
+<p>Эта таблица ломается почти сразу.</p>
+<p>Полезнее задавать вопрос:</p>
+<blockquote>
+<p>Как долго значение должно существовать и кто может на него ссылаться?</p>
+</blockquote>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">answer</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">x</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>x</code> нужен только во время вызова <code>answer</code>.</p>
+<p>А теперь:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">answer</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">x</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>После <code>return</code> вызывающая функция всё ещё получает адрес <code>x</code>.</p>
+<p>Значит lifetime значения переживает execution frame функции.</p>
+<p>Именно здесь возникает задача compiler:</p>
+<div class="highlight"><pre><span></span><code>где разместить значение,
+чтобы его lifetime был корректным?
+</code></pre></div>
+<hr/>
+<h1 id="2-stack">Блок 2. Stack<a class="headerlink" href="#2-stack" title="Permanent link">¶</a></h1>
+<h2 id="3-stack">3. Stack — сначала ментальная модель<a class="headerlink" href="#3-stack" title="Permanent link">¶</a></h2>
+<p>При вызове функции ей нужна память для выполнения.</p>
+<p>Учебно можно представить frame:</p>
+<div class="highlight"><pre><span></span><code>foo()
+┌─────────────────┐
+│ arguments       │
+│ local values    │
+│ temporary data  │
+│ return state    │
+└─────────────────┘
+</code></pre></div>
+<p>Функция вызывает другую:</p>
+<div class="highlight"><pre><span></span><code>main
+ ↓
+handle
+ ↓
+parse
+ ↓
+validate
+</code></pre></div>
+<p>Получаем:</p>
+<div class="highlight"><pre><span></span><code>goroutine stack
+
+┌────────────┐
+│ validate   │
+├────────────┤
+│ parse      │
+├────────────┤
+│ handle     │
+├────────────┤
+│ main       │
+└────────────┘
+</code></pre></div>
+<p>Когда <code>validate</code> заканчивается, её frame больше не нужен.</p>
+<hr/>
+<h2 id="4-stack-allocation">4. Почему stack allocation дешёвая<a class="headerlink" href="#4-stack-allocation" title="Permanent link">¶</a></h2>
+<p>В очень упрощённой модели stack allocation похожа на:</p>
+<div class="highlight"><pre><span></span><code>stack pointer
+      ↓
+сдвинули границу
+      ↓
+готово
+</code></pre></div>
+<p>Когда функция возвращается:</p>
+<div class="highlight"><pre><span></span><code>frame больше не нужен
+↓
+stack pointer возвращается
+</code></pre></div>
+<p>Не нужно:</p>
+<div class="highlight"><pre><span></span><code>искать отдельный свободный object
+запоминать его lifetime в heap
+потом искать его GC
+</code></pre></div>
+<p>Поэтому stack allocation обычно значительно дешевле heap allocation.</p>
+<hr/>
+<h2 id="5-stack-value">5. Кто освобождает stack value<a class="headerlink" href="#5-stack-value" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">calculate</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">    </span><span class="nx">y</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">20</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">y</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Когда frame <code>calculate</code> исчезает:</p>
+<div class="highlight"><pre><span></span><code>x
+y
+</code></pre></div>
+<p>исчезают вместе с ним.</p>
+<p>Никакой GC не обязан отдельно искать:</p>
+<div class="highlight"><pre><span></span><code>x больше не нужен?
+y больше не нужен?
+</code></pre></div>
+<p>Lifetime уже структурирован call stack.</p>
+<hr/>
+<h2 id="6-goroutine-stack">6. У каждой goroutine свой stack<a class="headerlink" href="#6-goroutine-stack" title="Permanent link">¶</a></h2>
+<p>Это важная связь с конкурентностью.</p>
+<div class="highlight"><pre><span></span><code>G1 → stack1
+G2 → stack2
+G3 → stack3
+...
+</code></pre></div>
+<p>Если одновременно существует 100 000 goroutines, у каждой есть собственное stack state.</p>
+<p>Но было бы слишком дорого заранее выдавать каждой goroutine огромный stack.</p>
+<p>Поэтому goroutine stacks стартуют небольшими и runtime может увеличивать их по мере необходимости.</p>
+<hr/>
+<h2 id="7-stack">7. Stack может расти<a class="headerlink" href="#7-stack" title="Permanent link">¶</a></h2>
+<p>Представим глубокий call chain:</p>
+<div class="highlight"><pre><span></span><code>f1
+↓
+f2
+↓
+f3
+↓
+...
+↓
+f1000
+</code></pre></div>
+<p>Или recursive algorithm.</p>
+<p>Текущего stack space может не хватить.</p>
+<p>Runtime Go умеет увеличить stack goroutine.</p>
+<p>Учебная модель:</p>
+<div class="highlight"><pre><span></span><code>старый stack слишком мал
+↓
+runtime получает больший stack
+↓
+переносит stack data
+↓
+обновляет известные references
+↓
+goroutine продолжает работу
+</code></pre></div>
+<p>Это implementation detail runtime, но полезное следствие:</p>
+<blockquote>
+<p>Размер goroutine stack не является фиксированной величиной на весь lifetime goroutine.</p>
+</blockquote>
+<hr/>
+<h2 id="8-stack">8. Stack тоже потребляет память<a class="headerlink" href="#8-stack" title="Permanent link">¶</a></h2>
+<p>Иногда говорят:</p>
+<blockquote>
+<p>«Goroutine почти бесплатная».</p>
+</blockquote>
+<p>Нет.</p>
+<p>Даже если stack стартует маленьким, goroutine:</p>
+<div class="highlight"><pre><span></span><code>имеет stack
+имеет runtime metadata
+может удерживать heap references
+может вырасти
+</code></pre></div>
+<p>Поэтому leak из сотен тысяч goroutines — memory problem даже до учёта heap objects, которые они удерживают.</p>
+<hr/>
+<h2 id="_1">Что важно запомнить<a class="headerlink" href="#_1" title="Permanent link">¶</a></h2>
+<ol>
+<li>Stack связан с execution frames функций.</li>
+<li>Stack values удобно освобождать вместе с завершением frame.</li>
+<li>У каждой goroutine свой stack.</li>
+<li>Goroutine stack способен расти.</li>
+<li>Stack memory тоже не бесплатна.</li>
+</ol>
+<hr/>
+<h1 id="3-heap">Блок 3. Heap<a class="headerlink" href="#3-heap" title="Permanent link">¶</a></h1>
+<h2 id="9-structured-lifetime-stack">9. Когда structured lifetime stack уже недостаточен<a class="headerlink" href="#9-structured-lifetime-stack" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">createUser</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="nx">User</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">u</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">User</span><span class="p">{</span>
+<span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">u</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>После возврата:</p>
+<div class="highlight"><pre><span></span><code>createUser frame
+</code></pre></div>
+<p>закончился.</p>
+<p>Но объект должен остаться доступным вызывающему коду.</p>
+<p>Значит storage объекта не может зависеть от lifetime этого frame.</p>
+<p>Здесь появляется heap.</p>
+<hr/>
+<h2 id="10-heap">10. Что такое heap в полезной модели<a class="headerlink" href="#10-heap" title="Permanent link">¶</a></h2>
+<p>Heap — managed memory для значений, lifetime которых нельзя удобно связать только с текущим stack frame.</p>
+<p>Очень грубо:</p>
+<div class="highlight"><pre><span></span><code>stack:
+lifetime следует call structure
+
+heap:
+lifetime определяется reachability
+</code></pre></div>
+<p>Это важнее определения:</p>
+<blockquote>
+<p>«Heap — большая область динамической памяти».</p>
+</blockquote>
+<p>Нас интересует именно различие lifetime.</p>
+<hr/>
+<h2 id="11-heap-object">11. Кто освобождает heap object<a class="headerlink" href="#11-heap-object" title="Permanent link">¶</a></h2>
+<p>Stack frame уничтожается структурно.</p>
+<p>С heap всё сложнее.</p>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>A → B → C
+</code></pre></div>
+<p>Пока <code>A</code> reachable, <code>B</code> и <code>C</code> тоже могут быть нужны.</p>
+<p>Потом reference на <code>A</code> исчезает.</p>
+<p>Теперь runtime должен установить:</p>
+<div class="highlight"><pre><span></span><code>существует ли ещё какой-либо путь к A/B/C?
+</code></pre></div>
+<p>Именно эту задачу решает GC.</p>
+<hr/>
+<h2 id="12-stack-heap">12. Stack и heap — не синтаксические конструкции языка<a class="headerlink" href="#12-stack-heap" title="Permanent link">¶</a></h2>
+<p>Go specification не обещает:</p>
+<div class="highlight"><pre><span></span><code>new(T) обязан heap
+локальная переменная обязана stack
+</code></pre></div>
+<p>Storage managed implementation.</p>
+<p>Compiler может изменить placement между версиями, не меняя корректность программы.</p>
+<p>Правильный уровень рассуждения:</p>
+<div class="highlight"><pre><span></span><code>семантика программы
+↓
+compiler определяет storage strategy
+</code></pre></div>
+<hr/>
+<h1 id="4-stack-heap">Блок 4. Разрушаем мифы про stack и heap<a class="headerlink" href="#4-stack-heap" title="Permanent link">¶</a></h1>
+<h2 id="13-newt-heap">13. <code>new(T)</code> не означает «heap»<a class="headerlink" href="#13-newt-heap" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">f</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">new</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="nx">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="nx">p</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>На уровне языка:</p>
+<div class="highlight"><pre><span></span><code>new(int)
+</code></pre></div>
+<p>создаёт variable и возвращает pointer.</p>
+<p>Но compiler может доказать:</p>
+<div class="highlight"><pre><span></span><code>pointer не переживает вызов f
+</code></pre></div>
+<p>и оставить storage вне heap либо оптимизировать его ещё сильнее.</p>
+<p>Следовательно:</p>
+<div class="highlight"><pre><span></span><code>new
+≠
+гарантированный heap allocation
+</code></pre></div>
+<hr/>
+<h2 id="14-x-heap">14. <code>&amp;x</code> не означает «heap»<a class="headerlink" href="#14-x-heap" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">f</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">x</span>
+<span class="w">    </span><span class="nx">consume</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Сам факт взятия адреса не требует heap.</p>
+<p>Вопрос:</p>
+<div class="highlight"><pre><span></span><code>куда pointer уходит?
+как долго он живёт?
+может ли compiler доказать lifetime?
+</code></pre></div>
+<hr/>
+<h2 id="15-heap">15. Локальная переменная может попасть в heap<a class="headerlink" href="#15-heap" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">makeCounter</span><span class="p">()</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">x</span><span class="o">++</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">x</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Closure переживает <code>makeCounter</code>.</p>
+<p>Значит captured state <code>x</code> должен жить дольше frame функции.</p>
+<p>Compiler должен обеспечить этот lifetime.</p>
+<hr/>
+<h2 id="16-compiler">16. Большое значение тоже может изменить решение compiler<a class="headerlink" href="#16-compiler" title="Permanent link">¶</a></h2>
+<p>Даже если значение логически могло бы жить на stack, compiler/runtime могут учитывать ограничения реализации.</p>
+<p>Большие local objects, inlining и конкретные optimization passes могут влиять на storage decision.</p>
+<p>Поэтому нельзя строить лекцию вокруг списка:</p>
+<div class="highlight"><pre><span></span><code>конструкция X всегда stack
+конструкция Y всегда heap
+</code></pre></div>
+<p>Надёжнее:</p>
+<div class="highlight"><pre><span></span><code>изучаем lifetime
+↓
+проверяем compiler diagnostics
+↓
+измеряем allocations
+</code></pre></div>
+<hr/>
+<h1 id="5-escape-analysis">Блок 5. Escape analysis<a class="headerlink" href="#5-escape-analysis" title="Permanent link">¶</a></h1>
+<h2 id="17-compiler-escape">17. Зачем compiler вообще анализирует escape<a class="headerlink" href="#17-compiler-escape" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">f</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">x</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Compiler видит flow:</p>
+<div class="highlight"><pre><span></span><code>x
+↓
+&amp;x
+↓
+return
+↓
+caller
+</code></pre></div>
+<p>Reference выходит за lifetime frame.</p>
+<p>Говорят:</p>
+<div class="highlight"><pre><span></span><code>x escapes
+</code></pre></div>
+<p>То есть compiler не может оставить storage только внутри обычного lifetime текущего frame.</p>
+<hr/>
+<h2 id="18-escape-references">18. Escape — это анализ потока references<a class="headerlink" href="#18-escape-references" title="Permanent link">¶</a></h2>
+<p>Не сводим к:</p>
+<div class="highlight"><pre><span></span><code>есть pointer → escape
+</code></pre></div>
+<p>Compiler анализирует:</p>
+<div class="highlight"><pre><span></span><code>value
+↓
+reference
+↓
+куда сохраняется?
+↓
+кто может пережить текущую функцию?
+</code></pre></div>
+<p>Типичные причины:</p>
+<div class="highlight"><pre><span></span><code>return pointer
+closure capture
+store into longer-lived object
+store in heap structure
+unknown/indirect call behavior
+large object/compiler constraints
+</code></pre></div>
+<hr/>
+<h2 id="19-return-pointer">19. Пример: return pointer<a class="headerlink" href="#19-return-pointer" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">makeID</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">id</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">id</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Lifetime:</p>
+<div class="highlight"><pre><span></span><code>frame makeID закончился
+↓
+caller всё ещё использует pointer
+</code></pre></div>
+<p>Storage обязан пережить frame.</p>
+<p>Это очевидный escape case.</p>
+<hr/>
+<h2 id="20-pointer">20. Пример: pointer остаётся локальным<a class="headerlink" href="#20-pointer" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">local</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">x</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="nx">p</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Pointer существует.</p>
+<p>Но:</p>
+<div class="highlight"><pre><span></span><code>p не уходит наружу
+</code></pre></div>
+<p>Compiler может оставить value вне heap.</p>
+<p>Снова:</p>
+<div class="highlight"><pre><span></span><code>pointer
+≠
+heap
+</code></pre></div>
+<hr/>
+<h2 id="21-closure">21. Пример: closure<a class="headerlink" href="#21-closure" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">counter</span><span class="p">()</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">n</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">n</span><span class="o">++</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">n</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Closure хранит доступ к <code>n</code>.</p>
+<p>После:</p>
+<div class="highlight"><pre><span></span><code>counter() returned
+</code></pre></div>
+<p><code>n</code> всё ещё нужен.</p>
+<p>Это lifetime extension.</p>
+<hr/>
+<h2 id="22-object">22. Пример: сохранение в более долгоживущий object<a class="headerlink" href="#22-object" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">Holder</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">P</span><span class="w"> </span><span class="o">*</span><span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">put</span><span class="p">(</span><span class="nx">h</span><span class="w"> </span><span class="o">*</span><span class="nx">Holder</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">42</span>
+<span class="w">    </span><span class="nx">h</span><span class="p">.</span><span class="nx">P</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">x</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>После <code>put</code>:</p>
+<div class="highlight"><pre><span></span><code>h.P
+</code></pre></div>
+<p>может использовать <code>x</code>.</p>
+<p>Значит <code>x</code> не может исчезнуть вместе с frame.</p>
+<hr/>
+<h2 id="23-inlining-escape-result">23. Inlining может изменить escape result<a class="headerlink" href="#23-inlining-escape-result" title="Permanent link">¶</a></h2>
+<p>До inlining compiler может видеть функцию отдельно.</p>
+<p>После inlining body вызываемой функции становится виден caller context.</p>
+<p>Иногда теперь можно доказать:</p>
+<div class="highlight"><pre><span></span><code>reference не переживает caller
+</code></pre></div>
+<p>и убрать heap allocation.</p>
+<p>Следствие:</p>
+<blockquote>
+<p>Allocation count может измениться после seemingly unrelated compiler upgrade.</p>
+</blockquote>
+<hr/>
+<h2 id="24-go-stack-allocation">24. Go продолжает улучшать stack allocation<a class="headerlink" href="#24-go-stack-allocation" title="Permanent link">¶</a></h2>
+<p>Go 1.26 расширил возможности compiler размещать некоторые constant-sized slices на stack.</p>
+<p>Это хороший пример:</p>
+<div class="highlight"><pre><span></span><code>код не изменился
+↓
+семантика не изменилась
+↓
+compiler доказал больше
+↓
+heap allocations стало меньше
+</code></pre></div>
+<p>Поэтому stack/heap placement — implementation detail, а не API contract.</p>
+<hr/>
+<h1 id="6-escape-analysis">Блок 6. Как смотреть escape analysis<a class="headerlink" href="#6-escape-analysis" title="Permanent link">¶</a></h1>
+<h2 id="25-compiler-diagnostics">25. Compiler diagnostics<a class="headerlink" href="#25-compiler-diagnostics" title="Permanent link">¶</a></h2>
+<p>Практический инструмент:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>build<span class="w"> </span>-gcflags<span class="o">=</span><span class="s2">"-m=2"</span><span class="w"> </span>./...
+</code></pre></div>
+<p>Для отдельного файла:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>build<span class="w"> </span>-gcflags<span class="o">=</span><span class="s2">"-m=2"</span><span class="w"> </span>main.go
+</code></pre></div>
+<p>Можно увидеть сообщения вроде:</p>
+<div class="highlight"><pre><span></span><code>x escapes to heap
+moved to heap: x
+does not escape
+</code></pre></div>
+<hr/>
+<h2 id="26-m-performance-report">26. Не читать <code>-m</code> как готовый performance report<a class="headerlink" href="#26-m-performance-report" title="Permanent link">¶</a></h2>
+<p>Escape report отвечает:</p>
+<div class="highlight"><pre><span></span><code>почему compiler принял storage decision
+</code></pre></div>
+<p>Он не отвечает:</p>
+<div class="highlight"><pre><span></span><code>это bottleneck?
+</code></pre></div>
+<p>Пример:</p>
+<div class="highlight"><pre><span></span><code>1 heap allocation
+</code></pre></div>
+<p>в функции, вызываемой раз в час, неинтересна.</p>
+<p>Та же allocation:</p>
+<div class="highlight"><pre><span></span><code>× 100 000 RPS
+</code></pre></div>
+<p>уже может быть существенна.</p>
+<hr/>
+<h2 id="27">27. Правильная последовательность<a class="headerlink" href="#27" title="Permanent link">¶</a></h2>
+<p>Не:</p>
+<div class="highlight"><pre><span></span><code>запустить -gcflags=-m
+↓
+оптимизировать всё красное
+</code></pre></div>
+<p>А:</p>
+<div class="highlight"><pre><span></span><code>наблюдаем CPU/memory problem
+↓
+profile / benchmark
+↓
+находим allocation hotspot
+↓
+escape analysis объясняет причину
+</code></pre></div>
+<p>Compiler diagnostics — инструмент объяснения, а не автоматический backlog.</p>
+<hr/>
+<h2 id="_2">Что важно запомнить<a class="headerlink" href="#_2" title="Permanent link">¶</a></h2>
+<ol>
+<li>Escape analysis исследует lifetime/reference flow.</li>
+<li>Pointer сам по себе не означает escape.</li>
+<li>Closure, return и long-lived references часто приводят к escape.</li>
+<li>Результаты могут меняться после compiler improvements.</li>
+<li><code>-gcflags="-m=2"</code> помогает объяснять allocations, но не заменяет profiling.</li>
+</ol>
+<hr/>
+<h1 id="7-allocation">Блок 7. Allocation<a class="headerlink" href="#7-allocation" title="Permanent link">¶</a></h1>
+<h2 id="28-allocation">28. Что именно называется allocation<a class="headerlink" href="#28-allocation" title="Permanent link">¶</a></h2>
+<p>В контексте performance обычно интересует heap allocation:</p>
+<div class="highlight"><pre><span></span><code>runtime должен получить storage для нового heap object
+</code></pre></div>
+<p>Но полезно различать три вещи:</p>
+<div class="highlight"><pre><span></span><code>allocation count
+allocated bytes
+live bytes
+</code></pre></div>
+<p>Это разные характеристики.</p>
+<hr/>
+<h2 id="29-allocation-rate-allocation">29. Почему allocation rate важнее одной allocation<a class="headerlink" href="#29-allocation-rate-allocation" title="Permanent link">¶</a></h2>
+<p>Одна allocation:</p>
+<div class="highlight"><pre><span></span><code>256 B
+</code></pre></div>
+<p>ничего не значит.</p>
+<p>Теперь:</p>
+<div class="highlight"><pre><span></span><code>256 B
+×
+2 000 000 allocations/sec
+≈
+512 MB/sec
+</code></pre></div>
+<p>Runtime каждую секунду пропускает через allocator огромный поток objects.</p>
+<p>Большинство может умереть почти сразу.</p>
+<p>Memory usage может оставаться стабильной.</p>
+<p>Но GC work будет большой.</p>
+<hr/>
+<h2 id="30-live-heap-allocation-rate">30. Live heap и allocation rate — разные оси<a class="headerlink" href="#30-live-heap-allocation-rate" title="Permanent link">¶</a></h2>
+<p>Сервис A:</p>
+<div class="highlight"><pre><span></span><code>live heap = 200 MB
+allocation rate = 5 GB/s
+</code></pre></div>
+<p>Сервис B:</p>
+<div class="highlight"><pre><span></span><code>live heap = 3 GB
+allocation rate = 100 MB/s
+</code></pre></div>
+<p>У A:</p>
+<div class="highlight"><pre><span></span><code>много churn
+</code></pre></div>
+<p>У B:</p>
+<div class="highlight"><pre><span></span><code>много retained/live memory
+</code></pre></div>
+<p>Оба могут иметь memory/GC проблемы, но причины будут разными.</p>
+<hr/>
+<h2 id="31-lifetime-distribution">31. Lifetime distribution<a class="headerlink" href="#31-lifetime-distribution" title="Permanent link">¶</a></h2>
+<p>Представим три типа объектов:</p>
+<div class="highlight"><pre><span></span><code>A: живёт 10 µs
+B: живёт 1 second
+C: живёт 1 hour
+</code></pre></div>
+<p>A:</p>
+<div class="highlight"><pre><span></span><code>много мусора
+высокий allocation churn
+</code></pre></div>
+<p>C:</p>
+<div class="highlight"><pre><span></span><code>увеличивает live set
+долго остаётся частью heap graph
+</code></pre></div>
+<p>Поэтому GC cost зависит не только от общего числа allocated bytes.</p>
+<hr/>
+<h1 id="8-allocations">Блок 8. Откуда появляются allocations<a class="headerlink" href="#8-allocations" title="Permanent link">¶</a></h1>
+<h2 id="32-make">32. <code>make</code><a class="headerlink" href="#32-make" title="Permanent link">¶</a></h2>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">buf</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="mi">4096</span><span class="p">)</span>
+</code></pre></div>
+<p>Backing array где-то должен храниться.</p>
+<p>Compiler может в отдельных случаях разместить fixed-size data на stack, но dynamic/larger cases часто требуют heap storage.</p>
+<hr/>
+<h2 id="33-slice">33. Рост slice<a class="headerlink" href="#33-slice" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">xs</span><span class="w"> </span><span class="p">[]</span><span class="kt">int</span>
+
+<span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1_000_000</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">xs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">xs</span><span class="p">,</span><span class="w"> </span><span class="nx">i</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Когда capacity заканчивается:</p>
+<div class="highlight"><pre><span></span><code>старый backing array полон
+↓
+создаётся больший backing array
+↓
+данные копируются
+↓
+slice указывает на новый array
+</code></pre></div>
+<p>Это может породить несколько allocations и copies.</p>
+<hr/>
+<h2 id="34-capacity">34. Почему capacity иногда важен<a class="headerlink" href="#34-capacity" title="Permanent link">¶</a></h2>
+<p>Если размер примерно известен:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">xs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nx">expected</span><span class="p">)</span>
+</code></pre></div>
+<p>можно уменьшить число growth reallocations.</p>
+<p>Но правило не:</p>
+<div class="highlight"><pre><span></span><code>всегда preallocate максимально
+</code></pre></div>
+<p>Слишком большой capacity может:</p>
+<div class="highlight"><pre><span></span><code>удерживать лишнюю память
+увеличить RSS
+</code></pre></div>
+<p>Снова trade-off.</p>
+<hr/>
+<h2 id="35-strings-byte">35. Strings и <code>[]byte</code><a class="headerlink" href="#35-strings-byte" title="Permanent link">¶</a></h2>
+<p>Преобразования:</p>
+<div class="highlight"><pre><span></span><code><span class="p">[]</span><span class="kt">byte</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+<span class="kt">string</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span>
+</code></pre></div>
+<p>могут требовать нового storage/copy.</p>
+<p>Compiler имеет оптимизации для отдельных случаев, поэтому нельзя утверждать:</p>
+<div class="highlight"><pre><span></span><code>каждая conversion всегда allocation
+</code></pre></div>
+<p>Но в hot path это известный источник temporary memory, который надо измерять.</p>
+<hr/>
+<h2 id="36-fmt">36. <code>fmt</code><a class="headerlink" href="#36-fmt" title="Permanent link">¶</a></h2>
+<p>Удобные formatting APIs могут использовать reflection/interface machinery и temporary storage.</p>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">"%s:%d"</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">)</span>
+</code></pre></div>
+<p>В cold path это нормально.</p>
+<p>В extremely hot loop может оказаться заметно.</p>
+<p>Вывод:</p>
+<div class="highlight"><pre><span></span><code>удобство
+≠
+запрет
+
+горячий path
+→
+измеряем
+</code></pre></div>
+<hr/>
+<h2 id="37-interfaces">37. Interfaces<a class="headerlink" href="#37-interfaces" title="Permanent link">¶</a></h2>
+<p>Передача значения через interface не означает автоматически heap allocation.</p>
+<p>Но конкретная interface conversion и дальнейший escape могут приводить к allocations.</p>
+<p>Поэтому плохое правило:</p>
+<div class="highlight"><pre><span></span><code>interface всегда allocates
+</code></pre></div>
+<p>Правильное:</p>
+<div class="highlight"><pre><span></span><code>конкретный call path
+↓
+benchmark
+↓
+escape report
+</code></pre></div>
+<hr/>
+<h2 id="38-closures">38. Closures<a class="headerlink" href="#38-closures" title="Permanent link">¶</a></h2>
+<p>Closure может быть дешёвой.</p>
+<p>Но если captured environment должен жить дольше frame:</p>
+<div class="highlight"><pre><span></span><code>captured values
+↓
+extended lifetime
+</code></pre></div>
+<p>может появиться heap allocation.</p>
+<hr/>
+<h2 id="39-maps">39. Maps<a class="headerlink" href="#39-maps" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kt">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="nx">User</span><span class="p">)</span>
+</code></pre></div>
+<p>Map требует runtime storage.</p>
+<p>По мере роста map получает дополнительные backing structures.</p>
+<p>Если заранее известна приблизительная cardinality:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">make</span><span class="p">(</span><span class="kt">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="nx">User</span><span class="p">,</span><span class="w"> </span><span class="nx">expected</span><span class="p">)</span>
+</code></pre></div>
+<p>можно уменьшить часть growth overhead.</p>
+<p>Опять же — измеряем.</p>
+<hr/>
+<h2 id="40-json">40. JSON<a class="headerlink" href="#40-json" title="Permanent link">¶</a></h2>
+<p>Типичный backend hotspot:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">json</span><span class="p">.</span><span class="nx">Marshal</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span>
+</code></pre></div>
+<p>Вокруг serialization могут появляться:</p>
+<div class="highlight"><pre><span></span><code>temporary buffers
+strings
+reflection paths
+copies
+DTO allocations
+</code></pre></div>
+<p>Один request выглядит безобидно.</p>
+<p>При:</p>
+<div class="highlight"><pre><span></span><code>20 allocations/request
+×
+30 000 RPS
+=
+600 000 allocations/sec
+</code></pre></div>
+<p>ситуация уже другая.</p>
+<hr/>
+<h1 id="9-allocations">Блок 9. Измеряем allocations<a class="headerlink" href="#9-allocations" title="Permanent link">¶</a></h1>
+<h2 id="41-benchmark">41. Benchmark<a class="headerlink" href="#41-benchmark" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">BenchmarkEncode</span><span class="p">(</span><span class="nx">b</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">B</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">b</span><span class="p">.</span><span class="nx">Loop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">encode</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Запуск:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-bench<span class="o">=</span>.<span class="w"> </span>-benchmem
+</code></pre></div>
+<p>Вывод может содержать:</p>
+<div class="highlight"><pre><span></span><code>850 ns/op
+512 B/op
+7 allocs/op
+</code></pre></div>
+<hr/>
+<h2 id="42-bop">42. Что означает <code>B/op</code><a class="headerlink" href="#42-bop" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>B/op
+</code></pre></div>
+<p>сколько bytes в среднем allocated на одну benchmark operation.</p>
+<p>Важно:</p>
+<p>это не:</p>
+<div class="highlight"><pre><span></span><code>сколько memory осталось live после operation
+</code></pre></div>
+<p>Это allocation traffic.</p>
+<hr/>
+<h2 id="43-allocsop">43. Что означает <code>allocs/op</code><a class="headerlink" href="#43-allocsop" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>allocs/op
+</code></pre></div>
+<p>сколько heap allocations приходится в среднем на operation.</p>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>100 B/op
+10 allocs/op
+</code></pre></div>
+<p>и:</p>
+<div class="highlight"><pre><span></span><code>100 B/op
+1 alloc/op
+</code></pre></div>
+<p>имеют одинаковые bytes, но разное число allocator events.</p>
+<hr/>
+<h2 id="44">44. Повторяем измерения<a class="headerlink" href="#44" title="Permanent link">¶</a></h2>
+<p>Полезно:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-bench<span class="o">=</span>.<span class="w"> </span>-benchmem<span class="w"> </span>-count<span class="o">=</span><span class="m">5</span>
+</code></pre></div>
+<p>Серьёзные regression comparisons лучше делать по нескольким запускам.</p>
+<p>Главный принцип:</p>
+<div class="highlight"><pre><span></span><code>до
+↓
+изменение
+↓
+после
+</code></pre></div>
+<hr/>
+<h2 id="45-allocations">45. Нулевые allocations — не самоцель<a class="headerlink" href="#45-allocations" title="Permanent link">¶</a></h2>
+<p>Административный endpoint:</p>
+<div class="highlight"><pre><span></span><code>1 request/hour
+</code></pre></div>
+<p>имеет 5 allocations.</p>
+<p>А parsing function на:</p>
+<div class="highlight"><pre><span></span><code>100 000 RPS
+</code></pre></div>
+<p>имеет одну лишнюю allocation.</p>
+<p>Оптимизировать надо второе.</p>
+<p>Performance engineering начинается с:</p>
+<div class="highlight"><pre><span></span><code>frequency × cost
+</code></pre></div>
+<hr/>
+<h1 id="10-pointers-lifetime">Блок 10. Pointers и lifetime<a class="headerlink" href="#10-pointers-lifetime" title="Permanent link">¶</a></h1>
+<h2 id="46-pointer-reference-storage">46. Pointer — reference на storage<a class="headerlink" href="#46-pointer-reference-storage" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">42</span>
+<span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">x</span>
+</code></pre></div>
+<p>Но для GC важнее object graph:</p>
+<div class="highlight"><pre><span></span><code>Request
+   │
+   ▼
+User
+   │
+   ▼
+Session
+   │
+   ▼
+Token
+</code></pre></div>
+<p>Pointers связывают objects.</p>
+<hr/>
+<h2 id="47-reachability">47. Reachability<a class="headerlink" href="#47-reachability" title="Permanent link">¶</a></h2>
+<p>GC задаёт вопрос:</p>
+<blockquote>
+<p>Можно ли добраться до object из roots?</p>
+</blockquote>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>root
+ │
+ ▼
+Request
+ │
+ ▼
+User
+ │
+ ▼
+Session
+</code></pre></div>
+<p>Все объекты reachable.</p>
+<p>Если root reference исчезла, цепочка может стать unreachable.</p>
+<hr/>
+<h2 id="48-reachable">48. Reachable не означает «нужен бизнесу»<a class="headerlink" href="#48-reachable" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">byte</span><span class="p">{}</span>
+</code></pre></div>
+<p>Приложение бесконечно добавляет:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">cache</span><span class="p">[</span><span class="nx">id</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">hugeData</span>
+</code></pre></div>
+<p>С точки зрения бизнес-логики старые entries давно не нужны.</p>
+<p>Но GC видит:</p>
+<div class="highlight"><pre><span></span><code>global variable
+↓
+map
+↓
+entry
+↓
+[]byte
+</code></pre></div>
+<p>Object reachable.</p>
+<p>Следовательно:</p>
+<div class="highlight"><pre><span></span><code>GC не имеет права его удалить
+</code></pre></div>
+<p>Это memory leak на уровне приложения при исправно работающем GC.</p>
+<hr/>
+<h1 id="11-garbage-collector">Блок 11. Зачем Garbage Collector<a class="headerlink" href="#11-garbage-collector" title="Permanent link">¶</a></h1>
+<h2 id="49-reclaim">49. Без автоматического reclaim<a class="headerlink" href="#49-reclaim" title="Permanent link">¶</a></h2>
+<p>Manual memory management:</p>
+<div class="highlight"><pre><span></span><code>allocate
+↓
+use
+↓
+кто-то обязан free
+</code></pre></div>
+<p>Ошибки:</p>
+<div class="highlight"><pre><span></span><code>забыли free → leak
+free слишком рано → use-after-free
+free дважды → corruption
+</code></pre></div>
+<p>Go использует managed storage.</p>
+<p>Для heap values runtime определяет, когда memory становится недостижима и может быть переиспользована.</p>
+<hr/>
+<h2 id="50-gc-">50. GC не знает бизнес-смысл<a class="headerlink" href="#50-gc-" title="Permanent link">¶</a></h2>
+<p>Точная формулировка:</p>
+<blockquote>
+<p>Collector ищет unreachable managed objects.</p>
+</blockquote>
+<p>Он не знает:</p>
+<div class="highlight"><pre><span></span><code>TTL cache entry
+старый request
+"мы уже никогда это не прочитаем"
+</code></pre></div>
+<p>Если reference существует — object жив для GC.</p>
+<hr/>
+<h1 id="12-tracing-gc">Блок 12. Tracing GC<a class="headerlink" href="#12-tracing-gc" title="Permanent link">¶</a></h1>
+<h2 id="51-graph-traversal">51. Graph traversal<a class="headerlink" href="#51-graph-traversal" title="Permanent link">¶</a></h2>
+<p>Учебно:</p>
+<div class="highlight"><pre><span></span><code>roots
+ │
+ ├── A
+ │   └── C
+ │
+ └── B
+     └── D
+
+E
+F
+</code></pre></div>
+<p>Collector проходит:</p>
+<div class="highlight"><pre><span></span><code>roots → A → C
+roots → B → D
+</code></pre></div>
+<p><code>E</code> и <code>F</code> недостижимы.</p>
+<hr/>
+<h2 id="52-mark">52. Mark<a class="headerlink" href="#52-mark" title="Permanent link">¶</a></h2>
+<p>Первая задача:</p>
+<div class="highlight"><pre><span></span><code>найти reachable objects
+</code></pre></div>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>root
+↓
+mark object
+↓
+scan its pointers
+↓
+mark referenced objects
+↓
+повторять
+</code></pre></div>
+<hr/>
+<h2 id="53-sweep">53. Sweep<a class="headerlink" href="#53-sweep" title="Permanent link">¶</a></h2>
+<p>После mark:</p>
+<div class="highlight"><pre><span></span><code>marked = live
+unmarked = garbage
+</code></pre></div>
+<p>Но allocator ещё нужно сообщить, какую memory можно снова использовать.</p>
+<p>Sweep отвечает:</p>
+<div class="highlight"><pre><span></span><code>какие места снова free?
+</code></pre></div>
+<hr/>
+<h2 id="54-tri-color-model">54. Tri-color model<a class="headerlink" href="#54-tri-color-model" title="Permanent link">¶</a></h2>
+<p>Для объяснения tracing удобно:</p>
+<div class="highlight"><pre><span></span><code>white
+объект ещё не обнаружен
+
+grey
+обнаружен, но pointers ещё нужно обработать
+
+black
+обнаружен и обработан
+</code></pre></div>
+<p>Это учебная модель.</p>
+<p>Не надо преподавать её как:</p>
+<blockquote>
+<p>«У каждого Go-object физически лежит поле color».</p>
+</blockquote>
+<hr/>
+<h1 id="13-concurrent-gc">Блок 13. Concurrent GC<a class="headerlink" href="#13-concurrent-gc" title="Permanent link">¶</a></h1>
+<h2 id="55-stop-the-world-collector">55. Наивный Stop-The-World collector<a class="headerlink" href="#55-stop-the-world-collector" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>application runs
+↓
+STOP EVERYTHING
+↓
+scan entire heap
+↓
+free garbage
+↓
+START
+</code></pre></div>
+<p>Если heap большой:</p>
+<div class="highlight"><pre><span></span><code>pause растёт
+</code></pre></div>
+<p>Для backend:</p>
+<div class="highlight"><pre><span></span><code>requests не обслуживаются
+↓
+latency spike
+</code></pre></div>
+<p>Поэтому Go выполняет основную mark work concurrent с application.</p>
+<hr/>
+<h2 id="56-concurrent">56. Concurrent означает одновременность<a class="headerlink" href="#56-concurrent" title="Permanent link">¶</a></h2>
+<p>Во время GC:</p>
+<div class="highlight"><pre><span></span><code>application goroutines
+        +
+GC workers
+</code></pre></div>
+<p>работают одновременно.</p>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>CPU0 → request
+CPU1 → request
+CPU2 → GC
+CPU3 → request
+</code></pre></div>
+<hr/>
+<h2 id="57-concurrent-gc">57. Concurrent GC не бесплатный<a class="headerlink" href="#57-concurrent-gc" title="Permanent link">¶</a></h2>
+<p>Цена распределена:</p>
+<div class="highlight"><pre><span></span><code>background GC CPU
+write barrier cost
+stack scanning
+mutator assists
+short STW phases
+cache/memory bandwidth pressure
+</code></pre></div>
+<p>Поэтому:</p>
+<div class="highlight"><pre><span></span><code>pause маленькая
+</code></pre></div>
+<p>ещё не значит:</p>
+<div class="highlight"><pre><span></span><code>GC дешёвый
+</code></pre></div>
+<hr/>
+<h1 id="14-write-barrier">Блок 14. Write barrier<a class="headerlink" href="#14-write-barrier" title="Permanent link">¶</a></h1>
+<h2 id="58">58. Проблема<a class="headerlink" href="#58" title="Permanent link">¶</a></h2>
+<p>GC уже просканировал:</p>
+<div class="highlight"><pre><span></span><code>A
+</code></pre></div>
+<p>Application делает:</p>
+<div class="highlight"><pre><span></span><code>A.child = C
+</code></pre></div>
+<p>Heap graph изменился во время collection.</p>
+<p>Если collector ничего не узнает, reachable object можно потерять.</p>
+<hr/>
+<h2 id="59">59. Решение<a class="headerlink" href="#59" title="Permanent link">¶</a></h2>
+<p>Во время concurrent marking определённые pointer writes сопровождаются дополнительной runtime bookkeeping.</p>
+<p>Это write barrier.</p>
+<p>Для основной лекции достаточно:</p>
+<div class="highlight"><pre><span></span><code>application меняет heap graph
+↓
+barrier помогает GC не потерять references
+</code></pre></div>
+<p>Как устроен hybrid barrier — отдельная дополнительная лекция.</p>
+<hr/>
+<h1 id="15-green-tea">Блок 15. Green Tea<a class="headerlink" href="#15-green-tea" title="Permanent link">¶</a></h1>
+<h2 id="60">60. Версионное примечание<a class="headerlink" href="#60" title="Permanent link">¶</a></h2>
+<p>Начиная с Go 1.26 Green Tea является default garbage collector стандартного toolchain.</p>
+<p>Для основной лекции не нужно разбирать его внутренние queues.</p>
+<p>Важно понять, какую проблему он решает.</p>
+<hr/>
+<h2 id="61-pointer-chasing">61. Проблема pointer chasing<a class="headerlink" href="#61-pointer-chasing" title="Permanent link">¶</a></h2>
+<p>Tracing object graph может выглядеть так:</p>
+<div class="highlight"><pre><span></span><code>A → object далеко в memory
+↓
+B → ещё дальше
+↓
+C → другая page
+</code></pre></div>
+<p>CPU caches работают хуже.</p>
+<p>Green Tea лучше группирует marking/scanning work по locality.</p>
+<p>Практический смысл:</p>
+<div class="highlight"><pre><span></span><code>меньше GC overhead на многих workloads
+</code></pre></div>
+<p>Но programming model остаётся:</p>
+<div class="highlight"><pre><span></span><code>reachable → live
+unreachable → collectible
+</code></pre></div>
+<hr/>
+<h1 id="16-gc-cycle">Блок 16. GC cycle<a class="headerlink" href="#16-gc-cycle" title="Permanent link">¶</a></h1>
+<h2 id="62-timeline">62. Timeline<a class="headerlink" href="#62-timeline" title="Permanent link">¶</a></h2>
+<p>Упрощённо:</p>
+<div class="highlight"><pre><span></span><code>application
+    │
+    ▼
+GC trigger
+    │
+    ▼
+short STW preparation
+    │
+    ▼
+concurrent mark
+    │
+    ├── GC workers
+    ├── stack scanning
+    ├── write barriers
+    └── assists
+    │
+    ▼
+mark termination
+    │
+    ▼
+short STW
+    │
+    ▼
+sweep / reuse
+</code></pre></div>
+<p>GC cycle — это период работы collector, а не одна pause.</p>
+<hr/>
+<h2 id="63-gc">63. Почему GC запускается<a class="headerlink" href="#63-gc" title="Permanent link">¶</a></h2>
+<p>Heap растёт.</p>
+<p>Runtime имеет target:</p>
+<div class="highlight"><pre><span></span><code>heap goal
+</code></pre></div>
+<p>Collector должен стартовать достаточно рано, чтобы закончить работу до чрезмерного роста heap.</p>
+<p>Этим занимается GC pacer.</p>
+<p>В основной лекции достаточно идеи:</p>
+<div class="highlight"><pre><span></span><code>allocation rate ↑
+↓
+collector должен начинать раньше / работать активнее
+</code></pre></div>
+<hr/>
+<h1 id="17-gogc">Блок 17. GOGC<a class="headerlink" href="#17-gogc" title="Permanent link">¶</a></h1>
+<h2 id="64-gogc">64. Что регулирует GOGC<a class="headerlink" href="#64-gogc" title="Permanent link">¶</a></h2>
+<p><code>GOGC</code> задаёт относительный growth budget.</p>
+<p>Default:</p>
+<div class="highlight"><pre><span></span><code>GOGC=100
+</code></pre></div>
+<p>Учебное приближение:</p>
+<div class="highlight"><pre><span></span><code>new goal
+≈
+live heap
++
+live heap × GOGC / 100
+</code></pre></div>
+<hr/>
+<h2 id="65">65. Более точная модель<a class="headerlink" href="#65" title="Permanent link">¶</a></h2>
+<p>Современный GC учитывает также root scan work.</p>
+<p>Можно думать так:</p>
+<div class="highlight"><pre><span></span><code>Target ≈
+Live heap
++
+(Live heap + GC roots) × GOGC / 100
+</code></pre></div>
+<p>Это модель, а не точная гарантия runtime.</p>
+<p>На target также влияют:</p>
+<div class="highlight"><pre><span></span><code>GOMEMLIMIT
+pacer
+runtime overhead
+actual workload
+</code></pre></div>
+<hr/>
+<h2 id="66-gogc100">66. Пример GOGC=100<a class="headerlink" href="#66-gogc100" title="Permanent link">¶</a></h2>
+<p>Пусть после GC:</p>
+<div class="highlight"><pre><span></span><code>live heap = 500 MB
+</code></pre></div>
+<p>Игнорируя roots и поправки:</p>
+<div class="highlight"><pre><span></span><code>goal ≈ 1 GB
+</code></pre></div>
+<p>Runtime получает примерно 500 MB growth space.</p>
+<hr/>
+<h2 id="67-gogc">67. Низкий GOGC<a class="headerlink" href="#67-gogc" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>GOGC=50
+</code></pre></div>
+<p>Следствие:</p>
+<div class="highlight"><pre><span></span><code>GC чаще
+↓
+heap меньше
+↓
+GC CPU обычно выше
+</code></pre></div>
+<p>Trade-off:</p>
+<div class="highlight"><pre><span></span><code>memory ↓
+CPU ↑
+</code></pre></div>
+<hr/>
+<h2 id="68-gogc">68. Высокий GOGC<a class="headerlink" href="#68-gogc" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>GOGC=200
+</code></pre></div>
+<p>Следствие:</p>
+<div class="highlight"><pre><span></span><code>GC реже
+↓
+heap больше
+↓
+GC CPU обычно ниже
+</code></pre></div>
+<p>Trade-off:</p>
+<div class="highlight"><pre><span></span><code>memory ↑
+CPU ↓
+</code></pre></div>
+<hr/>
+<h2 id="69-gogc">69. Почему огромный GOGC не универсальное решение<a class="headerlink" href="#69-gogc" title="Permanent link">¶</a></h2>
+<p>Да, GC может стать реже.</p>
+<p>Но heap получает больше пространства для роста.</p>
+<p>В container:</p>
+<div class="highlight"><pre><span></span><code>memory limit = 1 GiB
+</code></pre></div>
+<p>это может приблизить OOM.</p>
+<p>Именно поэтому нужен абсолютный memory budget.</p>
+<hr/>
+<h1 id="18-gomemlimit">Блок 18. GOMEMLIMIT<a class="headerlink" href="#18-gomemlimit" title="Permanent link">¶</a></h1>
+<h2 id="70-budget">70. Проблема абсолютного budget<a class="headerlink" href="#70-budget" title="Permanent link">¶</a></h2>
+<p>Пусть:</p>
+<div class="highlight"><pre><span></span><code>pod memory limit = 512 MiB
+live heap = 350 MiB
+</code></pre></div>
+<p>При <code>GOGC=100</code> относительный target без ограничения может захотеть больше memory, чем container реально имеет.</p>
+<hr/>
+<h2 id="71-gomemlimit">71. Что делает GOMEMLIMIT<a class="headerlink" href="#71-gomemlimit" title="Permanent link">¶</a></h2>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">GOMEMLIMIT</span><span class="o">=</span>450MiB
+</code></pre></div>
+<p>Runtime получает soft memory budget.</p>
+<p>Важно:</p>
+<div class="highlight"><pre><span></span><code>GOMEMLIMIT
+≠
+максимальный HeapAlloc
+</code></pre></div>
+<p>Он относится к более широкому набору memory, управляемой runtime.</p>
+<p>Полезная модель:</p>
+<div class="highlight"><pre><span></span><code>Go controlled memory
+≈
+/memory/classes/total:bytes
+-
+/memory/classes/heap/released:bytes
+</code></pre></div>
+<hr/>
+<h2 id="72-limit-soft">72. Почему limit soft<a class="headerlink" href="#72-limit-soft" title="Permanent link">¶</a></h2>
+<p>Представим:</p>
+<div class="highlight"><pre><span></span><code>GOMEMLIMIT = 500 MB
+live set = 490 MB
+</code></pre></div>
+<p>Application всё ещё должна:</p>
+<div class="highlight"><pre><span></span><code>обрабатывать requests
+создавать temporary objects
+завершать GC
+</code></pre></div>
+<p>Если запретить даже временно выйти выше limit, можно получить почти непрерывный GC.</p>
+<p>Поэтому limit soft.</p>
+<hr/>
+<h2 id="73-memory-limit-cpu">73. Memory limit может увеличить CPU<a class="headerlink" href="#73-memory-limit-cpu" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>memory budget ↓
+↓
+heap goal ↓
+↓
+GC frequency ↑
+↓
+GC CPU ↑
+↓
+request CPU available ↓
+↓
+latency ↑
+</code></pre></div>
+<p>Главный production-вывод:</p>
+<blockquote>
+<p>Memory configuration может проявиться как CPU problem.</p>
+</blockquote>
+<hr/>
+<h2 id="74-gomemlimit-container-hard-limit">74. GOMEMLIMIT и container hard limit<a class="headerlink" href="#74-gomemlimit-container-hard-limit" title="Permanent link">¶</a></h2>
+<p>Плохо механически делать:</p>
+<div class="highlight"><pre><span></span><code>container hard limit = 1 GiB
+GOMEMLIMIT          = 1 GiB
+</code></pre></div>
+<p>У процесса может быть memory вне прямого контроля GC:</p>
+<div class="highlight"><pre><span></span><code>cgo/native allocations
+some mmap
+thread/runtime overhead
+external memory
+</code></pre></div>
+<p>Нужен safety headroom.</p>
+<p>Конкретное значение подбирается под workload.</p>
+<hr/>
+<h2 id="_3">Что важно запомнить<a class="headerlink" href="#_3" title="Permanent link">¶</a></h2>
+<ol>
+<li><code>GOGC</code> задаёт относительный CPU ↔ memory trade-off.</li>
+<li><code>GOMEMLIMIT</code> задаёт soft absolute runtime memory budget.</li>
+<li>Маленький memory budget может увеличить GC CPU.</li>
+<li>Container hard limit остаётся внешней границей.</li>
+<li>GC tuning без понимания allocation rate часто лечит симптом.</li>
+</ol>
+<hr/>
+<h1 id="19-gc-pauses">Блок 19. GC pauses<a class="headerlink" href="#19-gc-pauses" title="Permanent link">¶</a></h1>
+<h2 id="75-pause">75. Что такое pause<a class="headerlink" href="#75-pause" title="Permanent link">¶</a></h2>
+<p>Есть моменты GC cycle, когда runtime кратко останавливает application world для действий, которым нужно глобально согласованное состояние.</p>
+<p>Это STW pause.</p>
+<p>Но основная mark work выполняется concurrent.</p>
+<p>Поэтому:</p>
+<div class="highlight"><pre><span></span><code>длительность GC cycle
+≠
+длительность STW pause
+</code></pre></div>
+<hr/>
+<h2 id="76-pause-duration">76. Почему нельзя смотреть только pause duration<a class="headerlink" href="#76-pause-duration" title="Permanent link">¶</a></h2>
+<p>Допустим:</p>
+<div class="highlight"><pre><span></span><code>STW pause = 150 µs
+</code></pre></div>
+<p>Очень мало.</p>
+<p>Но одновременно:</p>
+<div class="highlight"><pre><span></span><code>GC использует 25% CPU
+</code></pre></div>
+<p>и request goroutines выполняют assists.</p>
+<p>Сервис всё равно может терять throughput и увеличивать p99.</p>
+<hr/>
+<h2 id="77-gc">77. Полная стоимость GC<a class="headerlink" href="#77-gc" title="Permanent link">¶</a></h2>
+<p>Нужно смотреть минимум:</p>
+<div class="highlight"><pre><span></span><code>GC frequency
+GC CPU
+allocation rate
+live heap
+heap goal
+scannable heap
+assist CPU
+pause duration
+</code></pre></div>
+<p>Одна метрика редко отвечает на весь вопрос.</p>
+<hr/>
+<h1 id="20-mutator-assists">Блок 20. Mutator assists<a class="headerlink" href="#20-mutator-assists" title="Permanent link">¶</a></h1>
+<h2 id="78-application-allocates">78. Что происходит, если application слишком быстро allocates<a class="headerlink" href="#78-application-allocates" title="Permanent link">¶</a></h2>
+<p>Collector должен успевать за heap growth.</p>
+<p>Пусть application резко увеличила allocation rate:</p>
+<div class="highlight"><pre><span></span><code>500 MB/s
+↓
+5 GB/s
+</code></pre></div>
+<p>Background GC workers могут не успеть.</p>
+<p>Runtime не может просто позволить heap расти бесконечно.</p>
+<hr/>
+<h2 id="79-request-goroutine-gc">79. Request goroutine может помочь GC<a class="headerlink" href="#79-request-goroutine-gc" title="Permanent link">¶</a></h2>
+<p>Allocating goroutine получает GC work debt.</p>
+<p>Учебно:</p>
+<div class="highlight"><pre><span></span><code>handler
+↓
+allocation
+↓
+runtime:
+"collector отстаёт"
+↓
+goroutine выполняет часть marking
+↓
+возвращается к handler
+</code></pre></div>
+<p>Это mark assist.</p>
+<hr/>
+<h2 id="80-assists-latency">80. Почему assists важны для latency<a class="headerlink" href="#80-assists-latency" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>HTTP request
+↓
+build response
+↓
+lots of allocations
+↓
+GC assist
+↓
+handler выполняется дольше
+</code></pre></div>
+<p>Request latency выросла.</p>
+<p>Но:</p>
+<div class="highlight"><pre><span></span><code>STW pause всё ещё маленькая
+</code></pre></div>
+<p>Именно поэтому GC impact нельзя диагностировать только pauses.</p>
+<hr/>
+<h1 id="21-memory-pressure">Блок 21. Memory pressure<a class="headerlink" href="#21-memory-pressure" title="Permanent link">¶</a></h1>
+<h2 id="81-memory-pressure-backend">81. Что такое memory pressure в backend<a class="headerlink" href="#81-memory-pressure-backend" title="Permanent link">¶</a></h2>
+<p>Сервис приближается к memory budget:</p>
+<div class="highlight"><pre><span></span><code>live objects ↑
+temporary allocations ↑
+goroutine stacks ↑
+runtime memory ↑
+</code></pre></div>
+<p>Runtime получает всё меньше пространства для роста heap.</p>
+<hr/>
+<h2 id="82">82. Типичная цепочка<a class="headerlink" href="#82" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>memory pressure
+↓
+GC cycles чаще
+↓
+GC CPU выше
+↓
+assists больше
+↓
+application CPU меньше
+↓
+latency выше
+↓
+throughput ниже
+</code></pre></div>
+<p>После этого может появиться feedback loop.</p>
+<hr/>
+<h2 id="83-lifetime">83. Под нагрузкой lifetime тоже меняется<a class="headerlink" href="#83-lifetime" title="Permanent link">¶</a></h2>
+<p>Это очень важная production-связь.</p>
+<p>Пусть обычно request живёт:</p>
+<div class="highlight"><pre><span></span><code>20 ms
+</code></pre></div>
+<p>При перегрузке:</p>
+<div class="highlight"><pre><span></span><code>queueing
+DB wait
+network wait
+↓
+request живёт 2 s
+</code></pre></div>
+<p>Значит связанные objects:</p>
+<div class="highlight"><pre><span></span><code>DTO
+buffers
+context
+response state
+</code></pre></div>
+<p>живут дольше.</p>
+<p>Даже без изменения кода live heap может вырасти только потому, что выросла latency.</p>
+<p>Получаем:</p>
+<div class="highlight"><pre><span></span><code>latency ↑
+↓
+object lifetime ↑
+↓
+live heap ↑
+↓
+GC pressure ↑
+↓
+latency ещё ↑
+</code></pre></div>
+<hr/>
+<h1 id="22-heap-rss">Блок 22. Heap ≠ RSS<a class="headerlink" href="#22-heap-rss" title="Permanent link">¶</a></h1>
+<h2 id="84-go-runtime">84. Что видит Go runtime<a class="headerlink" href="#84-go-runtime" title="Permanent link">¶</a></h2>
+<p>Runtime может разделять memory на классы:</p>
+<div class="highlight"><pre><span></span><code>heap objects
+heap free
+heap released
+stacks
+runtime metadata
+</code></pre></div>
+<hr/>
+<h2 id="85-os">85. Что видит OS<a class="headerlink" href="#85-os" title="Permanent link">¶</a></h2>
+<p>OS имеет свои представления:</p>
+<div class="highlight"><pre><span></span><code>virtual memory
+RSS
+page mappings
+</code></pre></div>
+<p>Это другой уровень abstraction.</p>
+<hr/>
+<h2 id="86-vss">86. Почему VSS может быть огромным<a class="headerlink" href="#86-vss" title="Permanent link">¶</a></h2>
+<p>Runtime может резервировать большой virtual address space.</p>
+<p>Reserved address space:</p>
+<div class="highlight"><pre><span></span><code>не равно физически занятая RAM
+</code></pre></div>
+<p>Поэтому VSS часто плохо отвечает на вопрос:</p>
+<blockquote>
+<p>Сколько реальной памяти сейчас потребляет service?</p>
+</blockquote>
+<p>Для production полезнее смотреть:</p>
+<div class="highlight"><pre><span></span><code>RSS / cgroup usage
++
+Go runtime memory metrics
+</code></pre></div>
+<hr/>
+<h2 id="87-heapalloc-rss">87. Почему HeapAlloc упал, а RSS нет<a class="headerlink" href="#87-heapalloc-rss" title="Permanent link">¶</a></h2>
+<p>Было:</p>
+<div class="highlight"><pre><span></span><code>HeapAlloc = 2 GB
+RSS       = 2.5 GB
+</code></pre></div>
+<p>После collection:</p>
+<div class="highlight"><pre><span></span><code>HeapAlloc = 700 MB
+RSS       = 2.2 GB
+</code></pre></div>
+<p>Это не обязательно leak.</p>
+<p>Возможный lifecycle:</p>
+<div class="highlight"><pre><span></span><code>objects dead
+↓
+memory free для Go allocator
+↓
+runtime может быстро reuse memory
+↓
+часть memory ещё не released OS
+</code></pre></div>
+<hr/>
+<h1 id="23-scavenger">Блок 23. Scavenger — только нужная основа<a class="headerlink" href="#23-scavenger" title="Permanent link">¶</a></h1>
+<h2 id="88-sweep-os-reclaim">88. Sweep и OS reclaim — разные процессы<a class="headerlink" href="#88-sweep-os-reclaim" title="Permanent link">¶</a></h2>
+<p>GC/sweep могут сделать memory:</p>
+<div class="highlight"><pre><span></span><code>free для Go
+</code></pre></div>
+<p>Но это не значит:</p>
+<div class="highlight"><pre><span></span><code>physical pages сразу возвращены OS
+</code></pre></div>
+<p>Scavenger помогает runtime release unused physical memory underlying OS.</p>
+<hr/>
+<h2 id="89-runtime">89. Почему runtime не отдаёт всё немедленно<a class="headerlink" href="#89-runtime" title="Permanent link">¶</a></h2>
+<p>Пусть workload пилообразный:</p>
+<div class="highlight"><pre><span></span><code>peak 4 GB
+↓
+idle 1 GB
+↓
+через минуту снова peak 4 GB
+</code></pre></div>
+<p>Слишком агрессивный release даст:</p>
+<div class="highlight"><pre><span></span><code>release
+↓
+снова acquire/page fault
+↓
+лишняя kernel work
+</code></pre></div>
+<p>Runtime балансирует:</p>
+<div class="highlight"><pre><span></span><code>reuse speed
+↔
+RSS
+</code></pre></div>
+<p>Internals scavenger — тема дополнительной лекции.</p>
+<hr/>
+<h1 id="24-memory-leak-gc">Блок 24. Memory leak в языке с GC<a class="headerlink" href="#24-memory-leak-gc" title="Permanent link">¶</a></h1>
+<h2 id="90-leak">90. Что практически называть leak<a class="headerlink" href="#90-leak" title="Permanent link">¶</a></h2>
+<p>Полезная engineering-модель:</p>
+<blockquote>
+<p>Memory остаётся reachable/retained существенно дольше, чем требуется приложению, и usage неконтролируемо растёт.</p>
+</blockquote>
+<p>GC при этом может работать абсолютно правильно.</p>
+<hr/>
+<h2 id="91-unbounded-cache">91. Unbounded cache<a class="headerlink" href="#91-unbounded-cache" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">byte</span><span class="p">{}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">put</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">data</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Если entries никогда не удаляются:</p>
+<div class="highlight"><pre><span></span><code>global root
+↓
+map
+↓
+all entries
+</code></pre></div>
+<p>GC ничего не сможет сделать.</p>
+<hr/>
+<h2 id="92-slice-backing-array">92. Slice удерживает большой backing array<a class="headerlink" href="#92-slice-backing-array" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nx">big</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="o">&lt;&lt;</span><span class="mi">20</span><span class="p">)</span>
+
+<span class="nx">small</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">big</span><span class="p">[:</span><span class="mi">10</span><span class="p">]</span>
+<span class="k">return</span><span class="w"> </span><span class="nx">small</span>
+</code></pre></div>
+<p>Логически возвращаем:</p>
+<div class="highlight"><pre><span></span><code>10 bytes
+</code></pre></div>
+<p>Но <code>small</code> продолжает ссылаться на тот же backing array.</p>
+<p>В результате:</p>
+<div class="highlight"><pre><span></span><code>10-byte view
+↓
+100 MB backing array retained
+</code></pre></div>
+<p>Иногда имеет смысл скопировать маленький фрагмент в отдельный compact buffer.</p>
+<p>Но только если retention действительно проблема.</p>
+<hr/>
+<h2 id="93-queue-backlog">93. Queue backlog<a class="headerlink" href="#93-queue-backlog" title="Permanent link">¶</a></h2>
+<p>Producer быстрее consumer:</p>
+<div class="highlight"><pre><span></span><code>producer
+&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;
+queue
+&gt;&gt;&gt;&gt;&gt;
+consumer
+</code></pre></div>
+<p>Queue size:</p>
+<div class="highlight"><pre><span></span><code>1k
+10k
+100k
+1M
+</code></pre></div>
+<p>Каждый queued element reachable.</p>
+<p>GC ничего не удаляет.</p>
+<p>Это не «GC leak».</p>
+<p>Это backpressure problem, проявившаяся ростом memory.</p>
+<hr/>
+<h2 id="94-goroutine-leak">94. Goroutine leak<a class="headerlink" href="#94-goroutine-leak" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">result</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ch</span>
+<span class="w">    </span><span class="nx">process</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span>
+<span class="p">}()</span>
+</code></pre></div>
+<p>Если никто никогда не отправит:</p>
+<div class="highlight"><pre><span></span><code>goroutine blocked forever
+</code></pre></div>
+<p>Она удерживает:</p>
+<div class="highlight"><pre><span></span><code>stack
+runtime metadata
+references from stack
+</code></pre></div>
+<p>Поэтому:</p>
+<div class="highlight"><pre><span></span><code>goroutine leak
+↓
+memory retention
+</code></pre></div>
+<hr/>
+<h2 id="95-timer-ticker-lifecycle-problems">95. Timer / ticker / lifecycle problems<a class="headerlink" href="#95-timer-ticker-lifecycle-problems" title="Permanent link">¶</a></h2>
+<p>Long-lived timers, tickers и background goroutines при неправильном lifecycle могут удерживать references и resources дольше ожидаемого.</p>
+<p>Полезные вопросы:</p>
+<div class="highlight"><pre><span></span><code>кто владелец?
+кто завершает?
+когда reference исчезает?
+как работает cancellation?
+</code></pre></div>
+<hr/>
+<h2 id="_4">Что важно запомнить<a class="headerlink" href="#_4" title="Permanent link">¶</a></h2>
+<ol>
+<li>GC удаляет unreachable objects, а не «ненужные бизнесу».</li>
+<li>Cache, queue и goroutine leaks обычно сохраняют reachability.</li>
+<li>Маленький slice способен удерживать большой backing array.</li>
+<li>Backpressure может выглядеть как memory leak.</li>
+<li>Lifetime ownership важнее самого наличия GC.</li>
+</ol>
+<hr/>
+<h1 id="25-pprof">Блок 25. Зачем нужен pprof<a class="headerlink" href="#25-pprof" title="Permanent link">¶</a></h1>
+<h2 id="96-pprof">96. До pprof у нас только симптомы<a class="headerlink" href="#96-pprof" title="Permanent link">¶</a></h2>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>CPU = 90%
+RSS = 1.7 GB
+p99 = 1.2 s
+goroutines = 25 000
+</code></pre></div>
+<p>Из этих цифр нельзя честно сделать вывод:</p>
+<div class="highlight"><pre><span></span><code>проблема GC
+</code></pre></div>
+<p>или:</p>
+<div class="highlight"><pre><span></span><code>проблема JSON
+</code></pre></div>
+<p>или:</p>
+<div class="highlight"><pre><span></span><code>goroutine leak
+</code></pre></div>
+<p>Нужны profiles.</p>
+<hr/>
+<h2 id="97-profiler">97. Что делает profiler<a class="headerlink" href="#97-profiler" title="Permanent link">¶</a></h2>
+<p>Profiler связывает resource consumption с code paths.</p>
+<p>Вместо:</p>
+<div class="highlight"><pre><span></span><code>CPU высокий
+</code></pre></div>
+<p>получаем:</p>
+<div class="highlight"><pre><span></span><code>какие функции потребляют CPU
+</code></pre></div>
+<p>Вместо:</p>
+<div class="highlight"><pre><span></span><code>memory высокая
+</code></pre></div>
+<p>получаем:</p>
+<div class="highlight"><pre><span></span><code>какие allocation sites создавали или удерживают memory
+</code></pre></div>
+<p>Вместо:</p>
+<div class="highlight"><pre><span></span><code>goroutines много
+</code></pre></div>
+<p>получаем:</p>
+<div class="highlight"><pre><span></span><code>где они находятся и на чём ждут
+</code></pre></div>
+<hr/>
+<h1 id="26-nethttppprof">Блок 26. Подключаем <code>net/http/pprof</code><a class="headerlink" href="#26-nethttppprof" title="Permanent link">¶</a></h1>
+<h2 id="98-diagnostic-server">98. Простой diagnostic server<a class="headerlink" href="#98-diagnostic-server" title="Permanent link">¶</a></h2>
+<p>Можно подключить handlers и поднять отдельный diagnostic listener.</p>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="s">"log"</span>
+<span class="w">    </span><span class="s">"net/http"</span>
+<span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">"net/http/pprof"</span>
+<span class="p">)</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">startDiagnostics</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">ListenAndServe</span><span class="p">(</span><span class="s">"127.0.0.1:6060"</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">))</span>
+<span class="w">    </span><span class="p">}()</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>При использовании default mux становятся доступны endpoints:</p>
+<div class="highlight"><pre><span></span><code>/debug/pprof/
+/debug/pprof/profile
+/debug/pprof/heap
+/debug/pprof/goroutine
+...
+</code></pre></div>
+<hr/>
+<h2 id="99-diagnostic-server">99. Почему лучше отдельный diagnostic server<a class="headerlink" href="#99-diagnostic-server" title="Permanent link">¶</a></h2>
+<p>Не стоит смешивать:</p>
+<div class="highlight"><pre><span></span><code>public API
+</code></pre></div>
+<p>и:</p>
+<div class="highlight"><pre><span></span><code>runtime diagnostics
+</code></pre></div>
+<p>Полезная схема:</p>
+<div class="highlight"><pre><span></span><code>:8080
+public HTTP
+
+127.0.0.1:6060
+diagnostic HTTP
+</code></pre></div>
+<p>или internal-only network endpoint.</p>
+<hr/>
+<h2 id="100-pprof">100. Почему pprof нельзя бездумно публиковать наружу<a class="headerlink" href="#100-pprof" title="Permanent link">¶</a></h2>
+<p>Profiles могут раскрывать:</p>
+<div class="highlight"><pre><span></span><code>function names
+package structure
+stack traces
+runtime behavior
+internal call paths
+</code></pre></div>
+<p>Кроме того, collection некоторых profiles имеет overhead.</p>
+<p>Production access должен быть ограничен.</p>
+<hr/>
+<h1 id="27-cpu-profile">Блок 27. CPU profile<a class="headerlink" href="#27-cpu-profile" title="Permanent link">¶</a></h1>
+<h2 id="101-cpu-profile">101. Главный вопрос CPU profile<a class="headerlink" href="#101-cpu-profile" title="Permanent link">¶</a></h2>
+<blockquote>
+<p>Где process проводит время, когда реально использует CPU?</p>
+</blockquote>
+<p>Снять 30 секунд:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>tool<span class="w"> </span>pprof<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>http://localhost:6060/debug/pprof/profile?seconds<span class="o">=</span><span class="m">30</span>
+</code></pre></div>
+<p>CPU profile собирается за временной интервал.</p>
+<hr/>
+<h2 id="102-top">102. <code>top</code><a class="headerlink" href="#102-top" title="Permanent link">¶</a></h2>
+<p>Внутри pprof:</p>
+<div class="highlight"><pre><span></span><code>(pprof) top
+</code></pre></div>
+<p>Условный вывод:</p>
+<div class="highlight"><pre><span></span><code>flat      flat%   sum%      cum
+2.5s      25%     25%       3.0s   encoding/json...
+1.8s      18%     43%       1.8s   runtime...
+...
+</code></pre></div>
+<hr/>
+<h2 id="103-flat">103. Flat<a class="headerlink" href="#103-flat" title="Permanent link">¶</a></h2>
+<p><code>flat</code> отвечает:</p>
+<blockquote>
+<p>Сколько CPU samples попало непосредственно внутрь функции?</p>
+</blockquote>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>parseJSON:
+flat = 20%
+</code></pre></div>
+<p>Значит собственный body функции CPU-heavy.</p>
+<hr/>
+<h2 id="104-cum">104. Cum<a class="headerlink" href="#104-cum" title="Permanent link">¶</a></h2>
+<p><code>cum</code>:</p>
+<blockquote>
+<p>Функция + все функции, которые она вызвала.</p>
+</blockquote>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>Handler
+  ↓
+BuildResponse
+  ↓
+json.Marshal
+  ↓
+encoding internals
+</code></pre></div>
+<p><code>Handler</code> может иметь:</p>
+<div class="highlight"><pre><span></span><code>flat = 1%
+cum = 60%
+</code></pre></div>
+<p>Handler сам почти ничего тяжёлого не делает, но ведёт в expensive subtree.</p>
+<hr/>
+<h2 id="105-top-cum">105. <code>top -cum</code><a class="headerlink" href="#105-top-cum" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>(pprof) top -cum
+</code></pre></div>
+<p>Полезен, когда хотим понять:</p>
+<div class="highlight"><pre><span></span><code>кто приводит к дорогой работе
+</code></pre></div>
+<p>а не только:</p>
+<div class="highlight"><pre><span></span><code>где лежат leaf samples
+</code></pre></div>
+<hr/>
+<h2 id="106-list">106. <code>list</code><a class="headerlink" href="#106-list" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>(pprof) list FunctionName
+</code></pre></div>
+<p>Связывает samples с конкретными source lines.</p>
+<p>Цель profiling:</p>
+<div class="highlight"><pre><span></span><code>package
+↓
+function
+↓
+call path
+↓
+конкретная строка
+</code></pre></div>
+<hr/>
+<h2 id="107-graph-flame-graph">107. Graph и flame graph<a class="headerlink" href="#107-graph-flame-graph" title="Permanent link">¶</a></h2>
+<p>Визуализация помогает видеть call relationships.</p>
+<p>Читать её надо как:</p>
+<div class="highlight"><pre><span></span><code>какая call path ведёт к cost?
+</code></pre></div>
+<p>А не:</p>
+<blockquote>
+<p>«самый широкий прямоугольник плохой сам по себе».</p>
+</blockquote>
+<hr/>
+<h1 id="28-cpu-profile">Блок 28. Чего CPU profile не показывает<a class="headerlink" href="#28-cpu-profile" title="Permanent link">¶</a></h1>
+<h2 id="108-wait-cpu">108. Wait не является CPU<a class="headerlink" href="#108-wait-cpu" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nx">rows</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">db</span><span class="p">.</span><span class="nx">QueryContext</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">query</span><span class="p">)</span>
+</code></pre></div>
+<p>PostgreSQL отвечает 3 секунды.</p>
+<p>Goroutine ждёт network/DB.</p>
+<p>Process может почти не использовать CPU.</p>
+<p>CPU profile ничего драматического не покажет.</p>
+<hr/>
+<h2 id="109-slow-endpoint-cpu-bottleneck">109. Slow endpoint ≠ CPU bottleneck<a class="headerlink" href="#109-slow-endpoint-cpu-bottleneck" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>p99 = 5 s
+CPU = 20%
+</code></pre></div>
+<p>Вероятные направления:</p>
+<div class="highlight"><pre><span></span><code>DB wait
+network wait
+lock contention
+queueing
+connection pool wait
+blocking
+</code></pre></div>
+<p>CPU profile — неправильный единственный инструмент.</p>
+<hr/>
+<h2 id="110">110. Другие диагностические инструменты<a class="headerlink" href="#110" title="Permanent link">¶</a></h2>
+<p>Для ожиданий и contention нужны:</p>
+<div class="highlight"><pre><span></span><code>goroutine profile
+block profile
+mutex profile
+execution trace
+DB metrics
+distributed tracing
+</code></pre></div>
+<p>В этой лекции подробно разбираем CPU/heap/goroutine.</p>
+<hr/>
+<h1 id="29-cpu-profile-gc">Блок 29. CPU profile и GC<a class="headerlink" href="#29-cpu-profile-gc" title="Permanent link">¶</a></h1>
+<h2 id="111">111. Что может встретиться<a class="headerlink" href="#111" title="Permanent link">¶</a></h2>
+<p>Например runtime-related symbols:</p>
+<div class="highlight"><pre><span></span><code>runtime.mallocgc
+runtime.gcBgMarkWorker
+runtime.gcAssistAlloc
+runtime.scanobject
+</code></pre></div>
+<p>Конкретные имена — implementation details.</p>
+<p>Они нужны не для заучивания, а для построения гипотезы.</p>
+<hr/>
+<h2 id="112-mallocgc">112. <code>mallocgc</code><a class="headerlink" href="#112-mallocgc" title="Permanent link">¶</a></h2>
+<p>Большой cumulative cost вокруг allocation path может означать:</p>
+<div class="highlight"><pre><span></span><code>application очень много allocates
+</code></pre></div>
+<p>Следующий шаг:</p>
+<div class="highlight"><pre><span></span><code>alloc profile
+benchmark
+escape analysis
+</code></pre></div>
+<hr/>
+<h2 id="113-gcassistalloc">113. <code>gcAssistAlloc</code><a class="headerlink" href="#113-gcassistalloc" title="Permanent link">¶</a></h2>
+<p>Если request goroutines много времени проводят в assist path:</p>
+<div class="highlight"><pre><span></span><code>collector не успевает только background work
+</code></pre></div>
+<p>Возможные причины:</p>
+<div class="highlight"><pre><span></span><code>allocation pressure
+tight memory budget
+large scan work
+</code></pre></div>
+<hr/>
+<h2 id="114-gcbgmarkworker">114. <code>gcBgMarkWorker</code><a class="headerlink" href="#114-gcbgmarkworker" title="Permanent link">¶</a></h2>
+<p>Много background GC work означает:</p>
+<div class="highlight"><pre><span></span><code>collector реально потребляет CPU
+</code></pre></div>
+<p>Но нужно учитывать:</p>
+<div class="highlight"><pre><span></span><code>dedicated work
+idle work
+overall CPU saturation
+</code></pre></div>
+<p>Часть GC может использовать CPU capacity, которая иначе простаивала бы.</p>
+<hr/>
+<h1 id="30-heap-profile">Блок 30. Heap profile<a class="headerlink" href="#30-heap-profile" title="Permanent link">¶</a></h1>
+<h2 id="115-memory-">115. Два разных memory-вопроса<a class="headerlink" href="#115-memory-" title="Permanent link">¶</a></h2>
+<p>Memory problem часто сводится к одному из двух:</p>
+<div class="highlight"><pre><span></span><code>кто сейчас удерживает memory?
+</code></pre></div>
+<p>или:</p>
+<div class="highlight"><pre><span></span><code>кто создаёт огромный allocation traffic?
+</code></pre></div>
+<p>Heap/alloc profiles позволяют различать их.</p>
+<hr/>
+<h2 id="116-heap-profile">116. Снять heap profile<a class="headerlink" href="#116-heap-profile" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>tool<span class="w"> </span>pprof<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>http://localhost:6060/debug/pprof/heap
+</code></pre></div>
+<p>Heap profile использует sampling.</p>
+<p>Это статистическое представление memory, а не запись буквально каждой allocation.</p>
+<hr/>
+<h2 id="117-inuse_space">117. <code>inuse_space</code><a class="headerlink" href="#117-inuse_space" title="Permanent link">¶</a></h2>
+<p>Вопрос:</p>
+<blockquote>
+<p>Какие call sites удерживают больше всего sampled live bytes сейчас?</p>
+</blockquote>
+<p>Полезно для:</p>
+<div class="highlight"><pre><span></span><code>memory leak
+retention
+large live heap
+</code></pre></div>
+<hr/>
+<h2 id="118-inuse_objects">118. <code>inuse_objects</code><a class="headerlink" href="#118-inuse_objects" title="Permanent link">¶</a></h2>
+<p>Вопрос:</p>
+<blockquote>
+<p>Кто удерживает больше всего live objects?</p>
+</blockquote>
+<p>Иногда bytes умеренные, но objects миллионы.</p>
+<p>Это тоже может увеличивать GC work.</p>
+<hr/>
+<h2 id="119-alloc_space">119. <code>alloc_space</code><a class="headerlink" href="#119-alloc_space" title="Permanent link">¶</a></h2>
+<p>Вопрос:</p>
+<blockquote>
+<p>Кто исторически выделил больше всего bytes?</p>
+</blockquote>
+<p>Полезно для поиска allocation churn и GC pressure.</p>
+<hr/>
+<h2 id="120-alloc_objects">120. <code>alloc_objects</code><a class="headerlink" href="#120-alloc_objects" title="Permanent link">¶</a></h2>
+<p>Вопрос:</p>
+<blockquote>
+<p>Кто породил больше всего objects?</p>
+</blockquote>
+<p>Например миллионы tiny short-lived objects могут быть существенны даже при небольшом live heap.</p>
+<hr/>
+<h1 id="31-leak-vs-churn">Блок 31. Leak vs churn<a class="headerlink" href="#31-leak-vs-churn" title="Permanent link">¶</a></h1>
+<h2 id="121-a-churn">121. Сервис A — churn<a class="headerlink" href="#121-a-churn" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>live heap = 150 MB
+alloc rate = 6 GB/s
+</code></pre></div>
+<p>Heap стабилен.</p>
+<p>CPU profile показывает allocation/GC.</p>
+<p><code>alloc_space</code> показывает:</p>
+<div class="highlight"><pre><span></span><code>JSON conversion
+temporary buffers
+DTO creation
+</code></pre></div>
+<p>Это allocation pressure.</p>
+<hr/>
+<h2 id="122-b-retention">122. Сервис B — retention<a class="headerlink" href="#122-b-retention" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>live heap:
+300 MB
+500 MB
+800 MB
+1.4 GB
+</code></pre></div>
+<p><code>inuse_space</code> показывает:</p>
+<div class="highlight"><pre><span></span><code>cache
+queue
+large slice backing arrays
+</code></pre></div>
+<p>Это retained/live memory problem.</p>
+<hr/>
+<h2 id="123-heap-snapshot">123. Почему один heap snapshot недостаточен<a class="headerlink" href="#123-heap-snapshot" title="Permanent link">¶</a></h2>
+<p>Для leak полезно сравнивать во времени:</p>
+<div class="highlight"><pre><span></span><code>profile t0
+profile t1
+profile t2
+</code></pre></div>
+<p>Нас интересует:</p>
+<div class="highlight"><pre><span></span><code>что систематически растёт?
+</code></pre></div>
+<p>А не просто:</p>
+<blockquote>
+<p>«что было самым большим в одном snapshot».</p>
+</blockquote>
+<hr/>
+<h1 id="32-goroutine-profile">Блок 32. Goroutine profile<a class="headerlink" href="#32-goroutine-profile" title="Permanent link">¶</a></h1>
+<h2 id="124">124. Что он показывает<a class="headerlink" href="#124" title="Permanent link">¶</a></h2>
+<p>Goroutine profile показывает stack traces текущих goroutines.</p>
+<p>Снять:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>tool<span class="w"> </span>pprof<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>http://localhost:6060/debug/pprof/goroutine
+</code></pre></div>
+<p>Или посмотреть debug output соответствующего endpoint.</p>
+<hr/>
+<h2 id="125-count">125. Почему count сам по себе недостаточен<a class="headerlink" href="#125-count" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>goroutines = 20 000
+</code></pre></div>
+<p>Это может быть:</p>
+<div class="highlight"><pre><span></span><code>нормально при 20 000 active connections
+</code></pre></div>
+<p>или:</p>
+<div class="highlight"><pre><span></span><code>катастрофический leak
+</code></pre></div>
+<p>Нужно знать:</p>
+<div class="highlight"><pre><span></span><code>где они стоят?
+на чём ждут?
+растёт ли count?
+есть ли одинаковый dominant stack?
+</code></pre></div>
+<hr/>
+<h2 id="126-goroutine-leak">126. Типичная картина goroutine leak<a class="headerlink" href="#126-goroutine-leak" title="Permanent link">¶</a></h2>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>15 000 goroutines
+↓
+same stack
+↓
+waiting on channel receive
+</code></pre></div>
+<p>или:</p>
+<div class="highlight"><pre><span></span><code>same stack
+↓
+blocked on channel send
+</code></pre></div>
+<p>Это сильный сигнал:</p>
+<div class="highlight"><pre><span></span><code>lifecycle producer/consumer сломан
+</code></pre></div>
+<hr/>
+<h2 id="127-connection-pool-pressure">127. Connection pool pressure<a class="headerlink" href="#127-connection-pool-pressure" title="Permanent link">¶</a></h2>
+<p>Допустим много goroutines находятся вокруг <code>database/sql</code> и ждут connection.</p>
+<p>Это не обязательно leak.</p>
+<p>Возможные причины:</p>
+<div class="highlight"><pre><span></span><code>pool слишком мал
+queries стали медленнее
+DB деградирует
+слишком высокая concurrency
+transactions держат connections слишком долго
+</code></pre></div>
+<p>Profile показывает место ожидания.</p>
+<p>Root cause ещё надо расследовать.</p>
+<hr/>
+<h1 id="33-go-127-goroutineleak-profile">Блок 33. Go 1.27: <code>goroutineleak</code> profile<a class="headerlink" href="#33-go-127-goroutineleak-profile" title="Permanent link">¶</a></h1>
+<h2 id="128">128. Новая возможность<a class="headerlink" href="#128" title="Permanent link">¶</a></h2>
+<p>В Go 1.27 generally available отдельный profile:</p>
+<div class="highlight"><pre><span></span><code>goroutineleak
+</code></pre></div>
+<p>Endpoint:</p>
+<div class="highlight"><pre><span></span><code>/debug/pprof/goroutineleak
+</code></pre></div>
+<p>Он использует reachability information runtime/GC, чтобы находить определённый класс goroutines, permanently blocked на поддерживаемых concurrency primitives и не способных разблокироваться.</p>
+<hr/>
+<h2 id="129-goroutine-profile">129. Чем он отличается от обычного goroutine profile<a class="headerlink" href="#129-goroutine-profile" title="Permanent link">¶</a></h2>
+<p>Обычный profile:</p>
+<div class="highlight"><pre><span></span><code>покажи все goroutines
+</code></pre></div>
+<p>Leak profile:</p>
+<div class="highlight"><pre><span></span><code>автоматически выдели определяемый runtime класс permanent leaks
+</code></pre></div>
+<p>Это уменьшает объём ручного анализа.</p>
+<hr/>
+<h2 id="130">130. Ограничения<a class="headerlink" href="#130" title="Permanent link">¶</a></h2>
+<p>Это не oracle.</p>
+<p>Не все возможные goroutine leaks можно доказать автоматически.</p>
+<p>Например goroutines, blocked на:</p>
+<div class="highlight"><pre><span></span><code>network I/O
+file I/O
+custom synchronization
+</code></pre></div>
+<p>могут не попадать в этот profile.</p>
+<p>Кроме того, globally reachable synchronization primitive может мешать доказать permanent leak.</p>
+<p>Следовательно:</p>
+<div class="highlight"><pre><span></span><code>goroutineleak empty
+≠
+доказательство отсутствия всех goroutine leaks
+</code></pre></div>
+<hr/>
+<h1 id="34-runtimemetrics">Блок 34. <code>runtime/metrics</code> как приборная панель<a class="headerlink" href="#34-runtimemetrics" title="Permanent link">¶</a></h1>
+<h2 id="131-heap-state">131. Heap state<a class="headerlink" href="#131-heap-state" title="Permanent link">¶</a></h2>
+<p>Полезные metrics:</p>
+<div class="highlight"><pre><span></span><code>/gc/heap/live:bytes
+/gc/heap/goal:bytes
+/gc/heap/allocs:bytes
+/gc/heap/frees:bytes
+</code></pre></div>
+<p>Вопросы:</p>
+<div class="highlight"><pre><span></span><code>live растёт?
+goal далеко от live?
+какой allocation traffic?
+</code></pre></div>
+<hr/>
+<h2 id="132-scan-work">132. Scan work<a class="headerlink" href="#132-scan-work" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>/gc/scan/heap:bytes
+/gc/scan/stack:bytes
+</code></pre></div>
+<p>Помогают отличить:</p>
+<div class="highlight"><pre><span></span><code>много raw bytes
+</code></pre></div>
+<p>от:</p>
+<div class="highlight"><pre><span></span><code>много scannable pointer-rich memory
+</code></pre></div>
+<p>И увидеть стоимость огромного числа goroutine stacks.</p>
+<hr/>
+<h2 id="133-gc-cpu-classes">133. GC CPU classes<a class="headerlink" href="#133-gc-cpu-classes" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>/cpu/classes/gc/mark/assist:cpu-seconds
+/cpu/classes/gc/mark/dedicated:cpu-seconds
+/cpu/classes/gc/mark/idle:cpu-seconds
+/cpu/classes/gc/total:cpu-seconds
+</code></pre></div>
+<p>Они помогают ответить:</p>
+<div class="highlight"><pre><span></span><code>GC выполнялся background workers?
+requests сами помогали через assists?
+GC использовал idle CPU?
+</code></pre></div>
+<hr/>
+<h2 id="134-memory-classes">134. Memory classes<a class="headerlink" href="#134-memory-classes" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>/memory/classes/heap/objects:bytes
+/memory/classes/heap/free:bytes
+/memory/classes/heap/released:bytes
+</code></pre></div>
+<p>Это полезно для вопроса:</p>
+<div class="highlight"><pre><span></span><code>HeapAlloc упал,
+а RSS почему нет?
+</code></pre></div>
+<hr/>
+<h1 id="35-pprof">Блок 35. pprof как расследование<a class="headerlink" href="#35-pprof" title="Permanent link">¶</a></h1>
+<h2 id="135">135. Неправильный процесс<a class="headerlink" href="#135" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>CPU высокий
+↓
+открыли flame graph
+↓
+увидели runtime
+↓
+"GC плохой"
+</code></pre></div>
+<p>Это угадывание.</p>
+<hr/>
+<h2 id="136">136. Правильный процесс<a class="headerlink" href="#136" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>симптом
+↓
+базовые metrics
+↓
+гипотеза
+↓
+правильный profile
+↓
+репрезентативная нагрузка
+↓
+call path
+↓
+source
+↓
+изменение
+↓
+повторное measurement
+</code></pre></div>
+<hr/>
+<h2 id="137-cpu">137. CPU высокий<a class="headerlink" href="#137-cpu" title="Permanent link">¶</a></h2>
+<p>Первый шаг:</p>
+<div class="highlight"><pre><span></span><code>CPU profile
+</code></pre></div>
+<p>Если hotspot — application algorithm:</p>
+<div class="highlight"><pre><span></span><code>оптимизируем algorithm
+</code></pre></div>
+<p>Если hotspot — allocation/GC:</p>
+<div class="highlight"><pre><span></span><code>alloc profile
+↓
+benchmark
+↓
+escape analysis
+</code></pre></div>
+<hr/>
+<h2 id="138-rss">138. RSS высокий<a class="headerlink" href="#138-rss" title="Permanent link">¶</a></h2>
+<p>Смотрим:</p>
+<div class="highlight"><pre><span></span><code>Go memory metrics
+heap inuse profile
+RSS/cgroup
+</code></pre></div>
+<p>И задаём вопросы:</p>
+<div class="highlight"><pre><span></span><code>live objects?
+free Go heap?
+released memory?
+external/native memory?
+</code></pre></div>
+<hr/>
+<h2 id="139-goroutines">139. Goroutines растут<a class="headerlink" href="#139-goroutines" title="Permanent link">¶</a></h2>
+<p>Смотрим:</p>
+<div class="highlight"><pre><span></span><code>goroutine count trend
+goroutine profile
+goroutineleak profile
+</code></pre></div>
+<p>Группируем stacks.</p>
+<p>Ищем dominant wait point.</p>
+<hr/>
+<h1 id="36-production-no1-allocation-churn">Блок 36. Production-кейс №1: allocation churn<a class="headerlink" href="#36-production-no1-allocation-churn" title="Permanent link">¶</a></h1>
+<h2 id="140">140. Симптом<a class="headerlink" href="#140" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>RPS = 20 000
+CPU = 92%
+RSS = 700 MB
+live heap = 250 MB
+p99 = 800 ms
+</code></pre></div>
+<p>Memory выглядит не ужасно.</p>
+<p>Но GC CPU высокий.</p>
+<hr/>
+<h2 id="141-cpu-profile">141. CPU profile<a class="headerlink" href="#141-cpu-profile" title="Permanent link">¶</a></h2>
+<p>Видим:</p>
+<div class="highlight"><pre><span></span><code>json encoding
+runtime allocation
+GC assist paths
+</code></pre></div>
+<p>Гипотеза:</p>
+<div class="highlight"><pre><span></span><code>application создаёт слишком много temporary objects
+</code></pre></div>
+<hr/>
+<h2 id="142-alloc-profile">142. Alloc profile<a class="headerlink" href="#142-alloc-profile" title="Permanent link">¶</a></h2>
+<p><code>alloc_space</code>:</p>
+<div class="highlight"><pre><span></span><code>Handler
+↓
+BuildResponse
+↓
+Transform
+↓
+json.Marshal
+</code></pre></div>
+<p>Benchmark:</p>
+<div class="highlight"><pre><span></span><code>40 allocs/op
+18 KB/op
+</code></pre></div>
+<hr/>
+<h2 id="143">143. Исправление<a class="headerlink" href="#143" title="Permanent link">¶</a></h2>
+<p>Например:</p>
+<div class="highlight"><pre><span></span><code>убрали промежуточный DTO copy
+заранее выделили разумную slice capacity
+убрали лишнюю string/[]byte conversion
+</code></pre></div>
+<p>После:</p>
+<div class="highlight"><pre><span></span><code>18 allocs/op
+7 KB/op
+</code></pre></div>
+<hr/>
+<h2 id="144">144. Результат<a class="headerlink" href="#144" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>allocation rate ↓
+↓
+GC work ↓
+↓
+assist CPU ↓
+↓
+CPU ↓
+↓
+p99 ↓
+</code></pre></div>
+<p>Главный урок:</p>
+<blockquote>
+<p>GC bottleneck часто начинается не с настройки collector, а с allocation pattern приложения.</p>
+</blockquote>
+<hr/>
+<h1 id="37-production-no2-memory-retention">Блок 37. Production-кейс №2: memory retention<a class="headerlink" href="#37-production-no2-memory-retention" title="Permanent link">¶</a></h1>
+<h2 id="145">145. Симптом<a class="headerlink" href="#145" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>live heap:
+500 MB
+700 MB
+950 MB
+1.3 GB
+
+goroutine count:
+stable
+</code></pre></div>
+<p>Heap растёт независимо от стабилизировавшегося traffic.</p>
+<hr/>
+<h2 id="146-heap-profile">146. Heap profile<a class="headerlink" href="#146-heap-profile" title="Permanent link">¶</a></h2>
+<p><code>inuse_space</code> показывает:</p>
+<div class="highlight"><pre><span></span><code>cache.Put
+↓
+map assignment
+↓
+large []byte
+</code></pre></div>
+<p>Cache не имеет eviction.</p>
+<hr/>
+<h2 id="147-gc">147. Почему GC не спасает<a class="headerlink" href="#147-gc" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>global cache
+↓
+entries
+↓
+buffers
+</code></pre></div>
+<p>Все reachable.</p>
+<p>Collector делает именно то, что обязан:</p>
+<div class="highlight"><pre><span></span><code>не удаляет живые objects
+</code></pre></div>
+<p>Root cause — ownership/lifecycle cache data.</p>
+<hr/>
+<h1 id="38-production-no3-goroutine-leak">Блок 38. Production-кейс №3: goroutine leak<a class="headerlink" href="#38-production-no3-goroutine-leak" title="Permanent link">¶</a></h1>
+<h2 id="148">148. Симптом<a class="headerlink" href="#148" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>goroutines:
+500
+2 000
+8 000
+30 000
+
+RSS растёт
+CPU постепенно растёт
+</code></pre></div>
+<hr/>
+<h2 id="149-goroutine-profile">149. Goroutine profile<a class="headerlink" href="#149-goroutine-profile" title="Permanent link">¶</a></h2>
+<p>Большинство:</p>
+<div class="highlight"><pre><span></span><code>worker.func1
+↓
+ch &lt;- result
+</code></pre></div>
+<p>Receiver может уйти раньше по error path.</p>
+<p>Senders остаются blocked.</p>
+<hr/>
+<h2 id="150-memory-problem">150. Почему это становится memory problem<a class="headerlink" href="#150-memory-problem" title="Permanent link">¶</a></h2>
+<p>Каждая leaked goroutine:</p>
+<div class="highlight"><pre><span></span><code>stack
++
+metadata
++
+references
+</code></pre></div>
+<p>Итог:</p>
+<div class="highlight"><pre><span></span><code>goroutine leak
+↓
+more retained references
+↓
+live memory ↑
+↓
+GC scan/root work ↑
+</code></pre></div>
+<p>Concurrency bug превратился в memory и CPU problem.</p>
+<hr/>
+<h1 id="39-production-no4-gomemlimit">Блок 39. Production-кейс №4: слишком маленький GOMEMLIMIT<a class="headerlink" href="#39-production-no4-gomemlimit" title="Permanent link">¶</a></h1>
+<h2 id="151">151. Симптом<a class="headerlink" href="#151" title="Permanent link">¶</a></h2>
+<p>После уменьшения pod memory:</p>
+<div class="highlight"><pre><span></span><code>RSS стабилизировался ниже
+CPU вырос с 45% до 85%
+p99 вырос в 2 раза
+</code></pre></div>
+<p>Heap leak отсутствует.</p>
+<hr/>
+<h2 id="152-gc">152. Смотрим GC<a class="headerlink" href="#152-gc" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>GC cycles/sec ↑
+heap goal близко к live heap
+assist CPU ↑
+</code></pre></div>
+<p>Причина:</p>
+<div class="highlight"><pre><span></span><code>runtime почти не имеет growth runway
+</code></pre></div>
+<hr/>
+<h2 id="153">153. Причинная цепочка<a class="headerlink" href="#153" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>memory budget слишком tight
+↓
+collector запускается часто
+↓
+goroutines чаще помогают GC
+↓
+CPU на requests меньше
+↓
+latency выше
+</code></pre></div>
+<p>Это следствие resource configuration.</p>
+<hr/>
+<h1 id="40-production-no5-rss">Блок 40. Production-кейс №5: RSS не падает<a class="headerlink" href="#40-production-no5-rss" title="Permanent link">¶</a></h1>
+<h2 id="154">154. Симптом<a class="headerlink" href="#154" title="Permanent link">¶</a></h2>
+<p>Traffic spike закончился:</p>
+<div class="highlight"><pre><span></span><code>HeapAlloc:
+3 GB → 800 MB
+
+RSS:
+3.6 GB → 3.2 GB
+</code></pre></div>
+<p>Команда говорит:</p>
+<blockquote>
+<p>leak.</p>
+</blockquote>
+<hr/>
+<h2 id="155-layers">155. Проверяем layers<a class="headerlink" href="#155-layers" title="Permanent link">¶</a></h2>
+<p>Смотрим:</p>
+<div class="highlight"><pre><span></span><code>heap objects
+heap free
+heap released
+RSS
+</code></pre></div>
+<p>Если objects резко упали, а free heap вырос:</p>
+<div class="highlight"><pre><span></span><code>GC уже освободил objects для allocator
+</code></pre></div>
+<p>Если released memory постепенно растёт:</p>
+<div class="highlight"><pre><span></span><code>runtime возвращает часть memory OS
+</code></pre></div>
+<p>RSS не обязан синхронно повторять HeapAlloc.</p>
+<hr/>
+<h1 id="41-">Блок 41. Практическая мини-демонстрация<a class="headerlink" href="#41-" title="Permanent link">¶</a></h1>
+<h2 id="156-1-escape">156. Этап 1 — увидеть escape<a class="headerlink" href="#156-1-escape" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
+
+<span class="kd">type</span><span class="w"> </span><span class="nx">User</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">ID</span><span class="w"> </span><span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">value</span><span class="p">()</span><span class="w"> </span><span class="nx">User</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">User</span><span class="p">{</span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">pointer</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="nx">User</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">u</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">User</span><span class="p">{</span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">u</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">value</span><span class="p">()</span>
+<span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">pointer</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Запуск:</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>build<span class="w"> </span>-gcflags<span class="o">=</span><span class="s2">"-m=2"</span><span class="w"> </span>.
+</code></pre></div>
+<p>Разбираем:</p>
+<div class="highlight"><pre><span></span><code>что compiler смог оставить локально?
+что escape'ится?
+почему?
+</code></pre></div>
+<hr/>
+<h2 id="157-2-allocations-benchmark">157. Этап 2 — увидеть allocations benchmark'ом<a class="headerlink" href="#157-2-allocations-benchmark" title="Permanent link">¶</a></h2>
+<p>Добавить benchmark.</p>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-bench<span class="o">=</span>.<span class="w"> </span>-benchmem
+</code></pre></div>
+<p>Смотреть:</p>
+<div class="highlight"><pre><span></span><code>B/op
+allocs/op
+</code></pre></div>
+<p>Важно заставить benchmark реально использовать результат, чтобы compiler не удалил бессмысленную работу.</p>
+<hr/>
+<h2 id="158-3-allocation-pressure">158. Этап 3 — создать allocation pressure<a class="headerlink" href="#158-3-allocation-pressure" title="Permanent link">¶</a></h2>
+<p>Сделать handler, специально создающий temporary buffers.</p>
+<p>Нагрузить сервис.</p>
+<p>Смотреть:</p>
+<div class="highlight"><pre><span></span><code>CPU
+allocation rate
+GC cycles
+heap goal
+latency
+</code></pre></div>
+<hr/>
+<h2 id="159-4-cpu-profile">159. Этап 4 — снять CPU profile<a class="headerlink" href="#159-4-cpu-profile" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code>go<span class="w"> </span>tool<span class="w"> </span>pprof<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>http://localhost:6060/debug/pprof/profile?seconds<span class="o">=</span><span class="m">30</span>
+</code></pre></div>
+<p>Найти:</p>
+<div class="highlight"><pre><span></span><code>application hotspots
+allocation/GC paths
+</code></pre></div>
+<hr/>
+<h2 id="160-5-alloc_space-inuse_space">160. Этап 5 — сравнить <code>alloc_space</code> и <code>inuse_space</code><a class="headerlink" href="#160-5-alloc_space-inuse_space" title="Permanent link">¶</a></h2>
+<p>Студенты должны руками увидеть:</p>
+<div class="highlight"><pre><span></span><code>"кто много создаёт"
+≠
+"кто много удерживает"
+</code></pre></div>
+<p>Это одна из самых важных диагностических мыслей лекции.</p>
+<hr/>
+<h2 id="161-6">161. Этап 6 — исправить и повторить<a class="headerlink" href="#161-6" title="Permanent link">¶</a></h2>
+<p>Уменьшить ненужные allocations.</p>
+<p>Повторить:</p>
+<div class="highlight"><pre><span></span><code>benchmark
+load test
+CPU profile
+heap profile
+</code></pre></div>
+<p>Нужна доказанная разница:</p>
+<div class="highlight"><pre><span></span><code>до
+vs
+после
+</code></pre></div>
+<hr/>
+<h1 id="42">Блок 42. Границы основной лекции<a class="headerlink" href="#42" title="Permanent link">¶</a></h1>
+<h2 id="162">162. Что студент должен понимать после неё<a class="headerlink" href="#162" title="Permanent link">¶</a></h2>
+<p>Он должен уверенно объяснить:</p>
+<div class="highlight"><pre><span></span><code>почему value может escape
+почему pointer не означает heap
+почему allocation rate важен
+как работает reachability GC
+почему concurrent GC всё равно стоит CPU
+что регулируют GOGC и GOMEMLIMIT
+почему HeapAlloc и RSS различаются
+какой pprof profile выбрать
+</code></pre></div>
+<hr/>
+<h2 id="163">163. Что оставляем дополнительной лекции<a class="headerlink" href="#163" title="Permanent link">¶</a></h2>
+<p>Пока не обязательно подробно разбирать:</p>
+<div class="highlight"><pre><span></span><code>mcache
+mcentral
+mspan internals
+size classes подробно
+tiny allocator
+Green Tea internal queues
+hybrid barrier exact invariant
+sweepgen
+page allocator
+madvise details
+scavenger internals
+</code></pre></div>
+<p>Основная лекция строит mental model.</p>
+<p>Дополнительная отвечает:</p>
+<blockquote>
+<p>«Хорошо, а как runtime физически всё это делает?»</p>
+</blockquote>
+<hr/>
+<h1 id="_5">Что важно запомнить<a class="headerlink" href="#_5" title="Permanent link">¶</a></h1>
+<ol>
+<li>
+<p><strong>Stack/heap placement в Go — решение compiler/runtime, а не прямое следствие синтаксиса.</strong></p>
+</li>
+<li>
+<p><strong>Главный вопрос — lifetime.</strong> Если value должен пережить текущий frame или compiler не может доказать обратное, может потребоваться heap storage.</p>
+</li>
+<li>
+<p><strong>Pointer не означает heap. <code>new(T)</code> не означает heap. Локальная переменная не гарантирует stack.</strong></p>
+</li>
+<li>
+<p><strong>Stack allocation обычно значительно дешевле и не создаёт отдельной GC work.</strong></p>
+</li>
+<li>
+<p><strong>Цена heap allocation — не только момент allocation.</strong> Object позже может увеличивать marking, sweeping, memory bandwidth и GC assist work.</p>
+</li>
+<li>
+<p><strong>Allocation rate и live heap — разные характеристики.</strong> Маленький live heap может сосуществовать с огромным GC churn.</p>
+</li>
+<li>
+<p><strong>GC смотрит reachability, а не бизнес-смысл.</strong> Поэтому unbounded cache, queue backlog и goroutine leaks создают memory retention при корректном GC.</p>
+</li>
+<li>
+<p><strong>Go GC выполняет основную mark work concurrent с application, но GC всё равно потребляет CPU.</strong></p>
+</li>
+<li>
+<p><strong>Маленькая STW pause не доказывает, что GC дешёвый.</strong> Нужно смотреть total GC CPU, cycles, assists и allocation rate.</p>
+</li>
+<li>
+<p><strong><code>GOGC</code> регулирует trade-off memory ↔ CPU. <code>GOMEMLIMIT</code> задаёт soft memory budget runtime.</strong></p>
+</li>
+<li>
+<p><strong>Слишком маленький memory budget может сделать приложение CPU-bound через частый GC и assists.</strong></p>
+</li>
+<li>
+<p><strong>Heap memory и RSS — разные уровни.</strong> Освобождение object для Go allocator не означает мгновенный возврат physical pages ОС.</p>
+</li>
+<li>
+<p><strong>CPU profile отвечает на вопрос «где тратится CPU». Он не объясняет ожидание DB/network автоматически.</strong></p>
+</li>
+<li>
+<p><strong><code>inuse_space</code> помогает искать retention. <code>alloc_space</code> — allocation churn.</strong></p>
+</li>
+<li>
+<p><strong>Goroutine profile показывает все goroutines; Go 1.27 <code>goroutineleak</code> дополнительно умеет автоматически находить определённый класс permanently blocked leaks.</strong></p>
+</li>
+<li>
+<p><strong>Оптимизация начинается с измерения.</strong> Правильная цепочка: symptom → metrics → profile → source → change → повторное measurement.</p>
+</li>
+</ol>
+<hr/>
+<h1 id="_6">Финальная схема лекции<a class="headerlink" href="#_6" title="Permanent link">¶</a></h1>
+<div class="highlight"><pre><span></span><code>                     SOURCE CODE
+                         │
+                         ▼
+                      values
+                         │
+                         ▼
+                      lifetime
+                         │
+                         ▼
+                 escape analysis
+                  │             │
+                  ▼             ▼
+                stack          heap
+                  │             │
+          frame завершён        │
+                  │             ▼
+                  │         allocations
+                  │             │
+                  │             ▼
+                  │         heap growth
+                  │             │
+                  │             ▼
+                  │            GC
+                  │       ┌─────┼──────┐
+                  │       ▼     ▼      ▼
+                  │    workers barrier assists
+                  │       └─────┼──────┘
+                  │             ▼
+                  │         CPU cost
+                  │             │
+                  │             ▼
+                  │      memory pressure
+                  │             │
+                  │             ▼
+                  │        backend latency
+                  │
+                  └─────────────────────────────┐
+                                                ▼
+                                             pprof
+                                      ┌─────────┼─────────┐
+                                      ▼         ▼         ▼
+                                     CPU       heap    goroutine
+                                      │         │         │
+                                      └─────────┼─────────┘
+                                                ▼
+                                       concrete code path
+                                                │
+                                                ▼
+                                            fix + remeasure
+</code></pre></div>
+<p>Финальный инженерный вывод:</p>
+<blockquote>
+<p>Memory performance в Go начинается не с GC knobs. Она начинается с lifetime данных и allocation patterns приложения. Runtime может очень быстро выделять memory и эффективно собирать мусор, но под нагрузкой даже маленькие лишние allocations умножаются на RPS, превращаются в GC work, занимают CPU и начинают влиять на tail latency. Поэтому задача backend-разработчика — понимать, какую работу его код заставляет runtime выполнять, измерять эту работу и устранять действительно дорогие места.</p>
+</blockquote>
+<hr/>
+<h1 id="_7">Официальные материалы для преподавателя<a class="headerlink" href="#_7" title="Permanent link">¶</a></h1>
+<ul>
+<li>Go GC Guide: https://go.dev/doc/gc-guide</li>
+<li>Go diagnostics: https://go.dev/doc/diagnostics</li>
+<li><code>net/http/pprof</code>: https://pkg.go.dev/net/http/pprof</li>
+<li><code>runtime/metrics</code>: https://pkg.go.dev/runtime/metrics</li>
+<li>Green Tea GC: https://go.dev/blog/greenteagc</li>
+<li>Go 1.26 release: https://go.dev/blog/go1.26</li>
+<li>Go 1.27 release notes: https://go.dev/doc/go1.27</li>
+<li>Allocating on the Stack: https://go.dev/blog/allocation-optimizations</li>
+<li>Size-Specialized Memory Allocation: https://go.dev/blog/size-specialized-allocations</li>
+<li>Goroutine Leak Profiles: https://go.dev/blog/goroutine-leak-profiles</li>
+</ul>
+</article>
+</div>
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+</div>
+<button class="md-top md-icon" data-md-component="top" hidden="" type="button">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  К началу
+</button>
+</main>
+<footer class="md-footer">
+<nav aria-label="Нижний колонтитул" class="md-footer__inner md-grid">
+<a aria-label="Назад: 2. Go runtime internals — расширенная версия" class="md-footer__link md-footer__link--prev" href="../../2.%20Runtime/Go%20runtime/">
+<div class="md-footer__button md-icon">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</div>
+<div class="md-footer__title">
+<span class="md-footer__direction">
+                Назад
+              </span>
+<div class="md-ellipsis">
+                2. Go runtime internals — расширенная версия
+              </div>
+</div>
+</a>
+<a aria-label="Вперед: 1. Глубокие internals Go runtime, synchronization и CPU" class="md-footer__link md-footer__link--next" href="../../Additional/1%20-%20Go%20Runtime%20deep/">
+<div class="md-footer__title">
+<span class="md-footer__direction">
+                Вперед
+              </span>
+<div class="md-ellipsis">
+                1. Глубокие internals Go runtime, synchronization и CPU
+              </div>
+</div>
+<div class="md-footer__button md-icon">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"></path></svg>
+</div>
+</a>
+</nav>
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}, "version": null}</script>
+<script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+</body>
+</html>
